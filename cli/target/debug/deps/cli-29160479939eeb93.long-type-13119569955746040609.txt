@@ -1,0 +1,1 @@
+fn(oauth2::http::Request<Vec<u8>>) -> impl Future<Output = Result<oauth2::http::Response<Vec<u8>>, Box<(dyn StdError + Send + Sync + 'static)>>> {AuthManager::http_client}

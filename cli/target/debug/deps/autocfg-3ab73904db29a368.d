@@ -1,0 +1,10 @@
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/autocfg-3ab73904db29a368.d: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/libautocfg-3ab73904db29a368.rlib: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/libautocfg-3ab73904db29a368.rmeta: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs
+
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/lib.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/error.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/rustc.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/autocfg-1.5.0/src/version.rs:

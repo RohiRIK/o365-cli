@@ -1,0 +1,10 @@
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/keyring-d740947d7fe6bf13.d: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/mock.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/credential.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/error.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/libkeyring-d740947d7fe6bf13.rlib: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/mock.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/credential.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/error.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/libkeyring-d740947d7fe6bf13.rmeta: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/mock.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/credential.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/error.rs
+
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/lib.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/mock.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/credential.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/keyring-3.6.3/src/error.rs:

@@ -1,0 +1,41 @@
+# OS specific
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# PowerShell output/logging
+*.log
+*.transcripts
+
+# Reports and Data Exports
+*.csv
+*.html
+*.xml
+*.json
+
+# Project specific temporary or output folders
+.gemini-clipboard/
+.gemini/
+
+# Certificates
+*.pfx
+*.pem
+*.crt
+*.key
+
+# Environment/Configuration files
+.env
+env.ps1
+config.json
+*.config # Broad, but can catch config files holding secrets
+
+# Secrets
+*.secrets
+secrets.json
+credentials.json

@@ -1,0 +1,10 @@
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/log-6dc34a8c5cd6ac61.d: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/macros.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/serde.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/__private_api.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/liblog-6dc34a8c5cd6ac61.rlib: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/macros.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/serde.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/__private_api.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/debug/deps/liblog-6dc34a8c5cd6ac61.rmeta: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/macros.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/serde.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/__private_api.rs
+
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/lib.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/macros.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/serde.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/log-0.4.28/src/__private_api.rs:
