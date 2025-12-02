@@ -1,73 +1,91 @@
-# Resource & Reporting Research
+# Resource & Reporting Research & Enhancement Plan
 
 ## 1. License Optimization (RES-03)
 
-### 🔍 Research Context
-Optimizing licenses is about finding waste. The current script looks at "Assigned" vs "SignIn".
+### ⚙️ API Implementation Specifications
 
-### 🛡️ Advanced Strategy: "Feature-Level Intelligence"
-*   **Workload Activity:** Don't just check "Did they sign in?". Check "Did they use the expensive features?"
-    *   User has **E5** ($57) but only reads Email? -> Downgrade to **E1/F3**.
-    *   User has **Visio Plan 2** but hasn't opened a .vsdx file in 90 days? -> Remove.
+#### **A. User Detail Report**
+*   **Endpoint:** `GET /reports/getOffice365ActiveUserDetail(period='D90')`
+*   **Best Practice:**
+    *   **Privacy:** Tenant settings might obfuscate names (showing standard IDs instead of UPNs).
+    *   **Check:** Check `/admin/serviceAnnouncement/healthOverviews` or report settings. If data is anonymized, this report is useless for optimization.
+    *   **Fallback:** Iterate users via `/users?$select=signInActivity` (slower but gets UPNs).
 
-### API Implementation Map
-| Metric | Endpoint | Value |
-| :--- | :--- | :--- |
-| **Detail Usage** | `/reports/getOffice365ActiveUserDetail` | Shows last activity date per workload (Exchange, OneDrive, Teams). |
-| **Sku Lookup** | `/subscribedSkus` | Get total available vs consumed units. |
-| **Direct Assignment** | `/users/{id}/licenseDetails` | Differentiate between "Direct" and "Group" assignment. (Crucial for remediation: You can't remove a group-assigned license directly from the user). |
+#### **B. Sku Utilization**
+*   **Endpoint:** `GET /subscribedSkus`
+*   **Best Practice:**
+    *   **Calculation:** `consumption = consumedUnits / prepaidUnits`.
+    *   **Alerting:** Flag if `consumption > 90%` (Run out soon) or `consumption < 50%` (Over-purchased).
+
+#### **C. Service Plan Inspection**
+*   **Endpoint:** `GET /users/{id}?$select=assignedLicenses`
+*   **Logic:**
+    *   Get `subscribedSkus` to map `skuId` -> `skuPartNumber` (e.g., "SPE_E5").
+    *   Inspect `disabledPlans` inside `assignedLicenses`.
+    *   **Optimization:** If a user has E5 but has `PowerBI_Pro` disabled in the plan, they aren't using the full value.
 
 ---
 
 ## 2. Stale Device Cleanup (RES-03-D)
 
-### 🔍 Research Context
-Deleting devices can break things. Deleting a Hybrid-Joined device breaks trust with On-Prem AD. Deleting an Autopilot device breaks re-deployment.
+### ⚙️ API Implementation Specifications
 
-### 🛡️ Enhancement Strategy
-*   **Intune Sync:** Before deleting from Entra ID, check the device status in Intune (`/deviceManagement/managedDevices`).
-    *   If "Compliant", **DO NOT DELETE** (even if stale login in Entra).
-*   **LAPS Recovery:** Before deleting a device, try to retrieve/backup its BitLocker key (`/informationProtection/bitlocker/recoveryKeys`) just in case.
+#### **A. Device Listing**
+*   **Endpoint:** `GET /devices?$select=id,displayName,approximateLastSignInDateTime,trustType,profileType`
+*   **Best Practice:**
+    *   **Filtering:** Use server-side filtering: `$filter=approximateLastSignInDateTime lt 2023-01-01T00:00:00Z` (Graph supports this on `devices`).
+    *   **Optimization:** Fetching only stale devices reduces payload size drastically.
 
-### Risk Logic
-1.  Is `trustType` == `ServerAd` (Hybrid)? -> **SKIP** (Report only).
-2.  Is `profileType` == `ZeroTouch` (Autopilot)? -> **SKIP**.
-3.  Is `approximateLastSignInDateTime` > 180 days? -> **MARK DELETE**.
+#### **B. Autopilot Safety Check**
+*   **Property:** `physicalIds` list contains `[ZTDId]...`
+*   **Best Practice:**
+    *   **Must Check:** BEFORE DELETE, iterate `physicalIds`. If ANY entry starts with `[ZTDId]`, abort delete.
+    *   **Reason:** Deleting an Autopilot ID breaks the hardware hash binding; the device cannot re-provision cleanly.
 
 ---
 
 ## 3. 360° User Analyzer (REP-04)
 
-### 🔍 Research Context
-The "dossier" concept is powerful. It needs to be instantaneous.
+### ⚙️ API Implementation Specifications
 
-### 🛡️ Enhancement Strategy
-*   **Parallel Fetching:** Rust/Bun can fetch Licenses, Devices, Group Memberships, and Sign-ins in parallel (`Promise.all`).
-*   **Insider Risk Indicators:**
-    *   *Mass Download:* Check `/auditLogs/sharePoint` for "FileDownloaded" spikes.
-    *   *Impossible Travel:* Check `/identityProtection/riskyUsers`.
+#### **A. Parallel Data Fetching**
+*   **Strategy:** Use `Promise.all` (TypeScript) to fire 5 requests simultaneously per user.
+    1.  User Info: `GET /users/{id}`
+    2.  Auth Methods: `GET /users/{id}/authentication/methods` (Check for MFA)
+    3.  Devices: `GET /users/{id}/ownedDevices`
+    4.  App Roles: `GET /users/{id}/appRoleAssignments`
+    5.  Groups: `GET /users/{id}/transitiveMemberOf`
+*   **Best Practice:**
+    *   **Batching:** For high volume, use `$batch` endpoint (up to 20 requests per HTTP call).
+    *   **Throttling:** Monitor `429 Too Many Requests`. Graph throttles aggressive parallel fetches. Implement `Retry-After` header handling.
 
-### API Implementation Map
-| Insight | Endpoint |
-| :--- | :--- |
-| **Risk Level** | `/identityProtection/riskyUsers/{id}` |
-| **MFA Status** | `/reports/authenticationMethods/userRegistrationDetails/{id}` |
-| **Owned Objects** | `/users/{id}/ownedDevices`, `/users/{id}/ownedObjects` |
+#### **B. Insider Risk Indicators**
+*   **Endpoint:** `GET /auditLogs/signIns`
+*   **Filter:** `userId eq '{id}' and status/errorCode eq 0`
+*   **Logic:**
+    *   **Geovelocity:** Compare `location` of last 5 sign-ins. If distance > 500 miles in < 2 hours -> Warning.
+    *   **Time:** Check `createdDateTime`. 80% of sign-ins outside 08:00-19:00 local time -> Warning.
 
 ---
 
 ## 4. Teams Sprawl Auditor (REP-04-T)
 
-### 🔍 Research Context
-Teams sprawl consumes storage and creates compliance blind spots.
+### ⚙️ API Implementation Specifications
 
-### 🛡️ Enhancement Strategy
-*   **SharePoint Storage:** A Team is just a Group with a Drive. We must check the storage used by the underlying SharePoint site.
-*   **Lifecycle:** Detect "Orphaned" teams (No owner).
+#### **A. Team Discovery**
+*   **Endpoint:** `GET /groups?$filter=resourceProvisioningOptions/Any(x:x eq 'Team')`
+*   **Best Practice:**
+    *   **Select:** `$select=id,displayName,renewedDateTime,createdDateTime`.
+    *   **Expiration:** Check `renewedDateTime`. If older than 365 days, the Group Expiration Policy might delete it soon.
 
-### API Implementation Map
-| Metric | Endpoint |
-| :--- | :--- |
-| **Team List** | `/groups?$filter=resourceProvisioningOptions/Any(x:x eq 'Team')` |
-| **Activity** | `/reports/getTeamsTeamActivityDetail` |
-| **Storage** | `/sites/{id}/usage` |
+#### **B. Storage Usage**
+*   **Endpoint:** `GET /sites/{groupId}/usage`
+*   **Best Practice:**
+    *   **Error Handling:** Not all Teams have a Site (provisioning delay). Handle `404` on site lookup.
+    *   **Metric:** `storage/used` vs `storage/quota`.
+
+#### **C. Channel Activity**
+*   **Endpoint:** `GET /teams/{id}/channels`
+*   **Best Practice:**
+    *   **Empty Teams:** If `channels.length == 1` (just "General") AND no messages in General, mark as "Zombie".
+    *   **Message Count:** `GET /teams/{id}/channels/{id}/messages/$count` (ConsistencyLevel: eventual).

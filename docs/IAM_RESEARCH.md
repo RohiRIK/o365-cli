@@ -4,62 +4,101 @@
 
 ### 🔍 Current Limitations (Legacy)
 *   **Linear Execution:** PowerShell script runs sequentially. If Exchange hangs, the whole process stalls.
-*   **State Amnesia:** No record of "Phase 1 complete, Phase 2 pending". If the script crashes, you have to start over, potentially causing errors (e.g., trying to convert an already converted mailbox).
-*   **Hardcoded Delays:** Relies on `Start-Sleep` for replication, which is unreliable.
+*   **State Amnesia:** No record of "Phase 1 complete, Phase 2 pending".
+*   **Hardcoded Delays:** Relies on `Start-Sleep` for replication.
 
-### 🛡️ Modernization Strategy (Graph API)
-*   **Workflow Engine:** Needs a state machine (e.g., "User Disabled", "Tokens Revoked", "Mailbox Converting").
-*   **Parallelism:** Can perform Entra ID actions (Block, Revoke) while waiting for Exchange operations.
+### 🛡️ Modernization Strategy
+*   **State Machine:** Track status in a local SQLite/JSON file to allow resuming after failure.
+*   **Parallelism:** Fire Entra ID blocks and Token revocation in parallel.
 
-###  API Implementation Map
-| Action | Legacy Cmdlet | Graph API / Modern Approach |
-| :--- | :--- | :--- |
-| **Block Sign-in** | `Set-MsolUser -BlockCredential` | `PATCH /users/{id} { "accountEnabled": false }` |
-| **Revoke Tokens** | `Revoke-AzureADUserAllRefreshToken` | `POST /users/{id}/revokeSignInSessions` |
-| **Convert Mailbox** | `Set-Mailbox -Type Shared` | **Gap:** Graph has limited mailbox management. Must use **Exchange v3 PowerShell** via local shell or extensive Graph `HTTP` requests to Exchange endpoints if supported. *Research indicates Exchange PS is still required for reliable conversion.* |
-| **Delegate Access** | `Add-MailboxPermission` | `POST /users/{id}/permissions` (Graph Beta for Calendar) / Exchange PS for Full Access. |
-| **Remove Licenses** | `Set-MsolUserLicense` | `POST /users/{id}/assignLicense` (add/remove in one call). |
-| **Wipe Mobile** | `Clear-MobileDevice` | `POST /users/{id}/managedDevices/{id}/wipe` or `retire`. |
+### ⚙️ API Implementation Specifications
 
-### 🚀 Feature Enhancements
-1.  **OneDrive Retention Lock:** Automatically apply a specific retention label to the user's OneDrive before deletion to ensure legal hold compliance without keeping the account active.
-2.  **Auto-Reply Injection:** Inject a standard OOF message using Graph API (`/mailboxSettings/automaticRepliesSetting`) immediately upon termination.
-3.  **Recurring Calendar Wiper:** optional logic to cancel all future meetings organized by the leaver to free up room resources.
+#### **A. Block Sign-in**
+*   **Endpoint:** `PATCH /users/{id}`
+*   **Payload:** `{ "accountEnabled": false }`
+*   **Best Practice:**
+    *   **Fields:** Select minimal fields first to verify state: `$select=id,accountEnabled`.
+    *   **Idempotency:** Check if `accountEnabled` is already `false` before patching to save API quota.
+    *   **Log:** Record the timestamp of disablement for audit.
+
+#### **B. Revoke Tokens**
+*   **Endpoint:** `POST /users/{id}/revokeSignInSessions`
+*   **Best Practice:**
+    *   **Timing:** This action invalidates *Refresh Tokens*. Access Tokens live for ~60 mins. Real-time lockout is not instant without Continuous Access Evaluation (CAE).
+    *   **Error Handling:** Ignore `404` if user is already deleted.
+
+#### **C. Manager Delegation (Mailbox)**
+*   **Endpoint (Graph):** `POST /users/{id}/permissions` (Beta) - *Experimental*
+*   **Endpoint (Exchange):** Use PowerShell via PSSession (Remote) as Graph mailbox permission support is incomplete.
+*   **Best Practice:**
+    *   **Auto-Mapping:** When using Exchange PS, set `-AutoMapping $true` so the mailbox appears in the manager's Outlook automatically.
+    *   **Retries:** Exchange propagation takes time. Implement exponential backoff (retry 3 times with 5s, 15s, 30s delays).
+
+#### **D. Remove Licenses**
+*   **Endpoint:** `POST /users/{id}/assignLicense`
+*   **Payload:** `{ "addLicenses": [], "removeLicenses": [ "skuId1", "skuId2" ] }`
+*   **Best Practice:**
+    *   **Batching:** Do NOT loop. Remove *all* licenses in a single `assignLicense` call by passing all `skuIds` in the array.
+    *   **Validation:** Ensure `addLicenses` is empty to avoid accidental assignment.
 
 ---
 
 ## 2. Guest User Lifecycle (IAM-01-G)
 
 ### 🔍 Current Limitations
-*   **Binary Logic:** Only looks at `LastSignIn`. Doesn't consider if the guest has been active in SharePoint or Teams (passive usage).
-*   **No Sponsor Loop:** If no manager is defined, it just screams into the void (Webhook). It lacks a "Ask the Sponsor" feedback loop.
+*   **Binary Logic:** Ignores passive activity (SharePoint views).
+*   **No Sponsor Loop:** Webhook-only approach is a black hole.
 
 ### 🛡️ Modernization Strategy
-*   **Interactive Bot:** Instead of a webhook, send an Adaptive Card to the Sponsor via Teams: *"Guest X expires in 7 days. Renew?"*
-*   **Deep Activity Audit:** Query `auditLogs/signIns` AND `auditLogs/sharePoint` to detect passive file access.
+*   **Deep Audit:** Query unified audit logs for *any* activity, not just interactive logins.
 
-### API Implementation Map
-| Feature | Graph Endpoint | Note |
-| :--- | :--- | :--- |
-| **Activity Check** | `/users/{id}/signInActivity` | Check `lastNonInteractiveSignInDateTime` as well. |
-| **Sponsor Lookup** | `/users/{id}/manager` | If null, scan `/auditLogs/directoryProvisioning` to find the inviter. |
-| **Expiration** | Custom Attribute or Database | Store `lifecycleExpirationDate` in `extensionAttributes` for tracking. |
+### ⚙️ API Implementation Specifications
+
+#### **A. Activity Analysis**
+*   **Endpoint:** `GET /users/{id}?$select=signInActivity,createdDateTime`
+*   **Endpoint:** `GET /auditLogs/signIns?$filter=userId eq '{id}'`
+*   **Best Practice:**
+    *   **Non-Interactive:** Check `signInActivity.lastNonInteractiveSignInDateTime`. Guests often sync files (OneDrive) without interactively logging in.
+    *   **Thresholds:** Configurable "Safe Period" (e.g., 90 days).
+
+#### **B. Sponsor Lookup**
+*   **Endpoint:** `GET /users/{id}/manager`
+*   **Fallback Strategy:**
+    1.  Check `manager` attribute.
+    2.  (Advanced) Scan `auditLogs/directoryProvisioning` to find the `initiator` (the person who invited the guest).
+    3.  (Advanced) Check `createdDateTime` and search Audit Logs for "Invite user" events around that time.
+
+#### **C. Handover (SharePoint)**
+*   **Endpoint:** `GET /users/{id}/drive/root/children` (List files)
+*   **Best Practice:**
+    *   **Ownership:** We cannot easily "transfer" ownership of a personal drive folder.
+    *   **Action:** Instead, generate a **Sharing Link** (`POST /drives/{driveId}/items/{itemId}/createLink`) for the Manager with `type: "view"` or `type: "edit"` before deleting the user.
 
 ---
 
 ## 3. New User Onboarding (IAM-01-N)
 
 ### 🔍 Current Limitations
-*   **CSV Dependency:** Relies on static CSV files.
-*   **Password Transmission:** Sending passwords via email to the manager is insecure.
+*   **Insecure Credentials:** Emailing passwords is bad hygiene.
 
-### 🛡️ Modernization Strategy
-*   **TAP (Temporary Access Pass):** Generate a TAP instead of a password. This allows passwordless first-time onboarding (MFA setup) without sharing secrets.
-*   **Group Modeling:** "Clone" a reference user's group memberships (`/users/{ref}/memberOf`).
+### ⚙️ API Implementation Specifications
 
-### API Implementation Map
-| Feature | Graph Endpoint | Note |
-| :--- | :--- | :--- |
-| **Create User** | `POST /users` | Use `passwordProfile` or TAP. |
-| **TAP Creation** | `POST /users/{id}/authentication/temporaryAccessPassMethods` | Returns a time-limited passcode. |
-| **Dynamic Licensing** | `POST /users/{id}/assignLicense` | Use Group-based licensing instead of direct assignment where possible. |
+#### **A. Create User**
+*   **Endpoint:** `POST /users`
+*   **Best Practice:**
+    *   **UPN Sanitization:** Remove spaces, special chars from UPN. Check for collision (`GET /users/{upn}`) before create.
+    *   **Retry:** Handle `409 Conflict` (User exists) by appending a number (e.g., `john.doe2`).
+
+#### **B. Temporary Access Pass (TAP)**
+*   **Endpoint:** `POST /users/{id}/authentication/temporaryAccessPassMethods`
+*   **Payload:** `{ "lifetimeInMinutes": 60, "isUsableOnce": false }`
+*   **Best Practice:**
+    *   **Policy Check:** Ensure the tenant has TAP enabled in Authentication Methods Policy. If not, fallback to Password.
+    *   **Delivery:** Display TAP to Admin console or send via SMS (if phone number provided), NEVER email the TAP + UPN together.
+
+#### **C. Dynamic Licensing**
+*   **Endpoint:** `POST /groups/{id}/members/$ref`
+*   **Payload:** `{ "@odata.id": "https://graph.microsoft.com/v1.0/directoryObjects/{userId}" }`
+*   **Best Practice:**
+    *   **Group-Based Licensing:** Do NOT assign licenses directly. Add the user to a "Licensing Group" (e.g., "E5-Users").
+    *   **Why?** Easier to manage, reduces API calls, handles consistency better.
