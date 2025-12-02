@@ -1,70 +1,128 @@
-# IT Administration & Automation Scripts
+# 🧑‍💻 o365-cli - Microsoft 365 Administration Toolset
 
-This repository contains a collection of PowerShell scripts designed for Microsoft 365 and Entra ID (formerly Azure AD) administration. These tools automate common tasks such as employee offboarding, stale device cleanup, guest user lifecycle management, and shadow IT governance.
+A **hybrid Rust + TypeScript** platform for enterprise-grade Microsoft 365 administration. This project combines secure authentication, interactive TUI, and powerful automation workflows to streamline M365 management tasks.
 
-## Prerequisites
+## 🚀 Architecture
 
-Before running these scripts, ensure your environment meets the following requirements:
+-   **Rust CLI (`cli/`)**: Secure OAuth2 PKCE authentication, macOS Keychain token storage, interactive TUI with Ratatui
+-   **TypeScript Workers (`core/`)**: Microsoft Graph API business logic, powered by Bun runtime
+-   **Legacy Scripts (`legacy/`)**: Original PowerShell reference implementations for porting
 
-*   **PowerShell:** PowerShell 5.1 or PowerShell 7+ (Core) is recommended.
-*   **Modules:** The scripts rely heavily on the Microsoft Graph and Exchange Online PowerShell modules.
+## 📦 Prerequisites
+
+### For Rust CLI (Recommended)
+*   **Rust:** Install via [rustup.rs](https://rustup.rs/)
+*   **Bun Runtime:** `brew install oven-sh/bun/bun` (macOS) or see [bun.sh](https://bun.sh)
+*   **Permissions:** Global Administrator, User Administrator, or specific delegated permissions
+
+### For Legacy PowerShell Scripts
+*   **PowerShell:** 5.1 or 7+ (Core)
+*   **Modules:**
     ```powershell
     Install-Module Microsoft.Graph -Scope CurrentUser
     Install-Module ExchangeOnlineManagement -Scope CurrentUser
     ```
-*   **Permissions:** You will need appropriate administrative roles (e.g., Global Administrator, User Administrator, Exchange Administrator, Intune Administrator) to execute these actions.
 
-## Scripts Overview
+## 🎯 Quick Start
 
-| Script File | Description | Key Features |
-| :--- | :--- | :--- |
-| `Invoke-Employee360_Report.ps1` | **360° Offboarding Analyzer**<br>Generates a forensic report on user activity, licenses, devices, and group memberships to aid in offboarding decisions. | • detailed user activity scanning<br>• License & Device inventory<br>• Export to CSV |
-| `Invoke-GracefulOffboarding.ps1` | **Standard Offboarding Automation**<br>Executes the "Graceful Exit" protocol for terminations, focusing on data preservation and license optimization. | • Blocks sign-in<br>• Converts to Shared Mailbox<br>• Hides from GAL<br>• Grants Manager access<br>• Reclaims licenses |
-| `Invoke-GuestCleanup.ps1` | **Guest User Lifecycle Management**<br>Identifies and cleans up stale guest users. Includes logic to handover assets to a sponsor/manager before deletion. | • Manager/Sponsor detection<br>• Asset handover (Mailbox/OneDrive)<br>• Webhook integration (e.g., for n8n/Zapier) for orphaned users |
-| `Invoke-StaleDeviceCleanup.ps1` | **Smart Device Cleanup**<br>Removes stale devices from Entra ID based on inactivity and registration type. | • Aware of Registration Type (TrustType)<br>• Protects Hybrid Joined devices<br>• Autopilot/Kiosk protection logic |
-| `ShadowITCleanup.ps1` | **Shadow IT Governance**<br>Scans for and remediates risky OAuth applications granted by users (Shadow IT). | • Risk scoring based on scopes (e.g., Mail.Read)<br>• White-listing capabilities<br>• Auto-remediation & User notification |
+### Using the Rust CLI (Interactive TUI)
+```bash
+# Build and run
+cd cli && cargo build --release
+./target/release/o365-cli
 
-## Usage Guidelines
+# Or run specific commands headless
+./target/release/o365-cli login --tenant common
+./target/release/o365-cli run sec:shadow-it -- --dry-run true
+```
+
+### Logging
+All sessions are logged to `logs/o365-cli_YYYYMMDD_HHMMSS.log` with:
+- Session ID for correlation
+- Debug-level detail with RFC3339 timestamps
+- No overwriting - each run creates a new file
+
+## 📋 Available Modules
+
+| Module | Status | Description | Key Features |
+| :--- | :---: | :--- | :--- |
+| **Shadow IT Governance** (`sec:shadow-it`) | ✅ **Enhanced** | Detects and remediates risky OAuth apps | 🚨 **NEW:** Permission severity classification (CRITICAL/HIGH/MEDIUM/LOW)<br>• Actionable recommendations<br>• Dual-scan (delegated + app permissions)<br>• Microsoft service principal filtering<br>• Last sign-in tracking<br>• Risk scoring (0-100)<br>• Publisher verification |
+| **Graceful Offboarding** (`iam:offboard`) | 🚧 In Progress | Standard user termination protocol | • Block sign-in<br>• Convert to shared mailbox<br>• Hide from GAL<br>• Grant manager access<br>• Reclaim licenses |
+| **Guest Cleanup** | 📅 Planned | Stale guest user lifecycle | • Orphan detection<br>• Asset handover<br>• Webhook notifications |
+| **Stale Device Cleanup** | 📅 Planned | Remove inactive devices | • TrustType awareness<br>• Hybrid join protection |
+| **License Optimization** | 📅 Planned | Identify unused licenses | • Cost analysis<br>• Reclaim suggestions |
+| **360° User Analyzer** | 📅 Planned | Comprehensive user reports | • Activity forensics<br>• Device inventory<br>• Group membership |
+
+## 🔐 Security & Authentication
+
+**OAuth2 PKCE Flow**
+- Authorization Code Flow with PKCE for secure authentication
+- Local HTTP server captures redirect (no copy-paste tokens)
+- CSRF validation prevents interception attacks
+
+**Token Storage**
+- Refresh tokens stored in **macOS Keychain** (via `keyring` crate with `apple-native` feature)
+- Access tokens obtained fresh for each command
+- Tokens passed to workers via stdin (not process args)
+- Automatic rotation and keyring updates
+
+**Session Management**
+- Auto-verification on TUI startup
+- Visual feedback: `Auth: ✅ Active` / `Auth: ❌ Expired`
+- Profile persistence for seamless re-authentication
+
+## 🛡️ Safety Guidelines
 
 **GOLDEN RULE: TEST BEFORE ACTION**
-> We NEVER move forward until we verify the script. When instructed to 'test', I (the agent) will execute the PowerShell script using `pwsh -File <script.ps1>`. I will analyze the output for logs and syntax errors and fix those on the way. I will *never* change the script's core functionality without explicit user confirmation.
-> Remember: Scripts often include a `-DryRun` parameter (defaulting to `$true`) for simulation. Only after successful verification in Dry Run mode do we proceed with real action (`-DryRun $false`).
-> Also, you (the user) are still responsible for executing the scripts and providing their output for review, especially for interactive authentication or complex environment setups.
+- **Dry-Run First**: All commands default to `--dry-run true`
+- Simulate actions and review output before execution
+- TypeScript workers log instead of mutating when dry-run is enabled
+- TUI Settings tab provides easy dry-run toggle
 
-Most scripts include a `-DryRun` parameter which is set to `$true` by default. This ensures that running a script without arguments will only simulate the actions and print what *would* happen.
+**Command Examples**
+```bash
+# Rust CLI (Dry-Run by default)
+./cli/target/release/o365-cli run sec:shadow-it -- --dry-run true
 
-**Local Context:** Each script folder contains a `GEMINI.md` file with specific context and instructions for that module. Refer to it for detailed operational logic. If a folder is missing this file, you (the agent) must create it.
-
-### 1. Employee Offboarding Reporting
-Generate a report to decide how to handle inactive users.
-```powershell
-.\Invoke-Employee360_Report.ps1 -ReportPath ".\OffboardingReport.csv"
+# Live execution (use with caution)
+./cli/target/release/o365-cli run sec:shadow-it -- --dry-run false
 ```
 
-### 2. Graceful Offboarding
-Perform the actual offboarding for a user.
+**Legacy PowerShell** (for reference):
 ```powershell
-.\Invoke-GracefulOffboarding.ps1 -UserPrincipalName "jdoe@company.com" -ManagerEmail "manager@company.com" -DryRun $false
-```
-
-### 3. Guest Cleanup
-Run a cleanup of guest users, notifying a webhook if manual intervention is needed for orphans.
-```powershell
-.\Invoke-GuestCleanup.ps1 -WebhookUrl "https://your-webhook-url" -DryRun $false
-```
-
-### 4. Stale Device Cleanup
-Clean up old BYOD devices (Workplace joined) but leave Hybrid devices alone.
-```powershell
-.\Invoke-StaleDeviceCleanup.ps1 -TargetTrustType "Workplace" -DryRun $false
-```
-
-### 5. Shadow IT Governance
-Audit risky applications without taking action.
-```powershell
+# Dry-run (default)
 .\ShadowITCleanup.ps1 -DryRun $true
+
+# Live execution
+.\Invoke-GracefulOffboarding.ps1 -UserPrincipalName "user@company.com" -ManagerEmail "manager@company.com" -DryRun $false
 ```
 
-## Safety & Logging
-*   **Dry Run:** Always run with `-DryRun $true` (or default) first to verify the scope of changes.
-*   **Logging:** Scripts output to the console using `Write-Host` with color-coding for readability. Some scripts generate CSV reports.
+## 📊 Logging & Debugging
+
+**Session-Based Logs** (`logs/` directory):
+- Format: `o365-cli_YYYYMMDD_HHMMSS.log`
+- Debug-level detail with RFC3339 timestamps
+- Each session has a unique log file (no overwriting)
+- Easy correlation via Session ID
+
+**Log Analysis**:
+```bash
+# View latest log
+ls -lt logs/ | head -1
+
+# Search for errors
+grep -i error logs/o365-cli_*.log
+
+# Filter by module
+grep "shadow-it" logs/o365-cli_*.log
+```
+
+## 📚 Documentation
+
+- **Developer Instructions**: `.github/copilot-instructions.md` - Architecture, IPC protocol, extending the platform
+- **Module Research**: `docs/SHADOW_IT_RESEARCH.md` - Permission model, risk scoring algorithm
+- **Legacy Context**: Each `legacy/` folder contains a `GEMINI.md` with specific operational logic
+
+## 🤝 Contributing
+
+This is a hybrid platform evolving from PowerShell scripts to a production-ready Rust/TypeScript architecture. The `legacy/` folder serves as reference implementations for porting to the modern stack.

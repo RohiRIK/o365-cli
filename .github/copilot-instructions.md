@@ -148,8 +148,9 @@ The platform employs robust, secure authentication:
 1.  **Flow:** Utilizes **OAuth2 Authorization Code Flow with PKCE** for secure, interactive login.
 2.  **User Experience:** Triggered via `o365-cli login` or the **Login** option in the TUI's **Settings** tab. A local HTTP server captures the redirect.
 3.  **Token Storage:**
-    *   **Refresh Tokens** are securely stored in the **OS-specific keyring** (`macOS Keychain`, `Windows Credential Manager`, `Linux Secret Service`) via the `keyring` crate. **No plaintext storage.**
+    *   **Refresh Tokens** are securely stored in the **OS-specific keyring** (`macOS Keychain`, `Windows Credential Manager`, `Linux Secret Service`) via the `keyring` crate with `apple-native` feature. **No plaintext storage.**
     *   **Access Tokens** are obtained fresh for each command execution by exchanging the refresh token.
+    *   **Fixed Issue:** Changed from MockCredential to MacCredential for proper macOS Keychain integration.
 4.  **Auto-Verification:** The TUI proactively verifies the session status on startup, providing visual feedback (`Auth: ✅ Active` / `Auth: ❌ Expired`) in the bottom status bar.
 5.  **Session Persistence:** If a profile is stored, the TUI automatically loads and attempts to verify the session upon launch, making re-login less frequent.
 6.  **Data Display:** The Settings tab provides detailed tenant and user information extracted directly from the authenticated token.
@@ -159,6 +160,22 @@ The platform employs robust, secure authentication:
 -   **Tokens passed via stdin** to TypeScript workers, avoiding exposure in process listings.
 -   **Refresh tokens automatically rotated** and updated in the keyring.
 -   **Client ID**: Uses Microsoft's official "Microsoft Graph PowerShell" app ID by default.
+
+## 📝 Logging System
+
+Session-based logging with organized historical tracking:
+
+1.  **Log Directory:** All logs are stored in `logs/` directory at project root.
+2.  **Session Files:** Each run creates a new log file: `o365-cli_YYYYMMDD_HHMMSS.log`
+3.  **Session ID:** Logged at startup for easy correlation and debugging.
+4.  **Log Level:** Debug level with RFC3339 timestamps for detailed troubleshooting.
+5.  **No Overwriting:** Every session maintains its own permanent log file.
+
+**Benefits:**
+-   Track historical runs and compare across sessions
+-   Debug issues by examining specific session logs
+-   Organized by timestamp for easy navigation
+-   Persistent audit trail for compliance
 
 ---
 
@@ -191,19 +208,19 @@ Contains original PowerShell automation scripts. These serve as **reference impl
 
 This matrix provides a high-level overview of each module's development progress across the platform components.
 
-| Module ID | Module Name | Legacy (PowerShell) | Core (TypeScript) | TUI Integration (Rust) |
-| :--- | :--- | :---: | :---: | :---: |
-| **IAM-01** | Graceful Offboarding | ✅ Stable | 🚧 In Progress | ❌ Planned |
-| **IAM-01-G** | Guest User Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
-| **IAM-01-N** | New User Onboarding | 🚧 Partial | ❌ Planned | ❌ Planned |
-| **SEC-02-S** | Shadow IT Governance | ✅ Stable | ✅ Production | ✅ Accessible |
-| **SEC-02-K** | Surgical Lockdown | ✅ Stable | ❌ Planned | ❌ Planned |
-| **SEC-02** | External Sharing Audit | ✅ Stable | ❌ Planned | ❌ Planned |
-| **SEC-02-M** | Mailbox Permissions | ❌ Planned | ❌ Planned | ❌ Planned |
-| **RES-03** | License Optimization | ✅ Stable | ❌ Planned | ❌ Planned |
-| **RES-03-D** | Stale Device Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
-| **REP-04** | 360° User Analyzer | ✅ Stable | ❌ Planned | ❌ Planned |
-| **REP-04-T** | Teams Sprawl Report | ❌ Planned | ❌ Planned | ❌ Planned |
+| Module ID | Module Name | Legacy (PowerShell) | Core (TypeScript) | TUI Integration (Rust) | Key Features |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **IAM-01** | Graceful Offboarding | ✅ Stable | 🚧 In Progress | ❌ Planned | Block sign-in, convert to shared mailbox, license reclaim |
+| **IAM-01-G** | Guest User Cleanup | ✅ Stable | ❌ Planned | ❌ Planned | Orphan detection, asset handover |
+| **IAM-01-N** | New User Onboarding | 🚧 Partial | ❌ Planned | ❌ Planned | Automated provisioning workflow |
+| **SEC-02-S** | Shadow IT Governance | ✅ Stable | ✅ **Enhanced** | ✅ Accessible | **NEW:** Permission severity (CRITICAL/HIGH/MEDIUM/LOW), actionable recommendations, MS service principal filtering, dual-scan (delegated + app permissions), last sign-in tracking, timeout protection |
+| **SEC-02-K** | Surgical Lockdown | ✅ Stable | ❌ Planned | ❌ Planned | Emergency account restrictions |
+| **SEC-02** | External Sharing Audit | ✅ Stable | ❌ Planned | ❌ Planned | SharePoint/OneDrive external links |
+| **SEC-02-M** | Mailbox Permissions | ❌ Planned | ❌ Planned | ❌ Planned | Delegated mailbox access audit |
+| **RES-03** | License Optimization | ✅ Stable | ❌ Planned | ❌ Planned | Unused license identification |
+| **RES-03-D** | Stale Device Cleanup | ✅ Stable | ❌ Planned | ❌ Planned | Hybrid-aware device cleanup |
+| **REP-04** | 360° User Analyzer | ✅ Stable | ❌ Planned | ❌ Planned | Comprehensive user activity report |
+| **REP-04-T** | Teams Sprawl Report | ❌ Planned | ❌ Planned | ❌ Planned | Unused Teams identification |
 
 **Legend:**
 *   ✅ **Stable/Production:** Fully functional and tested.
