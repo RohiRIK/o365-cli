@@ -73,6 +73,29 @@ The platform is divided into four strategic pillars. Each module is designed to 
 
 ---
 
+## 📊 Implementation Status Matrix
+
+| Module ID | Module Name | Legacy (PowerShell) | Core (TypeScript) | TUI Integration (Rust) |
+| :--- | :--- | :---: | :---: | :---: |
+| **IAM-01** | Graceful Offboarding | ✅ Stable | 🚧 In Progress | ❌ Planned |
+| **IAM-01-G** | Guest User Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
+| **IAM-01-N** | New User Onboarding | 🚧 Partial | ❌ Planned | ❌ Planned |
+| **SEC-02-S** | Shadow IT Governance | ✅ Stable | ✅ Production | ✅ Accessible |
+| **SEC-02-K** | Surgical Lockdown | ✅ Stable | ❌ Planned | ❌ Planned |
+| **SEC-02** | External Sharing Audit | ✅ Stable | ❌ Planned | ❌ Planned |
+| **SEC-02-M** | Mailbox Permissions | ❌ Planned | ❌ Planned | ❌ Planned |
+| **RES-03** | License Optimization | ✅ Stable | ❌ Planned | ❌ Planned |
+| **RES-03-D** | Stale Device Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
+| **REP-04** | 360° User Analyzer | ✅ Stable | ❌ Planned | ❌ Planned |
+| **REP-04-T** | Teams Sprawl Report | ❌ Planned | ❌ Planned | ❌ Planned |
+
+**Legend:**
+*   ✅ **Stable/Production:** Fully functional and tested.
+*   🚧 **In Progress:** Code exists but may be incomplete or beta.
+*   ❌ **Planned:** Specified in architecture but implementation not started.
+
+---
+
 ## 🛠️ Technical Architecture
 
 This project uses a **Hybrid Architecture** to leverage the best of all worlds:
