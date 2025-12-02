@@ -268,8 +268,16 @@ impl App {
             },
             CurrentTab::IAM => match self.iam_index {
                 0 => { 
-                    self.add_log("Not Implemented: Graceful Offboarding".to_string());
-                    None
+                    self.add_log("Queueing: Graceful Offboarding...".to_string());
+                    self.add_log("⚠️  Please edit cli/src/app.rs to provide actual user & manager emails for testing.".to_string());
+                    Some(AppAction::RunTask { 
+                        name: "iam:offboard".to_string(), 
+                        args: vec![
+                            "--email".to_string(), "test.leaver@yourdomain.com".to_string(), // REPLACE ME
+                            "--managerEmail".to_string(), "your.manager@yourdomain.com".to_string(), // REPLACE ME
+                            "--dry-run".to_string(), self.dry_run.to_string() 
+                        ] 
+                    })
                 },
                 1 => { 
                     self.add_log("Not Implemented: Guest User Cleanup".to_string());
