@@ -1,7 +1,5 @@
 import { GraphService } from "../../services/graph";
 import { IPC } from "../../utils/ipc";
-import * as fs from "fs";
-import * as path from "path";
 
 // TODO: Move to external config
 const HIGH_RISK_SCOPES = [

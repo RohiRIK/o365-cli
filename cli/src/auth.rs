@@ -6,6 +6,8 @@ use oauth2::{
 };
 use std::env;
 use std::fmt;
+use std::fs;
+use std::path::PathBuf;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
 use url::Url;
@@ -57,13 +59,62 @@ fn get_keyring_entry() -> Result<Entry> {
         .context("Failed to access system keyring")
 }
 
+fn get_legacy_cache_path() -> Result<PathBuf> {
+    let current_dir = std::env::current_dir()?;
+    let root_dir = if current_dir.ends_with("cli") {
+        current_dir
+    } else {
+        current_dir.join("cli")
+    };
+    Ok(root_dir.join(".o365_cli_token"))
+}
+
+// Migrate old file-based token to keyring
+fn migrate_legacy_token() -> Result<()> {
+    let legacy_path = get_legacy_cache_path()?;
+    
+    if !legacy_path.exists() {
+        return Ok(()); // Nothing to migrate
+    }
+    
+    // Read old token
+    let token = fs::read_to_string(&legacy_path)
+        .context("Failed to read legacy token file")?;
+    
+    if token.trim().is_empty() {
+        fs::remove_file(&legacy_path)?;
+        return Ok(());
+    }
+    
+    // Store in keyring
+    let entry = get_keyring_entry()?;
+    entry.set_password(token.trim())
+        .context("Failed to migrate token to keyring")?;
+    
+    // Remove old file
+    fs::remove_file(&legacy_path)?;
+    
+    log::info!("Successfully migrated token from file to keyring");
+    Ok(())
+}
+
 pub fn clear_keychain_entry() -> Result<()> {
+    // Clear keyring
     let entry = get_keyring_entry()?;
     match entry.delete_credential() {
-        Ok(_) => Ok(()),
-        Err(keyring::Error::NoEntry) => Ok(()), // Already cleared
-        Err(e) => Err(anyhow::anyhow!("Failed to clear keyring: {}", e)),
+        Ok(_) => {},
+        Err(keyring::Error::NoEntry) => {},
+        Err(e) => return Err(anyhow::anyhow!("Failed to clear keyring: {}", e)),
     }
+    
+    // Also clear legacy file if it exists
+    if let Ok(legacy_path) = get_legacy_cache_path() {
+        if legacy_path.exists() {
+            let _ = fs::remove_file(legacy_path);
+        }
+    }
+    
+    Ok(())
 }
 
 impl AuthManager {
@@ -201,12 +252,19 @@ impl AuthManager {
             let entry = get_keyring_entry()?;
             entry.set_password(new_refresh_token.secret())
                 .context("Failed to store refresh token in keyring")?;
+            log::info!("✅ Refresh token stored in keyring successfully");
+        } else {
+            log::error!("❌ OAuth token response did not include refresh token - offline_access scope may not be granted");
+            return Err(anyhow::anyhow!("Microsoft did not return a refresh token. This usually means the 'offline_access' scope was not consented. Please retry login and ensure you consent to all permissions."));
         }
 
         Ok(access_token)
     }
 
     pub async fn get_access_token(&self) -> Result<String> {
+        // Try to migrate legacy token first
+        let _ = migrate_legacy_token();
+        
         // Retrieve refresh token from secure keyring
         let entry = get_keyring_entry()?;
         let refresh_token_secret = entry.get_password()

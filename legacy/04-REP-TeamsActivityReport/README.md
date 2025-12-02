@@ -1,10 +1,15 @@
-# Teams Activity Report Script
+# Teams Activity Report Module
 
-This script generates a report on Microsoft Teams activity and configuration.
+## Context
+This folder is reserved for analyzing Microsoft Teams usage, focusing on inactive teams and guest access within teams.
 
-## Key Features
-*   Identifies potentially inactive or abandoned teams.
-*   Reports on large files stored in Teams channels.
-*   Lists teams with a high number of external guest users.
-*   Provides insights into team ownership and membership.
-*   Exports data to a CSV for review.
+## Planned Scripts
+*   `Invoke-TeamsActivity_Report.ps1` (Not yet implemented)
+
+## Intended Scope
+1.  **Team Lifecycle:** Identify "Zombie Teams" (No activity > 90 days).
+2.  **Guest Review:** List external guests per Team.
+3.  **Ownerless Teams:** Flag Teams that have no valid owners.
+
+## Operational Rules
+*   **Dependencies:** Will require `Microsoft.Graph` (Teams/Groups endpoints).

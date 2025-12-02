@@ -1,60 +1,21 @@
-# Graceful Offboarding Action Tool
+# Graceful Offboarding Module
 
-This PowerShell script, `Invoke-GracefulOffboarding_Action.ps1`, automates the standard "soft" offboarding process for employee terminations. Unlike emergency lockdowns, this workflow focuses on data preservation, delegation, and license optimization.
+## Context
+This folder contains the standard automation logic for "Graceful Exit" employee terminations. It differs from "Surgical Lockdown" by focusing on data preservation and handover rather than immediate security containment.
 
-## Workflow
+## Scripts
+*   **`Invoke-GracefulOffboarding_Action.ps1`**: The main executor.
+    *   **Type:** Action / Write (Modifies Tenant).
+    *   **Input:** `UserPrincipalName` (Leaver), `ManagerEmail` (Receiver).
+    *   **Dependencies:** Requires both `Microsoft.Graph` (Identity/Licensing) and `ExchangeOnlineManagement` (Mailbox/GAL).
 
-The script performs the following steps in order:
+## Key Logic
+1.  **Block Login:** Ensures `AccountEnabled` is false.
+2.  **Mailbox Conversion:** Converts User Mailbox -> Shared Mailbox (Retains data for free <50GB).
+3.  **GAL Hiding:** Sets `HiddenFromAddressListsEnabled` to true.
+4.  **Handover:** Grants `FullAccess` permission to the specified Manager.
+5.  **License Reclamation:** Removes all assigned licenses *after* mailbox conversion to ensure no data loss.
 
-1.  **Block Sign-in:** Ensures the user account is disabled in Entra ID (Azure AD).
-2.  **Convert to Shared Mailbox:** Converts the user's Exchange Online mailbox to a "Shared Mailbox". This preserves mailbox data indefinitely for free (under 50GB) and frees up the Office 365 license.
-3.  **Hide from GAL:** Hides the user from the Global Address List so they no longer appear in Outlook address books.
-4.  **Grant Manager Access:** Assigns "Full Access" and "Send As" permissions (AutoMapped) to the specified manager, allowing them to monitor the leaver's email.
-5.  **Reclaim Licenses:** Removes all assigned Office 365 licenses from the user account to stop billing.
-
-## Prerequisites
-
-*   **PowerShell 7+ (Core):** Recommended.
-*   **Modules:** Requires **both** of the following modules:
-    ```powershell
-    Install-Module Microsoft.Graph -Scope CurrentUser
-    Install-Module ExchangeOnlineManagement -Scope CurrentUser
-    ```
-*   **Permissions:** The running account needs:
-    *   **Entra ID:** `User Administrator` or `Global Administrator` (to manage users and licenses).
-    *   **Exchange Online:** `Exchange Administrator` or `Global Administrator` (to manage mailboxes).
-
-## Usage
-
-Run the script from a PowerShell console. You will likely need to authenticate interactively for Exchange Online.
-
-```powershell
-.\GracefulOffboarding_Script\Invoke-GracefulOffboarding_Action.ps1 -UserPrincipalName "leaver@domain.com" -ManagerEmail "manager@domain.com"
-```
-
-### Parameters
-
-*   `-UserPrincipalName` (string, Mandatory): The UPN of the employee leaving the company.
-*   `-ManagerEmail` (string, Mandatory): The UPN/Email of the manager receiving access to the data.
-*   `-ExecuteLive` (switch):
-    *   If **Omitted** (Default): Runs in **SIMULATION MODE**. Reports what would happen without making changes.
-    *   If **Included** (`-ExecuteLive`): **EXECUTES** the offboarding actions immediately.
-
-### Examples
-
-**1. Simulation (Default)**
-Preview the offboarding steps for "john.doe".
-```powershell
-.\GracefulOffboarding_Script\Invoke-GracefulOffboarding_Action.ps1 -UserPrincipalName "john.doe@contoso.com" -ManagerEmail "jane.boss@contoso.com"
-```
-
-**2. Live Offboarding**
-Perform the actual offboarding.
-```powershell
-.\GracefulOffboarding_Script\Invoke-GracefulOffboarding_Action.ps1 -UserPrincipalName "john.doe@contoso.com" -ManagerEmail "jane.boss@contoso.com" -ExecuteLive
-```
-
-## Notes
-
-*   **Exchange Connection:** The script attempts to connect to Exchange Online. If you are not already connected, it may prompt for authentication.
-*   **Shared Mailbox Conversion:** This step usually requires the user to still have a license attached *at the moment of conversion*. The script handles this by converting *before* removing the license.
+## Operational Rules
+*   **Simulation Default:** Uses `-ExecuteLive` switch. Defaults to simulation (Dry Run).
+*   **Timing:** Should be run *on* the termination date, typically after the user's last active hour.

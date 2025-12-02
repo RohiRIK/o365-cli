@@ -94,8 +94,15 @@ AppAction::RunTask {
 
 ## IPC Protocol
 
-Workers communicate with Rust via **JSON-over-stdout**. Three message types:
+Workers communicate with Rust via **JSON-over-stdout** and receive the auth token via **stdin**:
 
+**Stdin (Rust → TypeScript)**:
+```typescript
+// Worker reads token from stdin on startup
+await GraphService.initialize(); // Reads token from stdin
+```
+
+**Stdout (TypeScript → Rust)**:
 ```typescript
 // Progress updates (non-blocking)
 IPC.progress("Fetching users...", 25);
@@ -107,16 +114,26 @@ IPC.success({ table: { headers: [...], rows: [...] } });
 IPC.error("User not found");
 ```
 
-**Rust Parser**: `cli/src/runner.rs` reads stdout line-by-line, deserializing into `IpcMessage` enum. Table data is automatically rendered in TUI as a `comfy-table`.
+**Important**: Workers MUST call `GraphService.initialize()` before any commands run to read the token from stdin. The `core/src/index.ts` main function handles this automatically.
+
+**Rust Parser**: `cli/src/runner.rs` writes token to stdin, then reads stdout line-by-line, deserializing into `IpcMessage` enum. Table data is automatically rendered in TUI as a `comfy-table`.
 
 ## Authentication Flow
 
 1. User runs `o365-cli login` or presses `L` in TUI
-2. Rust generates PKCE challenge and opens browser to Microsoft login
-3. Local HTTP server (localhost:8000) captures redirect with auth code
-4. Token exchange happens in Rust using `oauth2` crate
-5. Access token stored in `.o365_cli_token` (plaintext file in `cli/` directory)
-6. On subsequent runs, token is loaded from cache and injected into `GRAPH_TOKEN` env var for workers
+2. Rust generates PKCE challenge with CSRF protection and opens browser to Microsoft login
+3. Local HTTP server (random port) captures redirect with auth code
+4. **CSRF state parameter validated** before proceeding
+5. Token exchange happens in Rust using `oauth2` crate
+6. Refresh token stored **securely in OS keyring** (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+7. On subsequent runs, refresh token retrieved from keyring and exchanged for fresh access token
+8. Access token passed to TypeScript workers via **stdin pipe** (not environment variable)
+
+**Security Notes**:
+- No plaintext token storage - uses system keyring via `keyring` crate
+- CSRF validation prevents authorization code interception attacks
+- Tokens passed via stdin to avoid exposure in process listings
+- Refresh tokens automatically rotated and updated in keyring
 
 **Client ID**: Uses Microsoft's official "Microsoft Graph PowerShell" app ID (`14d82eec-204b-4c2f-b7e8-296a70dab67e`) by default. Override with `AZURE_CLIENT_ID` env var.
 
@@ -132,9 +149,14 @@ Format: `{category}:{action}` where:
 
 Example: `sec:shadow-it`, `iam:offboard`
 
-### Token Caching
+### Token Management
 
-Token persistence uses a **file-based cache** at `cli/.o365_cli_token` (NOT the system keyring despite `keyring` dependency). Token refresh is NOT implemented—users must re-authenticate when expired.
+Tokens are stored securely in the **system keyring** using the `keyring` crate:
+- **macOS**: Keychain (via Security Framework)
+- **Windows**: Credential Manager
+- **Linux**: Secret Service API
+
+Refresh tokens are automatically rotated when Graph API returns new ones. Access tokens are obtained fresh for each command execution by exchanging the refresh token.
 
 ### Dry-Run Mode
 

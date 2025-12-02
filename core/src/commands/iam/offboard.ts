@@ -1,12 +1,6 @@
 import { GraphService } from "../../services/graph";
 import { IPC } from "../../utils/ipc";
 
-interface OffboardParams {
-  email: string;
-  managerEmail: string;
-  dryRun?: boolean;
-}
-
 export async function offboardUser(email: string, managerEmail?: string, dryRun: boolean = true) {
   IPC.progress(`Starting graceful offboarding for ${email}...`, 0);
   const client = GraphService.getClient();

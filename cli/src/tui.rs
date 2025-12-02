@@ -78,18 +78,17 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app
                 let action = app.on_key(key.code);
                 match action {
                     Some(crate::app::AppAction::Login) => {
-                        // Start Login Flow
+                        // Start Login Flow with tenant from profile or default to common
                         app.is_loading = true;
-                        app.add_log("🚀 Starting Authentication Flow...".to_string());
+                        let tenant_to_use = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() {
+                            "common".to_string()
+                        } else {
+                            app.tenant_id.clone()
+                        };
+                        app.add_log(format!("🚀 Authenticating with tenant: {}...", tenant_to_use));
                         terminal.draw(|f| crate::ui::render(f, &mut app))?; // Force redraw to show loading
 
-                        // Use tenant from app state, default to "common" for multi-tenant
-                        let tenant = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() {
-                            "common"
-                        } else {
-                            app.tenant_id.as_str()
-                        };
-                        let auth = AuthManager::new(tenant)?;
+                        let auth = AuthManager::new(&tenant_to_use)?;
                         match auth.login().await {
                             Ok(token) => {
                                 app.add_log("✅ Login Successful!".to_string());

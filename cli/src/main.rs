@@ -40,18 +40,29 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize File Logger
+    // Initialize File Logger with timestamp and detailed output
+    let log_path = std::env::current_dir()
+        .unwrap()
+        .join("o365-cli.log");
+    
     CombinedLogger::init(
         vec![
             WriteLogger::new(
-                LevelFilter::Info,
-                Config::default(),
-                File::create("o365-cli.log").unwrap(),
+                LevelFilter::Debug, // Changed to Debug for more detailed logs
+                ConfigBuilder::new()
+                    .set_time_format_rfc3339()
+                    .set_thread_level(LevelFilter::Error)
+                    .set_target_level(LevelFilter::Error)
+                    .build(),
+                File::create(&log_path).unwrap(),
             ),
         ]
     ).unwrap();
 
-    log::info!("Starting o365-cli...");
+    log::info!("=================================");
+    log::info!("Starting o365-cli v{}", env!("CARGO_PKG_VERSION"));
+    log::info!("Log file: {}", log_path.display());
+    log::info!("=================================");
 
     // Check if arguments were provided
     if std::env::args().len() <= 1 {

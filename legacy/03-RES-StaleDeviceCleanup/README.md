@@ -1,72 +1,24 @@
-# Smart Stale Device Cleanup Tool
+# Stale Device Cleanup Module
 
-This PowerShell script, `Invoke-StaleDevice_Cleanup.ps1`, is an intelligent maintenance tool designed to keep your Microsoft Entra ID (Azure AD) device inventory clean and secure. It identifies and removes stale devices based on inactivity while employing advanced safeguards to prevent accidental deletion of critical assets.
+## Context
+This folder contains logic for maintaining hygiene in Entra ID (Azure AD) device records. It removes old, unused devices to improve security posture and reporting accuracy.
 
-## Key Features
+## Scripts
+*   **`Invoke-StaleDevice_Cleanup.ps1`**: The main engine.
+    *   **Type:** Action / Write (Modifies Tenant).
+    *   **Input:** `TargetTrustType` (AzureAd, Workplace, ServerAd), `DaysInactive`.
+    *   **Output:** CSV Report, Deletion Actions.
 
-*   **Registration Type Awareness (TrustType):** The script distinguishes between different device types:
-    *   `AzureAd`: Cloud-only joined devices.
-    *   `Workplace`: Registered personal devices (BYOD).
-    *   `ServerAd`: Hybrid AD joined devices (on-premises sync).
-*   **Hybrid Protection:** By default, the script **excludes** Hybrid Joined devices (`ServerAd`) from cleanup. Deleting these in the cloud without removing them from on-premises AD can cause sync errors ("zombie devices").
-*   **Autopilot Safety:** It automatically detects and skips devices with a specialized `ProfileType` (often indicating Windows Autopilot or Kiosk mode), preventing the accidental deletion of zero-touch deployment records.
-*   **Configurable Staleness:** You can define the exact number of days (`-DaysInactive`) before a device is considered stale.
+## Key Logic
+1.  **TrustType Awareness:** Filters devices based on how they are registered.
+    *   `AzureAd`: Cloud-only joined.
+    *   `Workplace`: Personal devices (BYOD) registered via "Add Work Account".
+    *   `ServerAd`: Hybrid joined (Synced from On-Prem AD). *Excluded by default to prevent sync loops.*
+2.  **Autopilot Protection:** Explicitly checks `PhysicalIds` for `[ZTDId]` to ensure Autopilot records (which often appear inactive before deployment) are **never** deleted.
+3.  **Staleness Check:**
+    *   Flags devices inactive > `$DaysInactive` (Default: 90).
+    *   Flags devices created > 30 days ago that *never* signed in.
 
-## Prerequisites
-
-*   **PowerShell 7+ (Core):** Recommended.
-*   **Microsoft Graph PowerShell Module:**
-    ```powershell
-    Install-Module Microsoft.Graph -Scope CurrentUser
-    ```
-*   **Permissions:** The account running the script needs:
-    *   `Device.ReadWrite.All` (to delete devices)
-    *   `Device.Read.All` (to scan)
-
-## Usage
-
-Run the script from a PowerShell console.
-
-```powershell
-.\StaleDevice_Script\Invoke-StaleDevice_Cleanup.ps1
-```
-
-### Parameters
-
-*   `-ExecuteLive` (switch): If present, the script **PERMANENTLY DELETES** identified stale devices. If omitted (default), it runs in "Audit Mode" and only reports what would be deleted.
-*   `-DaysInactive` (int): The number of days a device must be inactive to be considered stale. Default: `90`.
-*   `-TargetTrustType` (string[]): The types of devices to clean. Default: `@("AzureAd", "Workplace")`.
-    *   To clean everything including Hybrid (Use Caution!): `-TargetTrustType "AzureAd", "Workplace", "ServerAd"`
-*   `-ReportPath` (string): Path to the CSV report. Default: `.\StaleDevices_Report.csv`.
-
-### Examples
-
-**1. Audit (Dry Run) - Default**
-Scan for stale cloud and BYOD devices inactive for 90 days. No changes made.
-```powershell
-.\StaleDevice_Script\Invoke-StaleDevice_Cleanup.ps1
-```
-
-**2. Live Cleanup**
-Delete stale devices that haven't checked in for 120 days.
-```powershell
-.\StaleDevice_Script\Invoke-StaleDevice_Cleanup.ps1 -DaysInactive 120 -ExecuteLive
-```
-
-**3. Clean Only BYOD Devices**
-Target only personal devices (`Workplace`) that are stale.
-```powershell
-.\StaleDevice_Script\Invoke-StaleDevice_Cleanup.ps1 -TargetTrustType "Workplace" -ExecuteLive
-```
-
-## Report Output (`StaleDevices_Report.csv`)
-
-The CSV report contains:
-*   **DeviceName:** Display name of the device.
-*   **DeviceId:** The unique Entra ID object ID.
-*   **TrustType:** The registration type (AzureAd, Workplace, etc.).
-*   **OS:** The operating system.
-*   **LastSeen:** Approximate last sign-in timestamp.
-*   **CreatedDate:** When the device was registered.
-*   **Status:** `Pending` (Audit) or `Deleted` (Live).
-*   **Reason:** Why the device was flagged (e.g., "Inactive (AzureAd) since 2023-01-01").
+## Operational Rules
+*   **Simulation Default:** Uses `-ExecuteLive` switch. Defaults to simulation (Dry Run).
+*   **Hybrid Caution:** Do NOT delete `ServerAd` (Hybrid) devices from the cloud. They must be deleted from On-Prem AD first, or they will simply re-sync (Zombie devices).

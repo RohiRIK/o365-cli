@@ -19,11 +19,11 @@ pub enum Focus {
 
 #[allow(dead_code)] // Variants are constructed conditionally
 pub enum AppAction {
-    Login,
     ToggleDryRun,
     RunTask { name: String, args: Vec<String> },
     ExportResults,
     BackToMenu,
+    Login,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +60,13 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let user_profile = UserProfile::load();
+        
+        // Load tenant ID from profile
+        let tenant_id = user_profile
+            .as_ref()
+            .map(|p| p.tenant_id.clone())
+            .unwrap_or_else(|| "Not Connected".to_string());
+        
         let logs = if user_profile.is_some() {
             vec![
                 "Welcome to Office 365 Toolset".to_string(),
@@ -83,7 +90,7 @@ impl App {
             security_index: 0,
             iam_index: 0,
             settings_index: 0,
-            tenant_id: "Not Connected".to_string(),
+            tenant_id,
             dry_run: true,
             user_profile,
             task_output: None,
@@ -135,7 +142,7 @@ impl App {
                     Focus::Menu => self.next_tab(), 
                     Focus::Content => self.move_content_down(), 
                     Focus::Logs => self.scroll_logs_down(),
-                }
+                };
                 None
             },
             KeyCode::Up | KeyCode::Char('k') => {
@@ -284,6 +291,8 @@ impl App {
                      Some(AppAction::ToggleDryRun)
                 },
                 1 => {
+                     // Trigger login action (will use stored tenant from profile)
+                     self.add_log("Starting authentication flow...".to_string());
                      Some(AppAction::Login)
                 },
                 _ => None,

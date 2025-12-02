@@ -1,10 +1,16 @@
-# New User Onboarding Script
+# New User Onboarding Module
 
-This script automates the process of creating and configuring new user accounts in Microsoft 365 and Entra ID.
+## Context
+This folder is reserved for the "New User Onboarding" automation logic. Its goal is to standardize the provisioning process for new hires.
 
-## Key Features
-*   Creates a new user account.
-*   Assigns specified licenses (e.g., Microsoft 365 E5).
-*   Adds the user to relevant groups (e.g., departmental security groups).
-*   Creates an Exchange Online mailbox.
-*   Sends a welcome email with credentials to the user's manager.
+## Planned Scripts
+*   `Invoke-NewUserOnboarding.ps1` (Not yet implemented)
+
+## Intended Scope
+1.  **Account Creation:** Standardized naming convention and attribute population (Department, Manager).
+2.  **Group Membership:** Role-based assignment to default security groups and Teams.
+3.  **License Assignment:** Automated assignment based on Department or Role.
+4.  **Welcome Email:** Sending a secure welcome packet to the user's personal email.
+
+## Operational Rules
+*   **Idempotency:** The script should be safe to run multiple times on the same user (e.g., updating missing attributes without creating duplicates).
