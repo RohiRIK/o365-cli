@@ -1,10 +1,15 @@
+mod app;
 mod auth;
+mod profile;
 mod runner;
-mod interactive;
+mod tui;
+mod ui;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
 use auth::AuthManager;
+use clap::{Parser, Subcommand};
+use simplelog::*;
+use std::fs::File;
 
 #[derive(Parser)]
 #[command(name = "o365-cli")]
@@ -35,10 +40,31 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize File Logger
+    CombinedLogger::init(
+        vec![
+            WriteLogger::new(
+                LevelFilter::Info,
+                Config::default(),
+                File::create("o365-cli.log").unwrap(),
+            ),
+        ]
+    ).unwrap();
+
+    log::info!("Starting o365-cli...");
+
     // Check if arguments were provided
     if std::env::args().len() <= 1 {
-        // No args? Interactive mode!
-        return interactive::start().await;
+        // No args? Launch TUI!
+        let mut terminal = tui::init()?;
+        let app = app::App::new();
+        let res = tui::run_app(&mut terminal, app).await;
+        tui::restore()?;
+        
+        if let Err(err) = res {
+            println!("Error running TUI: {:?}", err);
+        }
+        return Ok(());
     }
 
     let cli = Cli::parse();
@@ -50,14 +76,26 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Run { task, args }) => {
             println!("🔑 Verifying session...");
-            let auth = AuthManager::new("common")?;
+            
+            // Load profile to get tenant ID
+            let profile = profile::UserProfile::load();
+            let tenant = profile
+                .as_ref()
+                .map(|p| p.tenant_id.as_str())
+                .unwrap_or("common");
+            
+            let auth = AuthManager::new(tenant)?;
             let token = auth.get_access_token().await?;
             
-            runner::run_task(&task, &args, &token)?;
+            let _output = runner::run_task(&task, &args, &token, |msg| println!("{}", msg))?;
         }
         None => {
             // Should be unreachable due to the check at start, but safe fallback
-            interactive::start().await?;
+            let mut terminal = tui::init()?;
+            let app = app::App::new();
+            let res = tui::run_app(&mut terminal, app).await;
+            tui::restore()?;
+            res?;
         }
     }
 

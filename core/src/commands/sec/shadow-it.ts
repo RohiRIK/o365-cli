@@ -231,41 +231,6 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
 
     IPC.progress(`Found ${riskyGrants.length} risky grants.`, 90);
 
-    // Generate CSV
-    const csvHeader = "DetectedDate,Action,AppName,CredentialHealth,AppId,Publisher,VerifiedPub,Homepage,ReplyUrls,SecretStatus,CertStatus,UserUPN,UserDisplayName,JobTitle,Department,Manager,LastSignIn,GrantStart,GrantExpiry,RiskyScopes,AllScopes\n";
-    const detectedDate = new Date().toISOString().split('T')[0];
-    const action = dryRun ? "Audit Only" : "Revoked";
-
-    const csvRows = riskyGrants.map(g => {
-        return [
-            detectedDate,
-            action,
-            `"${g.appName}"`, 
-            `"${g.credentialHealth}"`,
-            `"${g.appId}"`, 
-            `"${g.publisher}"`, 
-            `"${g.publisher !== 'Unverified' ? 'Yes' : 'No'}"`, 
-            `"${g.homepage}"`, 
-            `"${g.replyUrls}"`, 
-            `"${g.secretStatus}"`, 
-            `"${g.certStatus}"`, 
-            `"${g.user}"`, 
-            `"${g.userDisplayName}"`, 
-            `"${g.jobTitle}"`, 
-            `"${g.department}"`, 
-            `"${g.manager}"`, 
-            `"${g.lastSignIn}"`, 
-            `"${g.grantStart}"`, 
-            `"${g.grantExpiry}"`, 
-            `"${g.riskyScopes}"`,
-            `"${g.scopes}"`
-        ].join(",");
-    }).join("\n");
-
-    const fileName = `shadow_it_report_${Date.now()}.csv`;
-    const filePath = path.resolve(process.cwd(), fileName);
-    fs.writeFileSync(filePath, csvHeader + csvRows);
-
     // Prepare Table Data for Rust
     const tableRows = riskyGrants.map(g => [
         g.appName, 
@@ -278,7 +243,7 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
 
     const successPayload = {
         message: dryRun ? "Audit Complete (Dry Run)" : "Remediation Complete",
-        file_path: filePath,
+        // file_path: filePath, // Removed auto-save
         table: {
             headers: ["App Name", "Creds Health", "Publisher", "User", "Dept", "Risky Scopes"],
             rows: tableRows

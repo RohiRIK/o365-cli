@@ -6,15 +6,16 @@ use oauth2::{
 };
 use std::env;
 use std::fmt;
-use std::fs;
-use std::path::PathBuf;
 use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
 use url::Url;
 use reqwest::Client as ReqwestClient;
+use keyring::Entry;
 
 // Official "Microsoft Graph PowerShell" Client ID
 const DEFAULT_CLIENT_ID: &str = "14d82eec-204b-4c2f-b7e8-296a70dab67e";
+const KEYRING_SERVICE: &str = "o365-cli";
+const KEYRING_USER: &str = "refresh_token";
 
 pub struct AuthManager {
     client_id: ClientId,
@@ -51,24 +52,18 @@ impl From<oauth2::http::Error> for HttpClientError {
     }
 }
 
-fn get_cache_path() -> Result<PathBuf> {
-    let current_dir = std::env::current_dir()?;
-    // Handle running from project root or inside cli/
-    let root_dir = if current_dir.ends_with("cli") {
-        current_dir
-    } else {
-        current_dir.join("cli")
-    };
-    Ok(root_dir.join(".o365_cli_token"))
+fn get_keyring_entry() -> Result<Entry> {
+    Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        .context("Failed to access system keyring")
 }
 
 pub fn clear_keychain_entry() -> Result<()> {
-    let path = get_cache_path()?;
-    if path.exists() {
-        fs::remove_file(path)?;
-        println!("🗑️  Previous session cleared.");
+    let entry = get_keyring_entry()?;
+    match entry.delete_credential() {
+        Ok(_) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()), // Already cleared
+        Err(e) => Err(anyhow::anyhow!("Failed to clear keyring: {}", e)),
     }
-    Ok(())
 }
 
 impl AuthManager {
@@ -120,7 +115,7 @@ impl AuthManager {
         let port = listener.local_addr()?.port();
         let redirect_uri = format!("http://localhost:{}", port);
         
-        println!("🌐 Listening on {}", redirect_uri);
+        // println!("🌐 Listening on {}", redirect_uri);
 
         // 2. Setup Client
         let client = BasicClient::new(self.client_id.clone())
@@ -131,20 +126,22 @@ impl AuthManager {
         // 3. Generate PKCE Challenge
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-        // 4. Generate Auth URL
-        let (auth_url, _csrf_token) = client
+        // 4. Generate Auth URL with CSRF protection
+        let (auth_url, csrf_token) = client
             .authorize_url(CsrfToken::new_random)
             .add_scope(Scope::new("User.Read".to_string()))
             .add_scope(Scope::new("Directory.ReadWrite.All".to_string()))
             .add_scope(Scope::new("offline_access".to_string()))
             .set_pkce_challenge(pkce_challenge)
             .url();
+        
+        let csrf_state = csrf_token.secret().clone();
 
         // 5. Open Browser
-        println!("🚀 Opening browser for authentication...");
+        // println!("🚀 Opening browser for authentication...");
         if webbrowser::open(auth_url.as_str()).is_err() {
-             println!("⚠️  Failed to open browser automatically.");
-             println!("🔗 Please open this URL manually: {}", auth_url);
+             // println!("⚠️  Failed to open browser automatically.");
+             // println!("🔗 Please open this URL manually: {}", auth_url);
         }
 
         // 6. Wait for Callback
@@ -165,6 +162,15 @@ impl AuthManager {
              .unwrap()
              .join(redirect_path)?;
         
+        // Validate CSRF state parameter
+        let state_param = url.query_pairs()
+            .find(|(key, _)| key == "state")
+            .ok_or_else(|| anyhow::anyhow!("Missing state parameter in OAuth callback"))?;
+        
+        if state_param.1 != csrf_state {
+            return Err(anyhow::anyhow!("CSRF validation failed: state mismatch"));
+        }
+        
         let code_pair = url.query_pairs()
             .find(|(key, _)| key == "code")
             .ok_or_else(|| anyhow::anyhow!("Failed to retrieve authorization code from callback. Received: {}", redirect_path))?;
@@ -181,7 +187,7 @@ impl AuthManager {
         stream.write_all(response.as_bytes())?;
 
         // 7. Exchange Code for Token
-        println!("🔄 Exchanging code for token...");
+        // println!("🔄 Exchanging code for token...");
         let token_result = client
             .exchange_code(code)
             .set_pkce_verifier(pkce_verifier)
@@ -190,21 +196,21 @@ impl AuthManager {
 
         let access_token = token_result.access_token().secret().clone();
 
+        // Store refresh token securely in system keyring
         if let Some(new_refresh_token) = token_result.refresh_token() {
-            let path = get_cache_path()?;
-            fs::write(&path, new_refresh_token.secret())?;
+            let entry = get_keyring_entry()?;
+            entry.set_password(new_refresh_token.secret())
+                .context("Failed to store refresh token in keyring")?;
         }
 
         Ok(access_token)
     }
 
     pub async fn get_access_token(&self) -> Result<String> {
-        let path = get_cache_path()?;
-        
-        let refresh_token_secret = match fs::read_to_string(&path) {
-            Ok(secret) => secret,
-            Err(_) => return Err(anyhow::anyhow!("No credentials found. Please run `mytool login`.")),
-        };
+        // Retrieve refresh token from secure keyring
+        let entry = get_keyring_entry()?;
+        let refresh_token_secret = entry.get_password()
+            .context("No credentials found. Please run `o365-cli login`.")?;
 
         let refresh_token = RefreshToken::new(refresh_token_secret.trim().to_string());
 
@@ -218,9 +224,10 @@ impl AuthManager {
             .await
             .context("Failed to refresh token. Please login again.")?;
 
+        // Update refresh token in keyring if rotated
         if let Some(new_refresh_token) = token_result.refresh_token() {
-             // Update cache
-             let _ = fs::write(&path, new_refresh_token.secret());
+            entry.set_password(new_refresh_token.secret())
+                .context("Failed to update refresh token in keyring")?;
         }
 
         Ok(token_result.access_token().secret().clone())

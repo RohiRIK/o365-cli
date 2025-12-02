@@ -18,10 +18,18 @@ Desktop.ini
 *.html
 *.xml
 *.json
+# But keep essential config files
+!package.json
+!tsconfig.json
+!Cargo.toml
 
 # Project specific temporary or output folders
 .gemini-clipboard/
 .gemini/
+cli/target/
+core/node_modules/
+core/bun.lock
+
 
 # Certificates
 *.pfx
@@ -35,7 +43,10 @@ env.ps1
 config.json
 *.config # Broad, but can catch config files holding secrets
 
-# Secrets
+# Secrets & Authentication
 *.secrets
 secrets.json
 credentials.json
+.o365_cli_token
+.o365_cli_profile.json
+.token_cache

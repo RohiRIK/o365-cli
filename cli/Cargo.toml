@@ -10,7 +10,10 @@ clap = { version = "4.5.53", features = ["derive"] }
 comfy-table = "7.2.1"
 crossterm = "0.29.0"
 inquire = "0.9.1"
+jsonwebtoken = "9.3.0"
 keyring = "3.6.3"
+log = "0.4.22"
+simplelog = "0.12.2"
 oauth2 = "5.0.0"
 ratatui = "0.29.0"
 reqwest = { version = "0.12.24", features = ["json", "rustls-tls"] }
