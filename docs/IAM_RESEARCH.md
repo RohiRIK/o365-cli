@@ -1,5 +1,17 @@
 # IAM Module Research & Enhancement Plan
 
+## Global API Client Best Practices
+
+To ensure resilience and optimal performance when interacting with Microsoft Graph API and other Microsoft 365 services:
+
+*   **Retry Logic (429 Too Many Requests):** Your API wrapper MUST implement automatic retry logic with exponential backoff and jitter for `429 Too Many Requests` HTTP responses. Crucially, it must **respect the `Retry-After` header** provided by the server. Ignoring this leads to further throttling.
+*   **Throttling Context:** Be aware of [Microsoft Graph throttling limits](https://learn.microsoft.com/en-us/graph/throttling). High-volume operations (e.g., scanning all users, massive batch updates) require careful design to avoid hitting these limits.
+*   **Batching:** Utilize the `$batch` endpoint for multiple non-dependent requests (up to 20 per call) to reduce overhead and improve throughput.
+*   **`$select` Fields:** Always use `$select=field1,field2,...` to fetch only the necessary properties. Avoid `*` or fetching full objects unnecessarily.
+*   **Consistency Levels:** For eventual consistency endpoints (especially `$count` or filters on new data), use the `ConsistencyLevel: eventual` header.
+
+---
+
 ## 1. Graceful Offboarding (IAM-01)
 
 ### 🔍 Current Limitations (Legacy)
@@ -27,19 +39,33 @@
     *   **Timing:** This action invalidates *Refresh Tokens*. Access Tokens live for ~60 mins. Real-time lockout is not instant without Continuous Access Evaluation (CAE).
     *   **Error Handling:** Ignore `404` if user is already deleted.
 
-#### **C. Manager Delegation (Mailbox)**
-*   **Endpoint (Graph):** `POST /users/{id}/permissions` (Beta) - *Experimental*
-*   **Endpoint (Exchange):** Use PowerShell via PSSession (Remote) as Graph mailbox permission support is incomplete.
+#### **C. Mailbox Preservation (Crucial Step!)**
+*   **Action:** Convert User Mailbox to Shared Mailbox.
+*   **Endpoint (Recommended):** Exchange Online PowerShell (`Set-Mailbox -Type Shared`).
 *   **Best Practice:**
-    *   **Auto-Mapping:** When using Exchange PS, set `-AutoMapping $true` so the mailbox appears in the manager's Outlook automatically.
+    *   **Priority:** This MUST happen *before* license removal (D) to avoid "soft-deletion" of the mailbox or losing data.
+    *   **Why Exchange PS?** Graph API's direct support for mailbox type conversion is historically unreliable/incomplete. Exchange Online PowerShell provides the robust, production-ready cmdlet.
+    *   **Prerequisite:** Ensure the user still holds a license during conversion.
+
+#### **D. Manager Delegation (Mailbox Access)**
+*   **Endpoint (Exchange PS):** `Add-MailboxPermission -Identity {user} -User {manager} -AccessRights FullAccess -InheritanceType All -AutoMapping $true`
+*   **Best Practice:**
+    *   **Auto-Mapping:** Set `-AutoMapping $true` so the mailbox appears in the manager's Outlook automatically.
     *   **Retries:** Exchange propagation takes time. Implement exponential backoff (retry 3 times with 5s, 15s, 30s delays).
 
-#### **D. Remove Licenses**
+#### **E. Remove Licenses**
 *   **Endpoint:** `POST /users/{id}/assignLicense`
 *   **Payload:** `{ "addLicenses": [], "removeLicenses": [ "skuId1", "skuId2" ] }`
 *   **Best Practice:**
     *   **Batching:** Do NOT loop. Remove *all* licenses in a single `assignLicense` call by passing all `skuIds` in the array.
     *   **Validation:** Ensure `addLicenses` is empty to avoid accidental assignment.
+
+#### **F. Intune Device Wipe/Retire**
+*   **Action:** Remove corporate data from managed devices.
+*   **Endpoint:** `POST /deviceManagement/managedDevices/{id}/retire` (Selective Wipe) or `/wipe` (Full Wipe).
+*   **Best Practice:**
+    *   **Conditional:** Check device ownership. For BYOD, `retire` is preferred. For corporate-owned, `wipe` may be appropriate.
+    *   **Asynchronous:** These are long-running operations. Monitor `operationStatus` if immediate confirmation is needed.
 
 ---
 
@@ -182,3 +208,50 @@ Audit "Keys to the Kingdom". Identify who has Global Admin or other high-privile
 | 🔴 Crit | Admin Joe | **Global Admin** | ❌ Disabled | 2023-10-22 | No |
 | 🟢 Low | Super Jane | Exchange Admin | ✅ Enforced | 2023-10-21 | Yes |
 | 🟠 High | Backup Svc | SharePoint Admin | ❌ Disabled | Never | N/A |
+
+---
+
+## 7. External Identities Governance (IAM-05)
+
+### 🔍 Purpose
+Audit and manage external identities (B2B guests, external users) and the policies governing their access to the tenant. This is crucial for preventing unmanaged access and maintaining a secure collaboration perimeter.
+
+### ⚙️ API Implementation Specifications
+
+#### **A. Cross-Tenant Access Policy (XTAP) Audit**
+*   **Endpoint:** `GET /policies/crossTenantAccessPolicy`
+*   **Endpoint:** `GET /policies/crossTenantAccessPolicy/partners/{partnerTenantId}` (for partner-specific settings)
+*   **Best Practice:**
+    *   **Default Settings:** Check `crossTenantAccessPolicy/default`. Look for `isB2BCollaborationAllowed` (should be `true` for general collaboration, `false` for strict).
+    *   **Inbound/Outbound Trust:** Verify `isMfaAcceptedFromPartners`, `isDeviceCompliantAcceptedFromPartners`, `isHybridAzureAdJoinedAcceptedFromPartners` for trusted partner policies. These should be enabled for secure collaboration.
+    *   **Unrestricted Settings:** Flag default policies where `allowedCloudEndpoints` is `null` or `[]` (meaning all endpoints) combined with `isB2BCollaborationAllowed: true`.
+    *   **Logging:** Record the tenant-wide default settings and any partner-specific overrides.
+
+#### **B. External Collaboration Settings**
+*   **Endpoint:** `GET /policies/externalIdentitiesPolicy`
+*   **Best Practice:**
+    *   **Guest Invite Restrictions:** Check `allowExternalInviterToReadUserAttributes`, `allowCreateTenants`, `allowExternalInitiatedTrusts`.
+    *   **Domain Allow/Block List:** Verify `allowedExternalDomains` or `blockedExternalDomains` to ensure only sanctioned domains can collaborate.
+    *   **User Consent:** Check `userConsentRequired` for applications.
+
+#### **C. B2B Guest Account Audit**
+*   **Endpoint:** `GET /users?$filter=userType eq 'Guest'&$select=displayName,userPrincipalName,createdDateTime,lastSignInDateTime,accountEnabled,externalUserState,externalUserStateChangeDateTime,invitedBy`
+*   **Best Practice:**
+    *   **Unredeemed Invites:** Filter for `externalUserState eq 'PendingAcceptance'` with old `createdDateTime`.
+    *   **Inactive Guests:** Similar to `IAM-01-G`, but now checking against XTAP policies.
+    *   **Inviter Trace:** Use `invitedBy` property to trace who invited the guest.
+
+#### **D. Reporting Table (Cross-Tenant Access Policy)**
+| Policy Scope | Direction | B2B Allowed | MFA Trust | Device Trust | Allowed Domains | Unrestricted |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Default | Inbound | ✅ Yes | ❌ No | ❌ No | All | 🔴 Yes |
+| Default | Outbound | ✅ Yes | ✅ Yes | ✅ Yes | All | 🔴 Yes |
+| Partner: Contoso | Inbound | ✅ Yes | ✅ Yes | ✅ Yes | N/A | 🟢 No |
+| Partner: RiskyCorp | Inbound | ❌ No | ❌ No | ❌ No | N/A | 🟢 No |
+
+#### **E. Reporting Table (Guest Users & Invites)**
+| Status | User Name | Invited By | Invite Date | Last Sign-in | Days Unaccepted | Domain |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 🟢 Active | Guest User 1 | Admin Joe | 2023-09-01 | 2023-10-25 | N/A | example.com |
+| 🟡 Pending | Guest Invite | Jane Doe | 2023-08-01 | Never | 60 | partner.com |
+| 🔴 Stale | Old Guest | Unkown | 2022-12-01 | 2023-01-01 | N/A | oldcorp.com |

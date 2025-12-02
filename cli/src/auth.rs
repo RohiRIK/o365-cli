@@ -99,11 +99,16 @@ fn migrate_legacy_token() -> Result<()> {
 }
 
 pub fn clear_keychain_entry() -> Result<()> {
+    log::debug!("[AUTH] Clearing keychain entry...");
     // Clear keyring
     let entry = get_keyring_entry()?;
     match entry.delete_credential() {
-        Ok(_) => {},
-        Err(keyring::Error::NoEntry) => {},
+        Ok(_) => {
+            log::info!("[AUTH] Keyring credential deleted successfully");
+        },
+        Err(keyring::Error::NoEntry) => {
+            log::debug!("[AUTH] No existing keyring entry to delete");
+        },
         Err(e) => return Err(anyhow::anyhow!("Failed to clear keyring: {}", e)),
     }
     
@@ -111,6 +116,7 @@ pub fn clear_keychain_entry() -> Result<()> {
     if let Ok(legacy_path) = get_legacy_cache_path() {
         if legacy_path.exists() {
             let _ = fs::remove_file(legacy_path);
+            log::info!("[AUTH] Removed legacy token file");
         }
     }
     
@@ -159,7 +165,9 @@ impl AuthManager {
     }
 
     pub async fn login(&self) -> Result<String> {
+        log::info!("[AUTH] Starting login flow...");
         clear_keychain_entry()?;
+        log::info!("[AUTH] Cleared existing keychain entries");
 
         // 1. Setup Local Listener
         let listener = TcpListener::bind("127.0.0.1:0")?;
@@ -187,19 +195,24 @@ impl AuthManager {
             .url();
         
         let csrf_state = csrf_token.secret().clone();
+        log::info!("[AUTH] Generated auth URL with scopes: User.Read, Directory.ReadWrite.All, offline_access");
+        log::debug!("[AUTH] Auth URL: {}", auth_url);
 
         // 5. Open Browser
-        // println!("🚀 Opening browser for authentication...");
+        log::info!("[AUTH] Opening browser for authentication...");
         if webbrowser::open(auth_url.as_str()).is_err() {
-             // println!("⚠️  Failed to open browser automatically.");
-             // println!("🔗 Please open this URL manually: {}", auth_url);
+             log::warn!("[AUTH] Failed to open browser automatically. URL: {}", auth_url);
+        } else {
+             log::info!("[AUTH] Browser opened successfully");
         }
 
         // 6. Wait for Callback
+        log::info!("[AUTH] Waiting for OAuth callback...");
         let (mut stream, _) = listener.accept()?;
         let mut reader = BufReader::new(&stream);
         let mut request_line = String::new();
         reader.read_line(&mut request_line)?;
+        log::debug!("[AUTH] Received HTTP request: {}", request_line.trim());
 
         // Extract code from "GET /?code=... HTTP/1.1"
         let redirect_path = request_line.split_whitespace().nth(1).unwrap_or("/");
@@ -219,14 +232,17 @@ impl AuthManager {
             .ok_or_else(|| anyhow::anyhow!("Missing state parameter in OAuth callback"))?;
         
         if state_param.1 != csrf_state {
+            log::error!("[AUTH] CSRF validation failed - state mismatch");
             return Err(anyhow::anyhow!("CSRF validation failed: state mismatch"));
         }
+        log::info!("[AUTH] CSRF validation passed");
         
         let code_pair = url.query_pairs()
             .find(|(key, _)| key == "code")
             .ok_or_else(|| anyhow::anyhow!("Failed to retrieve authorization code from callback. Received: {}", redirect_path))?;
             
         let code = AuthorizationCode::new(code_pair.1.to_string());
+        log::info!("[AUTH] Authorization code received (length: {})", code.secret().len());
 
         // Send Response to Browser
         let message = "Login Successful! You can close this window and return to the terminal.";
@@ -236,39 +252,49 @@ impl AuthManager {
             message
         );
         stream.write_all(response.as_bytes())?;
+        log::info!("[AUTH] Sent success response to browser");
 
         // 7. Exchange Code for Token
-        // println!("🔄 Exchanging code for token...");
+        log::info!("[AUTH] Exchanging authorization code for tokens...");
         let token_result = client
             .exchange_code(code)
             .set_pkce_verifier(pkce_verifier)
             .request_async(&Self::http_client)
             .await?;
+        log::info!("[AUTH] Token exchange successful");
 
         let access_token = token_result.access_token().secret().clone();
+        log::debug!("[AUTH] Access token received (length: {})", access_token.len());
 
         // Store refresh token securely in system keyring
         if let Some(new_refresh_token) = token_result.refresh_token() {
+            log::info!("[AUTH] Refresh token received from OAuth response");
             let entry = get_keyring_entry()?;
+            log::debug!("[AUTH] Keyring entry created for service: o365-cli, account: refresh_token");
             entry.set_password(new_refresh_token.secret())
                 .context("Failed to store refresh token in keyring")?;
-            log::info!("✅ Refresh token stored in keyring successfully");
+            log::info!("[AUTH] ✅ Refresh token stored in keyring successfully");
         } else {
-            log::error!("❌ OAuth token response did not include refresh token - offline_access scope may not be granted");
+            log::error!("[AUTH] ❌ OAuth token response did NOT include refresh token");
+            log::error!("[AUTH] This indicates offline_access scope was not consented or the app lacks permission");
             return Err(anyhow::anyhow!("Microsoft did not return a refresh token. This usually means the 'offline_access' scope was not consented. Please retry login and ensure you consent to all permissions."));
         }
 
+        log::info!("[AUTH] Login flow completed successfully");
         Ok(access_token)
     }
 
     pub async fn get_access_token(&self) -> Result<String> {
+        log::info!("[AUTH] Attempting to retrieve access token...");
         // Try to migrate legacy token first
         let _ = migrate_legacy_token();
         
         // Retrieve refresh token from secure keyring
+        log::debug!("[AUTH] Retrieving refresh token from keyring...");
         let entry = get_keyring_entry()?;
         let refresh_token_secret = entry.get_password()
             .context("No credentials found. Please run `o365-cli login`.")?;
+        log::info!("[AUTH] Refresh token retrieved from keyring");
 
         let refresh_token = RefreshToken::new(refresh_token_secret.trim().to_string());
 
@@ -276,16 +302,20 @@ impl AuthManager {
             .set_auth_uri(self.auth_url.clone())
             .set_token_uri(self.token_url.clone());
         
+        log::info!("[AUTH] Exchanging refresh token for new access token...");
         let token_result = client
             .exchange_refresh_token(&refresh_token)
             .request_async(&Self::http_client)
             .await
             .context("Failed to refresh token. Please login again.")?;
+        log::info!("[AUTH] Access token refreshed successfully");
 
         // Update refresh token in keyring if rotated
         if let Some(new_refresh_token) = token_result.refresh_token() {
+            log::info!("[AUTH] New refresh token received, updating keyring...");
             entry.set_password(new_refresh_token.secret())
                 .context("Failed to update refresh token in keyring")?;
+            log::info!("[AUTH] Refresh token updated in keyring");
         }
 
         Ok(token_result.access_token().secret().clone())

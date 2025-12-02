@@ -273,8 +273,8 @@ impl App {
                     Some(AppAction::RunTask { 
                         name: "iam:offboard".to_string(), 
                         args: vec![
-                            "--email".to_string(), "test.leaver@yourdomain.com".to_string(), // REPLACE ME
-                            "--managerEmail".to_string(), "your.manager@yourdomain.com".to_string(), // REPLACE ME
+                            "--user".to_string(), "test.leaver@yourdomain.com".to_string(), // REPLACE ME
+                            "--manager".to_string(), "your.manager@yourdomain.com".to_string(), // REPLACE ME
                             "--dry-run".to_string(), self.dry_run.to_string() 
                         ] 
                     })

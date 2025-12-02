@@ -9,7 +9,8 @@ use anyhow::Result;
 use auth::AuthManager;
 use clap::{Parser, Subcommand};
 use simplelog::*;
-use std::fs::File;
+use std::fs::{File, create_dir_all};
+use chrono::Local;
 
 #[derive(Parser)]
 #[command(name = "o365-cli")]
@@ -40,27 +41,37 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize File Logger with timestamp and detailed output
-    let log_path = std::env::current_dir()
+    // Create logs directory if it doesn't exist
+    let logs_dir = std::env::current_dir()
         .unwrap()
-        .join("o365-cli.log");
+        .join("logs");
+    
+    create_dir_all(&logs_dir).expect("Failed to create logs directory");
+    
+    // Create session-based log file with timestamp
+    let timestamp = Local::now().format("%Y%m%d_%H%M%S");
+    let log_filename = format!("o365-cli_{}.log", timestamp);
+    let log_path = logs_dir.join(&log_filename);
+    
+    let log_config = ConfigBuilder::new()
+        .set_time_format_rfc3339()
+        .set_thread_level(LevelFilter::Error)
+        .set_target_level(LevelFilter::Error)
+        .build();
     
     CombinedLogger::init(
         vec![
             WriteLogger::new(
-                LevelFilter::Debug, // Changed to Debug for more detailed logs
-                ConfigBuilder::new()
-                    .set_time_format_rfc3339()
-                    .set_thread_level(LevelFilter::Error)
-                    .set_target_level(LevelFilter::Error)
-                    .build(),
-                File::create(&log_path).unwrap(),
+                LevelFilter::Debug,
+                log_config,
+                File::create(&log_path).expect("Failed to create log file"),
             ),
         ]
-    ).unwrap();
+    ).expect("Failed to initialize logger");
 
     log::info!("=================================");
     log::info!("Starting o365-cli v{}", env!("CARGO_PKG_VERSION"));
+    log::info!("Session ID: {}", timestamp);
     log::info!("Log file: {}", log_path.display());
     log::info!("=================================");
 

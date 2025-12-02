@@ -85,12 +85,14 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app
                         } else {
                             app.tenant_id.clone()
                         };
+                        log::info!("[TUI] User initiated login with tenant: {}", tenant_to_use);
                         app.add_log(format!("🚀 Authenticating with tenant: {}...", tenant_to_use));
                         terminal.draw(|f| crate::ui::render(f, &mut app))?; // Force redraw to show loading
 
                         let auth = AuthManager::new(&tenant_to_use)?;
                         match auth.login().await {
                             Ok(token) => {
+                                log::info!("[TUI] Login successful, token received");
                                 app.add_log("✅ Login Successful!".to_string());
                                 
                                 // Decode the token (without validation for display purposes)
@@ -126,23 +128,30 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app
                                         };
 
                                         if let Err(e) = profile.save() {
+                                            log::error!("[TUI] Failed to save user profile: {}", e);
                                             app.add_log(format!("⚠️ Failed to save profile: {}", e));
+                                        } else {
+                                            log::info!("[TUI] User profile saved successfully");
                                         }
 
                                         app.tenant_id = profile.tenant_id.clone();
                                         app.user_profile = Some(profile);
+                                        log::info!("[TUI] User profile updated in app state");
                                         app.add_log("📄 Token Decoded: User Profile Updated & Saved".to_string());
                                     },
                                     Err(e) => {
+                                        log::error!("[TUI] Failed to parse token claims: {}", e);
                                         app.add_log(format!("⚠️ Failed to parse token claims: {}", e));
                                     }
                                 }
                             },
                             Err(e) => {
+                                log::error!("[TUI] Login failed: {}", e);
                                 app.add_log(format!("❌ Login Failed: {}", e));
                             }
                         }
                         app.is_loading = false;
+                        log::info!("[TUI] Login flow completed");
                     },
                     Some(crate::app::AppAction::ToggleDryRun) => {
                         // already handled in app.rs, just here for completeness if needed

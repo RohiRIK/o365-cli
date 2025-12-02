@@ -1,25 +1,41 @@
-# Surgical Lockdown Module
+# Surgical Lockdown / Emergency Kill Switch (SEC-02-K)
 
-## Context
-This folder contains the high-risk "Emergency Kill Switch" for compromised accounts. Unlike "Graceful Offboarding," this protocol prioritizes security containment over data preservation.
+## 🚀 Vision & Purpose
+The **Surgical Lockdown Tool** is the **"Break Glass"** protocol for high-severity security incidents (e.g., Ransomware active on a device, Insider Threat, Hostile Termination).
 
-## Scripts
-*   **`Invoke-SurgicalLockdown.ps1`**: The emergency executor.
-    *   **Type:** Action / Write (Modifies Tenant).
-    *   **Input:** `UserPrincipalName` (Target), `IsolationComment`.
-    *   **Output:** Console logs, CSV Action Report.
+Unlike standard offboarding, this module prioritizes **Speed** and **Containment** over user experience. It creates an immediate "air gap" around the compromised user identity and their devices, effectively neutralizing the threat in seconds.
 
-## Key Logic (Multi-Layered Defense)
-1.  **Identity Layer:**
-    *   Sets `AccountEnabled` to False.
-    *   Revokes all SignInSessions (RefreshToken revocation).
-    *   Scrambles the password to a random 64-character string.
-2.  **Mobile Layer (Intune):**
-    *   Issues a `Retire` command to iOS/Android devices. This performs a "Selective Wipe," removing corporate data while leaving personal data intact.
-3.  **Endpoint Layer (Defender):**
-    *   Issues an `Isolate` command to Windows devices. This cuts off network access (except to the MDE management channel).
+## 💎 Key Features & Capabilities
 
-## Operational Rules
-*   **Simulation Default:** Uses `-ExecuteLive` switch. Defaults to simulation (Dry Run).
-*   **Use Case:** Only use for active security threats (e.g., malware, insider threat, hostility).
-*   **Dependencies:** `Microsoft.Graph` (Identity/Intune/Defender).
+### 🔥 Multi-Layered Containment (The Kill Chain)
+*   **Layer 1: Identity (Entra ID):**
+    *   **Block Sign-in:** `AccountEnabled = $false`.
+    *   **Token Nuke:** Revokes all Refresh Tokens (`Revoke-MgUserSignInSession`), forcing immediate logout from Web Apps, Outlook, and Teams.
+    *   **Credential Scramble:** Resets password to a cryptographically random 64-character string.
+*   **Layer 2: Mobile (Intune):**
+    *   **Selective Wipe:** Issues a `Retire` command to BYOD devices to strip corporate data/apps while leaving personal photos intact.
+    *   **Full Wipe:** (Optional) Issues `Wipe` command for corporate-owned devices.
+*   **Layer 3: Endpoint (Defender):**
+    *   **Network Isolation:** Triggers the "Isolate Device" API in Defender for Endpoint (MDE). The laptop remains on, but its network adapter cuts all traffic except to the Defender management server.
+
+### 📝 Forensic Audit Trail
+*   **Incident Logging:** Records every action taken, the timestamp (UTC), and the admin responsible into a tamper-evident log.
+*   **Defender Tagging:** Adds a "Compromised" or "Investigation" tag to the device in MDE to alert SOC analysts.
+
+## 🛠️ Technical Architecture
+
+### Prerequisites
+*   **PowerShell 7+**
+*   **Microsoft Graph API:** `User.ReadWrite.All`, `Directory.AccessAsUser.All`
+*   **Intune Permissions:** `DeviceManagementManagedDevices.ReadWrite.All`
+*   **Defender Permissions:** `Machine.Isolate` (via Graph or MDE API).
+
+### Input
+*   `UserPrincipalName`: The target.
+*   `IsolationComment`: Required field for audit logs (e.g., "Ticket #1234 - Ransomware Detected").
+
+## 🔮 Future Roadmap (The "Massive" Vision)
+*   **SOC Integration:** Automatically trigger a "High Severity" incident in Microsoft Sentinel or Splunk upon execution.
+*   **Legal Hold Activation:** Automatically place the user's Exchange Mailbox and OneDrive into Litigation Hold to preserve evidence for prosecution.
+*   **Cross-Platform Lock:** Extend API hooks to revoke sessions in Okta, Salesforce, and AWS via their respective APIs during the lockdown event.
+*   **Kill Switch GUI:** A simplified "Panic Button" web interface for Helpdesk staff (with heavy approval gates) to trigger this without touching PowerShell.
