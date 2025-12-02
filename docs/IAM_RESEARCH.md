@@ -102,3 +102,83 @@
 *   **Best Practice:**
     *   **Group-Based Licensing:** Do NOT assign licenses directly. Add the user to a "Licensing Group" (e.g., "E5-Users").
     *   **Why?** Easier to manage, reduces API calls, handles consistency better.
+
+---
+
+## 4. Regular User Lifecycle (IAM-02)
+
+### 🔍 Purpose
+Detect stale internal accounts that are not Guests. Employees leave, go on sabbatical, or switch roles, leaving dormant accounts that increase attack surface.
+
+### ⚙️ API Implementation Specifications
+
+#### **A. Stale User Detection**
+*   **Endpoint:** `GET /users?$select=displayName,userPrincipalName,signInActivity,createdDateTime,accountEnabled,userType`
+*   **Filter:** `userType eq 'Member'`
+*   **Logic:**
+    *   **Active:** `lastSignIn` < 30 days.
+    *   **Stale:** `lastSignIn` > 90 days.
+    *   **Dormant:** `lastSignIn` > 180 days.
+    *   **Ghost:** `createdDateTime` > 30 days AND `lastSignIn` is null (Never logged in).
+
+#### **B. Reporting Table**
+| Status | User Name | Type | Last Active | Days Inactive | Manager | Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 🟢 Active | John Doe | Member | 2023-10-20 | 2 | Jane Boss | Low |
+| 🟡 Stale | Old Account | Member | 2023-05-01 | 160 | N/A | Medium |
+| 🔴 Ghost | Test User | Member | Never | 45 | N/A | High |
+
+---
+
+## 5. Disabled User License Audit (IAM-03)
+
+### 🔍 Purpose
+Identify "Zombie" accounts: Users who are disabled (`AccountEnabled=false`) but still holding onto expensive licenses (e.g., E5). This is 100% financial waste.
+
+### ⚙️ API Implementation Specifications
+
+#### **A. Zombie Hunting**
+*   **Endpoint:** `GET /users?$filter=accountEnabled eq false&$select=id,displayName,userPrincipalName,assignedLicenses`
+*   **Logic:**
+    *   Filter users where `assignedLicenses.length > 0`.
+    *   Map `skuId` to Price (using hardcoded map or external price API).
+
+#### **B. Assignment Type Check**
+*   **Endpoint:** `GET /users/{id}/licenseDetails`
+*   **Property:** `assignmentPaths`
+*   **Logic:**
+    *   If `assignmentPaths` implies `Direct` -> **Action:** Remove License directly.
+    *   If `assignmentPaths` implies `Group` -> **Action:** Remove User from Group.
+
+#### **C. Reporting Table**
+| Waste/Mo | User Name | Disabled Date | License SKU | Assignment | Action |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 🔴 $57.00 | Ex-Employee | 2023-01-15 | Office 365 E5 | Direct | Reclaim |
+| 🟠 $20.00 | Contractor | 2023-08-20 | Visio Plan 2 | Group | Remove from Grp |
+
+---
+
+## 6. Privileged User Audit (IAM-04)
+
+### 🔍 Purpose
+Audit "Keys to the Kingdom". Identify who has Global Admin or other high-privilege roles, and ensure they are secured (MFA, PIM).
+
+### ⚙️ API Implementation Specifications
+
+#### **A. Role Discovery**
+*   **Endpoint:** `GET /directoryRoles` (to get IDs for "Global Administrator", "Exchange Administrator", etc.)
+*   **Endpoint:** `GET /directoryRoles/{roleId}/members`
+*   **Best Practice:** Also check **PIM (Privileged Identity Management)** assignments if license permits (`GET /roleManagement/directory/roleAssignmentScheduleInstances`).
+
+#### **B. Security Checks**
+*   **MFA Status:** `GET /reports/authenticationMethods/userRegistrationDetails/{id}`
+    *   Check `isMfaRegistered` and `isCapable`.
+*   **Sign-in Analysis:** `GET /users/{id}/signInActivity`
+    *   Check `lastSignInDateTime`. Admins who haven't signed in for 30 days are risky (Dormant Admin).
+
+#### **C. Reporting Table**
+| Risk | User Name | Role(s) | MFA Status | Last Admin Sign-in | PIM Enabled |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 🔴 Crit | Admin Joe | **Global Admin** | ❌ Disabled | 2023-10-22 | No |
+| 🟢 Low | Super Jane | Exchange Admin | ✅ Enforced | 2023-10-21 | Yes |
+| 🟠 High | Backup Svc | SharePoint Admin | ❌ Disabled | Never | N/A |
