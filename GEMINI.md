@@ -126,3 +126,10 @@ grep "shadow-it" logs/o365-cli_*.log
 ## 🤝 Contributing
 
 This is a hybrid platform evolving from PowerShell scripts to a production-ready Rust/TypeScript architecture. The `legacy/` folder serves as reference implementations for porting to the modern stack.
+
+## 🤖 AI/Developer Rules
+
+- **Rust Development Verification:** After modifying any Rust code (`.rs` files or `Cargo.toml`), you **MUST** run `cargo build --manifest-path cli/Cargo.toml` to verify compilation.
+  - If the build fails, you **MUST** analyze the error log and apply a fix immediately.
+  - Do **NOT** report the task as complete until the code compiles successfully.
+  - This applies to even "small" changes like changing strings or imports.
