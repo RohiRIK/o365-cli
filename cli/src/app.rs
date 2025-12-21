@@ -37,7 +37,6 @@ pub enum InputContext {
 #[derive(Debug, Clone)]
 pub enum AuthStatus {
     Unknown,
-    Checking,
     Refreshing,
     Valid(String),
     Invalid(String),
