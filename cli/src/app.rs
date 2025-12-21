@@ -34,6 +34,7 @@ pub enum InputContext {
     None,
     OffboardUserEmail,
     OffboardManagerEmail { user_email: String },
+    GuestCleanupThreshold,
 }
 
 #[derive(Debug, Clone)]
@@ -273,6 +274,29 @@ impl App {
                     name: "iam:offboard".to_string(), 
                     args 
                 })
+            },
+            InputContext::GuestCleanupThreshold => {
+                let threshold = input.trim().parse::<u32>().unwrap_or(90);
+                self.input_context = InputContext::None;
+                self.focus = Focus::Content;
+                
+                let args = vec![
+                    "--days".to_string(), 
+                    threshold.to_string(), 
+                    "--dry-run".to_string(), 
+                    self.dry_run.to_string()
+                ];
+
+                if !self.dry_run {
+                    self.pending_action = Some(("iam:guest-cleanup".to_string(), args.clone()));
+                    self.focus = Focus::Review;
+                    return Some(AppAction::ReviewProposedActions { name: "iam:guest-cleanup".to_string(), args });
+                }
+
+                Some(AppAction::RunTask { 
+                    name: "iam:guest-cleanup".to_string(), 
+                    args 
+                })
             }
             _ => { self.focus = Focus::Content; None },
         }
@@ -328,6 +352,13 @@ impl App {
                     self.input_buffer.clear();
                     None 
                 },
+                1 => {
+                    self.input_context = InputContext::GuestCleanupThreshold;
+                    self.focus = Focus::Input;
+                    self.input_buffer.clear();
+                    self.input_buffer.push_str("90"); // Default
+                    None
+                },
                 2 => Some(AppAction::RunTask { name: "iam:test".to_string(), args: vec![] }),
                 _ => None,
             },
@@ -379,5 +410,22 @@ mod tests {
         }
         assert_eq!(app.focus, Focus::Review);
         assert!(app.pending_action.is_some());
+    }
+
+    #[test]
+    fn test_guest_cleanup_input_flow() {
+        let mut app = App::new();
+        app.focus = Focus::Input;
+        app.input_context = InputContext::GuestCleanupThreshold;
+        
+        let action = app.handle_input_submission("120".to_string());
+        match action {
+            Some(AppAction::RunTask { name, args }) => {
+                assert_eq!(name, "iam:guest-cleanup");
+                assert!(args.contains(&"--days".to_string()));
+                assert!(args.contains(&"120".to_string()));
+            },
+            _ => panic!("Expected RunTask for guest cleanup"),
+        }
     }
 }

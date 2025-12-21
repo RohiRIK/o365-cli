@@ -182,6 +182,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         let (prompt_title, prompt_text) = match &app.input_context {
             crate::app::InputContext::OffboardUserEmail => ("Graceful Offboarding (1/2)", "Enter User Email (UPN):"),
             crate::app::InputContext::OffboardManagerEmail { .. } => ("Graceful Offboarding (2/2)", "Enter Manager Email (Optional):"),
+            crate::app::InputContext::GuestCleanupThreshold => ("Guest User Cleanup", "Enter Inactivity Threshold (Days):"),
             crate::app::InputContext::None => ("Input", "Processing..."),
         };
 
