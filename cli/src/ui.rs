@@ -74,30 +74,25 @@ pub fn render(f: &mut Frame, app: &mut App) {
     if let Some(output) = &app.task_output {
         // --- DETAIL VIEW POPUP ---
         if app.show_detail {
-            let area = centered_rect(80, 60, f.area());
+            let area = centered_rect(80, 80, f.area());
             let block = Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Cyan))
                 .title("🔎  ROW DETAILS");
 
             if let Some(row) = output.rows.get(app.selected_row) {
-                let action_type = &row[0];
-                let detail = &row[1];
-                let type_style = get_action_style(action_type);
+                let mut text = Vec::new();
 
-                let mut text = vec![
-                    Line::from(vec![
-                        Span::styled("Type:   ", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::styled(action_type, type_style),
-                    ]),
-                    Line::from(""),
-                    Line::from(Span::styled("Details:", Style::default().add_modifier(Modifier::BOLD))),
-                ];
+                for (i, header) in output.headers.iter().enumerate() {
+                    if let Some(value) = row.get(i) {
+                        let header_style = Style::default().add_modifier(Modifier::BOLD).fg(Color::Cyan);
+                        let value_style = if i == 0 { get_action_style(value) } else { Style::default().fg(Color::White) };
 
-                // Wrap long details into multiple lines
-                let wrapped_detail = detail.replace("; ", "\n • ").replace(". ", ".\n");
-                for line in wrapped_detail.lines() {
-                    text.push(Line::from(format!("  {}", line)));
+                        text.push(Line::from(vec![
+                            Span::styled(format!("{:<20}: ", header), header_style),
+                            Span::styled(value, value_style),
+                        ]));
+                    }
                 }
 
                 text.push(Line::from(""));
