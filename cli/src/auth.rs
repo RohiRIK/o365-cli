@@ -12,12 +12,50 @@ use std::net::TcpListener;
 use std::io::{BufRead, BufReader, Write};
 use url::Url;
 use reqwest::Client as ReqwestClient;
-use keyring::Entry;
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc, Duration};
 
 // Official "Microsoft Graph PowerShell" Client ID
 const DEFAULT_CLIENT_ID: &str = "14d82eec-204b-4c2f-b7e8-296a70dab67e";
-const KEYRING_SERVICE: &str = "o365-cli";
-const KEYRING_USER: &str = "refresh_token";
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TokenStorage {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_at: DateTime<Utc>,
+}
+
+impl TokenStorage {
+    pub fn load(path: &PathBuf) -> Result<Self> {
+        let content = fs::read_to_string(path).context("Failed to read token storage file")?;
+        let storage: TokenStorage = serde_json::from_str(&content).context("Failed to parse token storage JSON")?;
+        Ok(storage)
+    }
+
+    pub fn save(&self, path: &PathBuf) -> Result<()> {
+        let content = serde_json::to_string_pretty(self).context("Failed to serialize token storage")?;
+        
+        // Ensure parent directory exists
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent).context("Failed to create token storage directory")?;
+            }
+        }
+
+        fs::write(path, content).context("Failed to write token storage file")?;
+
+        // Set permissions to 600 on Unix systems
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(path)?.permissions();
+            perms.set_mode(0o600);
+            fs::set_permissions(path, perms).context("Failed to set file permissions to 600")?;
+        }
+
+        Ok(())
+    }
+}
 
 pub struct AuthManager {
     client_id: ClientId,
@@ -54,72 +92,17 @@ impl From<oauth2::http::Error> for HttpClientError {
     }
 }
 
-fn get_keyring_entry() -> Result<Entry> {
-    Entry::new(KEYRING_SERVICE, KEYRING_USER)
-        .context("Failed to access system keyring")
+fn get_token_storage_path() -> Result<PathBuf> {
+    let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).context("Failed to get HOME directory")?;
+    Ok(PathBuf::from(home).join(".o365-cli").join("tokens.json"))
 }
 
-fn get_legacy_cache_path() -> Result<PathBuf> {
-    let current_dir = std::env::current_dir()?;
-    let root_dir = if current_dir.ends_with("cli") {
-        current_dir
-    } else {
-        current_dir.join("cli")
-    };
-    Ok(root_dir.join(".o365_cli_token"))
-}
-
-// Migrate old file-based token to keyring
-fn migrate_legacy_token() -> Result<()> {
-    let legacy_path = get_legacy_cache_path()?;
-    
-    if !legacy_path.exists() {
-        return Ok(()); // Nothing to migrate
+pub fn clear_token_storage() -> Result<()> {
+    let path = get_token_storage_path()?;
+    if path.exists() {
+        fs::remove_file(path).context("Failed to remove token storage file")?;
+        log::info!("[AUTH] Token storage cleared successfully");
     }
-    
-    // Read old token
-    let token = fs::read_to_string(&legacy_path)
-        .context("Failed to read legacy token file")?;
-    
-    if token.trim().is_empty() {
-        fs::remove_file(&legacy_path)?;
-        return Ok(());
-    }
-    
-    // Store in keyring
-    let entry = get_keyring_entry()?;
-    entry.set_password(token.trim())
-        .context("Failed to migrate token to keyring")?;
-    
-    // Remove old file
-    fs::remove_file(&legacy_path)?;
-    
-    log::info!("Successfully migrated token from file to keyring");
-    Ok(())
-}
-
-pub fn clear_keychain_entry() -> Result<()> {
-    log::debug!("[AUTH] Clearing keychain entry...");
-    // Clear keyring
-    let entry = get_keyring_entry()?;
-    match entry.delete_credential() {
-        Ok(_) => {
-            log::info!("[AUTH] Keyring credential deleted successfully");
-        },
-        Err(keyring::Error::NoEntry) => {
-            log::debug!("[AUTH] No existing keyring entry to delete");
-        },
-        Err(e) => return Err(anyhow::anyhow!("Failed to clear keyring: {}", e)),
-    }
-    
-    // Also clear legacy file if it exists
-    if let Ok(legacy_path) = get_legacy_cache_path() {
-        if legacy_path.exists() {
-            let _ = fs::remove_file(legacy_path);
-            log::info!("[AUTH] Removed legacy token file");
-        }
-    }
-    
     Ok(())
 }
 
@@ -166,15 +149,12 @@ impl AuthManager {
 
     pub async fn login(&self) -> Result<String> {
         log::info!("[AUTH] Starting login flow...");
-        clear_keychain_entry()?;
-        log::info!("[AUTH] Cleared existing keychain entries");
+        let _ = clear_token_storage();
 
         // 1. Setup Local Listener
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let port = listener.local_addr()?.port();
         let redirect_uri = format!("http://localhost:{}", port);
-        
-        // println!("🌐 Listening on {}", redirect_uri);
 
         // 2. Setup Client
         let client = BasicClient::new(self.client_id.clone())
@@ -196,14 +176,11 @@ impl AuthManager {
         
         let csrf_state = csrf_token.secret().clone();
         log::info!("[AUTH] Generated auth URL with scopes: User.Read, Directory.ReadWrite.All, offline_access");
-        log::debug!("[AUTH] Auth URL: {}", auth_url);
 
         // 5. Open Browser
         log::info!("[AUTH] Opening browser for authentication...");
         if webbrowser::open(auth_url.as_str()).is_err() {
              log::warn!("[AUTH] Failed to open browser automatically. URL: {}", auth_url);
-        } else {
-             log::info!("[AUTH] Browser opened successfully");
         }
 
         // 6. Wait for Callback
@@ -212,47 +189,25 @@ impl AuthManager {
         let mut reader = BufReader::new(&stream);
         let mut request_line = String::new();
         reader.read_line(&mut request_line)?;
-        log::debug!("[AUTH] Received HTTP request: {}", request_line.trim());
 
-        // Extract code from "GET /?code=... HTTP/1.1"
         let redirect_path = request_line.split_whitespace().nth(1).unwrap_or("/");
-        
-        // Ignore favicon.ico requests which might steal the connection
         if redirect_path.contains("favicon.ico") {
              return Err(anyhow::anyhow!("Browser requested favicon.ico, confusing the listener. Please try again."));
         }
 
-        let url = Url::parse(&format!("http://localhost:{}", port))
-             .unwrap()
-             .join(redirect_path)?;
-        
-        // Validate CSRF state parameter
-        let state_param = url.query_pairs()
-            .find(|(key, _)| key == "state")
-            .ok_or_else(|| anyhow::anyhow!("Missing state parameter in OAuth callback"))?;
+        let url = Url::parse(&format!("http://localhost:{}", port)).unwrap().join(redirect_path)?;
+        let state_param = url.query_pairs().find(|(key, _)| key == "state").ok_or_else(|| anyhow::anyhow!("Missing state parameter"))?;
         
         if state_param.1 != csrf_state {
-            log::error!("[AUTH] CSRF validation failed - state mismatch");
-            return Err(anyhow::anyhow!("CSRF validation failed: state mismatch"));
+            return Err(anyhow::anyhow!("CSRF validation failed"));
         }
-        log::info!("[AUTH] CSRF validation passed");
         
-        let code_pair = url.query_pairs()
-            .find(|(key, _)| key == "code")
-            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve authorization code from callback. Received: {}", redirect_path))?;
-            
+        let code_pair = url.query_pairs().find(|(key, _)| key == "code").ok_or_else(|| anyhow::anyhow!("Failed to retrieve code"))?;
         let code = AuthorizationCode::new(code_pair.1.to_string());
-        log::info!("[AUTH] Authorization code received (length: {})", code.secret().len());
 
-        // Send Response to Browser
         let message = "Login Successful! You can close this window and return to the terminal.";
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
-            message.len(),
-            message
-        );
+        let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}", message.len(), message);
         stream.write_all(response.as_bytes())?;
-        log::info!("[AUTH] Sent success response to browser");
 
         // 7. Exchange Code for Token
         log::info!("[AUTH] Exchanging authorization code for tokens...");
@@ -261,46 +216,47 @@ impl AuthManager {
             .set_pkce_verifier(pkce_verifier)
             .request_async(&Self::http_client)
             .await?;
-        log::info!("[AUTH] Token exchange successful");
 
         let access_token = token_result.access_token().secret().clone();
-        log::debug!("[AUTH] Access token received (length: {})", access_token.len());
+        let refresh_token = token_result.refresh_token()
+            .ok_or_else(|| anyhow::anyhow!("Microsoft did not return a refresh token. Ensure 'offline_access' scope was consented."))?
+            .secret().clone();
 
-        // Store refresh token securely in system keyring
-        if let Some(new_refresh_token) = token_result.refresh_token() {
-            log::info!("[AUTH] Refresh token received from OAuth response");
-            let entry = get_keyring_entry()?;
-            log::debug!("[AUTH] Keyring entry created for service: o365-cli, account: refresh_token");
-            entry.set_password(new_refresh_token.secret())
-                .context("Failed to store refresh token in keyring")?;
-            log::info!("[AUTH] ✅ Refresh token stored in keyring successfully");
-        } else {
-            log::error!("[AUTH] ❌ OAuth token response did NOT include refresh token");
-            log::error!("[AUTH] This indicates offline_access scope was not consented or the app lacks permission");
-            return Err(anyhow::anyhow!("Microsoft did not return a refresh token. This usually means the 'offline_access' scope was not consented. Please retry login and ensure you consent to all permissions."));
-        }
+        let expires_in = token_result.expires_in().unwrap_or(std::time::Duration::from_secs(3600));
+        let expires_at = Utc::now() + Duration::from_std(expires_in).unwrap_or(Duration::hours(1));
 
-        log::info!("[AUTH] Login flow completed successfully");
+        let storage = TokenStorage {
+            access_token: access_token.clone(),
+            refresh_token,
+            expires_at,
+        };
+
+        storage.save(&get_token_storage_path()?)?;
+        log::info!("[AUTH] ✅ Tokens stored in JSON file successfully");
+
         Ok(access_token)
     }
 
     pub async fn get_access_token(&self) -> Result<String> {
-        log::info!("[AUTH] Attempting to retrieve access token...");
-        // Try to migrate legacy token first
-        let _ = migrate_legacy_token();
-        
-        // Retrieve refresh token from secure keyring
-        log::debug!("[AUTH] Retrieving refresh token from keyring...");
-        let entry = get_keyring_entry()?;
-        let refresh_token_secret = entry.get_password()
-            .context("No credentials found. Please run `o365-cli login`.")?;
-        log::info!("[AUTH] Refresh token retrieved from keyring");
+        let path = get_token_storage_path()?;
+        let mut storage = TokenStorage::load(&path).context("No credentials found. Please run `o365-cli login`.")?;
 
-        let refresh_token = RefreshToken::new(refresh_token_secret.trim().to_string());
+        // Check if token is expired or expiring soon (5 minute buffer)
+        if Utc::now() + Duration::minutes(5) >= storage.expires_at {
+            log::info!("[AUTH] Token expired or expiring soon. Attempting refresh...");
+            self.refresh_tokens(&mut storage).await?;
+            storage.save(&path)?;
+        }
 
+        Ok(storage.access_token)
+    }
+
+    pub async fn refresh_tokens(&self, storage: &mut TokenStorage) -> Result<()> {
         let client = BasicClient::new(self.client_id.clone())
             .set_auth_uri(self.auth_url.clone())
             .set_token_uri(self.token_url.clone());
+
+        let refresh_token = RefreshToken::new(storage.refresh_token.clone());
         
         log::info!("[AUTH] Exchanging refresh token for new access token...");
         let token_result = client
@@ -308,16 +264,50 @@ impl AuthManager {
             .request_async(&Self::http_client)
             .await
             .context("Failed to refresh token. Please login again.")?;
-        log::info!("[AUTH] Access token refreshed successfully");
 
-        // Update refresh token in keyring if rotated
+        storage.access_token = token_result.access_token().secret().clone();
         if let Some(new_refresh_token) = token_result.refresh_token() {
-            log::info!("[AUTH] New refresh token received, updating keyring...");
-            entry.set_password(new_refresh_token.secret())
-                .context("Failed to update refresh token in keyring")?;
-            log::info!("[AUTH] Refresh token updated in keyring");
+            storage.refresh_token = new_refresh_token.secret().clone();
         }
 
-        Ok(token_result.access_token().secret().clone())
+        let expires_in = token_result.expires_in().unwrap_or(std::time::Duration::from_secs(3600));
+        storage.expires_at = Utc::now() + Duration::from_std(expires_in).unwrap_or(Duration::hours(1));
+
+        log::info!("[AUTH] Tokens refreshed successfully");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Utc};
+
+    #[test]
+    fn test_token_storage_lifecycle() {
+        let storage_path = PathBuf::from("test_tokens.json");
+        if storage_path.exists() {
+            fs::remove_file(&storage_path).unwrap();
+        }
+
+        let expires_at = Utc::now() + Duration::hours(1);
+        let storage = TokenStorage {
+            access_token: "test_access".to_string(),
+            refresh_token: "test_refresh".to_string(),
+            expires_at,
+        };
+
+        // Save
+        storage.save(&storage_path).expect("Failed to save tokens");
+
+        // Load
+        let loaded = TokenStorage::load(&storage_path).expect("Failed to load tokens");
+        assert_eq!(loaded.access_token, "test_access");
+        assert_eq!(loaded.refresh_token, "test_refresh");
+        // Compare timestamps with some tolerance for serialization
+        assert_eq!(loaded.expires_at.timestamp(), expires_at.timestamp());
+
+        // Cleanup
+        fs::remove_file(&storage_path).unwrap();
     }
 }
