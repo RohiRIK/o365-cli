@@ -15,15 +15,22 @@ pub enum Focus {
     Menu,
     Content,
     Logs,
+    Input, // New focus for input mode
 }
 
 #[allow(dead_code)] // Variants are constructed conditionally
 pub enum AppAction {
+    Login,
     ToggleDryRun,
     RunTask { name: String, args: Vec<String> },
     ExportResults,
     BackToMenu,
-    Login,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InputContext {
+    None,
+    OffboardUser,
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +49,10 @@ pub struct App {
     pub logs_state: ListState,
     pub is_loading: bool,
     
+    // Input State
+    pub input_buffer: String,
+    pub input_context: InputContext,
+
     // Navigation State
     pub security_index: usize,
     pub iam_index: usize,
@@ -60,13 +71,11 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let user_profile = UserProfile::load();
-        
-        // Load tenant ID from profile
         let tenant_id = user_profile
             .as_ref()
             .map(|p| p.tenant_id.clone())
             .unwrap_or_else(|| "Not Connected".to_string());
-        
+
         let logs = if user_profile.is_some() {
             vec![
                 "Welcome to Office 365 Toolset".to_string(),
@@ -86,6 +95,8 @@ impl App {
             logs,
             logs_state: ListState::default(),
             is_loading: false,
+            input_buffer: String::new(),
+            input_context: InputContext::None,
             auth_status: AuthStatus::Unknown,
             security_index: 0,
             iam_index: 0,
@@ -102,7 +113,42 @@ impl App {
         self.logs.push(message);
     }
 
+    pub fn on_paste(&mut self, data: String) {
+        if self.focus == Focus::Input {
+            // Clean up pasted text (remove newlines etc if needed, though usually paste is one block)
+            // For safety, we just push it.
+            self.input_buffer.push_str(&data);
+        }
+    }
+
     pub fn on_key(&mut self, key: KeyCode) -> Option<AppAction> {
+        // Handle Input Mode
+        if self.focus == Focus::Input {
+            match key {
+                KeyCode::Enter => {
+                    let input = self.input_buffer.clone();
+                    self.input_buffer.clear();
+                    // Don't reset focus yet, handle_input might chain
+                    return self.handle_input_submission(input);
+                }
+                KeyCode::Esc => {
+                    self.input_buffer.clear();
+                    self.input_context = InputContext::None;
+                    self.focus = Focus::Content;
+                    return None;
+                }
+                KeyCode::Backspace => {
+                    self.input_buffer.pop();
+                    return None;
+                }
+                KeyCode::Char(c) => {
+                    self.input_buffer.push(c);
+                    return None;
+                }
+                _ => return None,
+            }
+        }
+
         // Special handling if we are showing results
         if self.task_output.is_some() {
             match key {
@@ -116,7 +162,7 @@ impl App {
                 KeyCode::Tab | KeyCode::Char('1') | KeyCode::Char('2') | KeyCode::Char('3') => {
                     // Fall through to standard navigation which will clear output via next_tab logic
                 } 
-                _ => return None, // Ignore other keys while in result view (or implement table scrolling)
+                _ => return None, 
             }
         }
 
@@ -142,7 +188,8 @@ impl App {
                     Focus::Menu => self.next_tab(), 
                     Focus::Content => self.move_content_down(), 
                     Focus::Logs => self.scroll_logs_down(),
-                };
+                    _ => {}
+                }
                 None
             },
             KeyCode::Up | KeyCode::Char('k') => {
@@ -150,6 +197,7 @@ impl App {
                     Focus::Menu => self.previous_tab(),
                     Focus::Content => self.move_content_up(),
                     Focus::Logs => self.scroll_logs_up(),
+                    _ => {}
                 }
                 None
             },
@@ -160,6 +208,7 @@ impl App {
                     Focus::Menu => Focus::Content,
                     Focus::Content => Focus::Logs,
                     Focus::Logs => Focus::Menu,
+                    Focus::Input => Focus::Menu,
                 };
                 None
             },
@@ -168,6 +217,7 @@ impl App {
                     Focus::Menu => Focus::Logs,
                     Focus::Content => Focus::Menu,
                     Focus::Logs => Focus::Content,
+                    Focus::Input => Focus::Menu,
                 };
                 None
             },
@@ -184,6 +234,37 @@ impl App {
         }
     }
 
+    fn handle_input_submission(&mut self, input: String) -> Option<AppAction> {
+        match &self.input_context {
+            InputContext::OffboardUser => {
+                if input.trim().is_empty() {
+                    self.add_log("❌ Operation cancelled: User email is required.".to_string());
+                    self.input_context = InputContext::None;
+                    self.focus = Focus::Content;
+                    return None;
+                }
+                
+                let user = input.trim().to_string();
+                self.add_log(format!("Queueing: Graceful Offboarding for {} (Auto-detecting manager)...", user));
+                
+                self.input_context = InputContext::None;
+                self.focus = Focus::Content;
+                
+                // We don't pass --manager anymore, the backend will fetch it.
+                let args = vec!["--user".to_string(), user, "--dry-run".to_string(), self.dry_run.to_string()];
+
+                Some(AppAction::RunTask { 
+                    name: "iam:offboard".to_string(), 
+                    args 
+                })
+            },
+            InputContext::None => {
+                self.focus = Focus::Content;
+                None
+            },
+        }
+    }
+
     pub fn next_tab(&mut self) {
         self.current_tab = match self.current_tab {
             CurrentTab::Security => CurrentTab::IAM,
@@ -191,6 +272,7 @@ impl App {
             CurrentTab::Settings => CurrentTab::Security,
         };
         self.task_output = None;
+        self.input_context = InputContext::None;
     }
 
     pub fn previous_tab(&mut self) {
@@ -200,6 +282,7 @@ impl App {
             CurrentTab::Settings => CurrentTab::IAM,
         };
         self.task_output = None;
+        self.input_context = InputContext::None;
     }
 
     fn move_content_up(&mut self) {
@@ -219,13 +302,12 @@ impl App {
     fn move_content_down(&mut self) {
         match self.current_tab {
             CurrentTab::Security => {
-                if self.security_index < 1 { self.security_index += 1; } // 2 items: Shadow IT, Lockdown
+                if self.security_index < 1 { self.security_index += 1; } // 2 items
             }
             CurrentTab::IAM => {
                 if self.iam_index < 2 { self.iam_index += 1; } // 3 items
             }
             CurrentTab::Settings => {
-                // Only 2 actionable items: Dry Run, Login
                 if self.settings_index < 1 { self.settings_index += 1; }
             }
         }
@@ -251,10 +333,8 @@ impl App {
         match self.current_tab {
             CurrentTab::Security => match self.security_index {
                 0 => { 
-                    // Merged Shadow IT Action
                     let action_desc = if self.dry_run { "Audit (Dry Run)" } else { "Remediation (LIVE)" };
                     self.add_log(format!("Queueing: Shadow IT {}...", action_desc));
-                    
                     Some(AppAction::RunTask { 
                         name: "sec:shadow-it".to_string(), 
                         args: vec!["--dry-run".to_string(), self.dry_run.to_string()] 
@@ -268,16 +348,11 @@ impl App {
             },
             CurrentTab::IAM => match self.iam_index {
                 0 => { 
-                    self.add_log("Queueing: Graceful Offboarding...".to_string());
-                    self.add_log("⚠️  Please edit cli/src/app.rs to provide actual user & manager emails for testing.".to_string());
-                    Some(AppAction::RunTask { 
-                        name: "iam:offboard".to_string(), 
-                        args: vec![
-                            "--user".to_string(), "test.leaver@yourdomain.com".to_string(), // REPLACE ME
-                            "--manager".to_string(), "your.manager@yourdomain.com".to_string(), // REPLACE ME
-                            "--dry-run".to_string(), self.dry_run.to_string() 
-                        ] 
-                    })
+                    // Switch to Input Mode for Graceful Offboarding
+                    self.input_context = InputContext::OffboardUser;
+                    self.focus = Focus::Input;
+                    self.input_buffer.clear();
+                    None 
                 },
                 1 => { 
                     self.add_log("Not Implemented: Guest User Cleanup".to_string());
@@ -299,8 +374,6 @@ impl App {
                      Some(AppAction::ToggleDryRun)
                 },
                 1 => {
-                     // Trigger login action (will use stored tenant from profile)
-                     self.add_log("Starting authentication flow...".to_string());
                      Some(AppAction::Login)
                 },
                 _ => None,
@@ -309,6 +382,6 @@ impl App {
     }
 
     pub fn on_tick(&mut self) {
-        // Logic to handle background updates will go here
+        // Logic to handle background updates
     }
 }

@@ -50,3 +50,18 @@ credentials.json
 .o365_cli_token
 .o365_cli_profile.json
 .token_cache
+
+# Build Artifacts
+dist/
+build/
+out/
+bin/
+obj/
+*.dll
+*.exe
+*.lib
+*.o         
+
+# Logs
+logs/
+*.log   

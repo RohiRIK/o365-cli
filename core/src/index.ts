@@ -24,7 +24,11 @@ async function main() {
       const manager = managerIndex !== -1 ? subArgs[managerIndex + 1] : undefined;
       
       const dryRunOffboardIndex = subArgs.indexOf("--dry-run");
-      const dryRunOffboard = dryRunOffboardIndex === -1 ? true : subArgs[dryRunOffboardIndex + 1] !== "false";
+      const dryRunVal = dryRunOffboardIndex !== -1 ? subArgs[dryRunOffboardIndex + 1] : "true";
+      // Explicitly check for 'false' string
+      const dryRunOffboard = dryRunVal.trim().toLowerCase() !== "false";
+      
+      IPC.progress(`Configuration: DryRun=${dryRunOffboard} (Arg: ${dryRunVal})`, 1);
       
       await offboardUser(subArgs[userIndex + 1], manager, dryRunOffboard);
       break;
@@ -32,7 +36,9 @@ async function main() {
     case "sec:shadow-it":
       // Usage: sec:shadow-it [--dry-run false]
       const dryRunIndex = subArgs.indexOf("--dry-run");
-      const dryRun = dryRunIndex === -1 ? true : subArgs[dryRunIndex + 1] !== "false";
+      const dryRunValSec = dryRunIndex !== -1 ? subArgs[dryRunIndex + 1] : "true";
+      const dryRun = dryRunValSec.trim().toLowerCase() !== "false";
+      
       await analyzeShadowIT(dryRun);
       break;
 
