@@ -6,7 +6,7 @@
     -   Sub-task: Add `appId`, `servicePrincipalId`, and `principalId` to the `RiskyGrant` interface.
     -   Sub-task: Update Graph API calls to fetch precise `signInActivity` (last successful, failures) and `passwordCredentials`/`keyCredentials` details.
     -   Sub-task: Implement `resolveScopeDescriptions` to fetch human-readable strings for permissions.
-- [ ] Task: Update Risk Scoring & Classification
+- [x] Task: Update Risk Scoring & Classification [cd9be43]
     -   Context: Modify `calculateRiskScore` and `generateRecommendation` in `shadow-it.ts`.
     -   Sub-task: Incorporate "Credential Age" and "Sign-in Failure Rate" into the risk algorithm.
     -   Sub-task: Add "Classification Source" metadata to each finding.
