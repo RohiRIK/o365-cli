@@ -1,7 +1,7 @@
 # Track Plan: Shadow IT Forensic Enrichment
 
 ## Phase 1: API & Data Model Enrichment [checkpoint: ]
-- [ ] Task: Expand `RiskyGrant` Interface and Data Fetching
+- [x] Task: Expand `RiskyGrant` Interface and Data Fetching [8189286]
     -   Context: Modify `core/src/commands/sec/shadow-it.ts`.
     -   Sub-task: Add `appId`, `servicePrincipalId`, and `principalId` to the `RiskyGrant` interface.
     -   Sub-task: Update Graph API calls to fetch precise `signInActivity` (last successful, failures) and `passwordCredentials`/`keyCredentials` details.
