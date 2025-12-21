@@ -27,12 +27,12 @@
 - [ ] Task: Conductor - User Manual Verification 'UI Safety & Interaction Polish' (Protocol in workflow.md)
 
 ## Phase 3: Guest User Lifecycle Module [checkpoint: ]
-- [ ] Task: Implement `iam:guest-cleanup` Worker
+- [x] Task: Implement `iam:guest-cleanup` Worker [f8b8959]
     -   Context: Create `core/src/commands/iam/guest-cleanup.ts`.
     -   Sub-task: Port PowerShell logic for identifying stale guests (>90 days).
     -   Sub-task: Implement logic to identify guests without sponsors (using `user.manager` or `extensionAttributes`).
     -   Sub-task: Implement "Block" and "Remove" remediation actions.
-- [ ] Task: TUI Integration for Guest Cleanup
+- [x] Task: TUI Integration for Guest Cleanup [664120a]
     -   Context: Update `cli/src/app.rs` to include the new module in the IAM tab.
     -   Sub-task: Define the input form for guest cleanup (e.g., "Days Inactive" threshold).
 - [ ] Task: Conductor - User Manual Verification 'Guest User Lifecycle Module' (Protocol in workflow.md)
