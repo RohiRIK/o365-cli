@@ -20,7 +20,7 @@
     -   Context: Modify `cli/src/ui.rs`.
     -   Sub-task: Refactor the detail popup to use a structured, multi-section layout (e.g., "Identifiers", "Permissions", "Activity", "Hygiene").
     -   Sub-task: Ensure long lists of secrets or permissions are readable (implement scrolling or better wrapping).
-- [ ] Task: Implement Local Results Filtering
+- [x] Task: Implement Local Results Filtering [79bce91]
     -   Context: Modify `cli/src/app.rs` and `cli/src/ui.rs`.
     -   Sub-task: Add a search buffer and logic to filter the results table by App Name, User, or Severity.
 - [ ] Task: Conductor - User Manual Verification 'TUI Detail View Refactor' (Protocol in workflow.md)
