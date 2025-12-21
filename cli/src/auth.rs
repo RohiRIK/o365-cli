@@ -14,6 +14,11 @@ use url::Url;
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, Duration};
+use aes_gcm::{
+    aead::{Aead, AeadCore, KeyInit, OsRng},
+    Aes256Gcm, Nonce
+};
+use sha2::{Sha256, Digest};
 
 // Official "Microsoft Graph PowerShell" Client ID
 const DEFAULT_CLIENT_ID: &str = "14d82eec-204b-4c2f-b7e8-296a70dab67e";
@@ -27,14 +32,21 @@ pub struct TokenStorage {
 
 impl TokenStorage {
     pub fn load(path: &PathBuf) -> Result<Self> {
-        let content = fs::read_to_string(path).context("Failed to read token storage file")?;
-        let storage: TokenStorage = serde_json::from_str(&content).context("Failed to parse token storage JSON")?;
+        let ciphertext = fs::read(path).context("Failed to read token storage file")?;
+        
+        let key = get_encryption_key()?;
+        let plaintext = decrypt(&ciphertext, &key).context("Failed to decrypt tokens")?;
+        
+        let storage: TokenStorage = serde_json::from_slice(&plaintext).context("Failed to parse token storage JSON")?;
         Ok(storage)
     }
 
     pub fn save(&self, path: &PathBuf) -> Result<()> {
-        let content = serde_json::to_string_pretty(self).context("Failed to serialize token storage")?;
+        let plaintext = serde_json::to_vec(self).context("Failed to serialize token storage")?;
         
+        let key = get_encryption_key()?;
+        let ciphertext = encrypt(&plaintext, &key).context("Failed to encrypt tokens")?;
+
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
             if !parent.exists() {
@@ -42,7 +54,7 @@ impl TokenStorage {
             }
         }
 
-        fs::write(path, content).context("Failed to write token storage file")?;
+        fs::write(path, ciphertext).context("Failed to write token storage file")?;
 
         // Set permissions to 600 on Unix systems
         #[cfg(unix)]
@@ -55,6 +67,46 @@ impl TokenStorage {
 
         Ok(())
     }
+}
+
+/// Derives a 32-byte key from the machine's unique ID using SHA-256
+fn get_encryption_key() -> Result<[u8; 32]> {
+    let id = machine_uid::get().map_err(|e| anyhow::anyhow!("Failed to retrieve machine unique ID: {}", e))?;
+    let mut hasher = Sha256::new();
+    hasher.update(id.as_bytes());
+    let result = hasher.finalize();
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&result);
+    Ok(key)
+}
+
+/// Encrypts data using AES-256-GCM with a random nonce
+fn encrypt(plaintext: &[u8], key: &[u8; 32]) -> Result<Vec<u8>> {
+    let cipher = Aes256Gcm::new(key.into());
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    let ciphertext = cipher.encrypt(&nonce, plaintext)
+        .map_err(|e| anyhow::anyhow!("Encryption error: {}", e))?;
+    
+    // Combine nonce and ciphertext: [nonce (12 bytes)][ciphertext]
+    let mut combined = nonce.to_vec();
+    combined.extend(ciphertext);
+    Ok(combined)
+}
+
+/// Decrypts data using AES-256-GCM, extracting the nonce from the first 12 bytes
+fn decrypt(ciphertext: &[u8], key: &[u8; 32]) -> Result<Vec<u8>> {
+    if ciphertext.len() < 12 {
+        return Err(anyhow::anyhow!("Invalid ciphertext length"));
+    }
+    
+    let (nonce_bytes, encrypted_data) = ciphertext.split_at(12);
+    let nonce = Nonce::from_slice(nonce_bytes);
+    let cipher = Aes256Gcm::new(key.into());
+    
+    let plaintext = cipher.decrypt(nonce, encrypted_data)
+        .map_err(|e| anyhow::anyhow!("Decryption error: {}", e))?;
+    
+    Ok(plaintext)
 }
 
 pub struct AuthManager {
@@ -95,7 +147,7 @@ impl From<oauth2::http::Error> for HttpClientError {
 
 fn get_token_storage_path() -> Result<PathBuf> {
     let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).context("Failed to get HOME directory")?;
-    Ok(PathBuf::from(home).join(".o365-cli").join("tokens.json"))
+    Ok(PathBuf::from(home).join(".o365-cli").join("tokens.bin"))
 }
 
 impl AuthManager {
@@ -243,7 +295,7 @@ impl AuthManager {
         };
 
         storage.save(&path)?;
-        log::info!("[AUTH] ✅ Tokens stored in JSON file successfully");
+        log::info!("[AUTH] ✅ Tokens stored securely in encrypted file");
 
         Ok(access_token)
     }
@@ -296,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_token_storage_lifecycle() {
-        let storage_path = PathBuf::from("test_tokens.json");
+        let storage_path = PathBuf::from("test_tokens.bin");
         if storage_path.exists() {
             fs::remove_file(&storage_path).unwrap();
         }
@@ -308,14 +360,13 @@ mod tests {
             expires_at,
         };
 
-        // Save
+        // Save (Encrypted)
         storage.save(&storage_path).expect("Failed to save tokens");
 
-        // Load
+        // Load (Decrypted)
         let loaded = TokenStorage::load(&storage_path).expect("Failed to load tokens");
         assert_eq!(loaded.access_token, "test_access");
         assert_eq!(loaded.refresh_token, "test_refresh");
-        // Compare timestamps with some tolerance for serialization
         assert_eq!(loaded.expires_at.timestamp(), expires_at.timestamp());
 
         // Cleanup
@@ -325,7 +376,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_access_token_checks_expiration() {
         let temp_dir = std::env::temp_dir();
-        let storage_path = temp_dir.join("check_expiry_tokens.json");
+        let storage_path = temp_dir.join("check_expiry_tokens.bin");
         
         let storage = TokenStorage {
             access_token: "still_valid".to_string(),
