@@ -38,6 +38,7 @@ pub enum InputContext {
 pub enum AuthStatus {
     Unknown,
     Checking,
+    Refreshing,
     Valid(String),
     Invalid(String),
 }

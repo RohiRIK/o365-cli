@@ -44,7 +44,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app
     // Initial Session Check
     if app.user_profile.is_some() {
         app.add_log("🔄 Verifying Session...".to_string());
-        app.auth_status = crate::app::AuthStatus::Checking;
+        app.auth_status = crate::app::AuthStatus::Refreshing;
         terminal.draw(|f| crate::ui::render(f, &mut app))?;
         
         // Use the tenant from the profile if possible, otherwise common

@@ -228,6 +228,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let auth_status_display: Span = match &app.auth_status {
         crate::app::AuthStatus::Unknown => Span::styled("Auth: Unknown", Style::default().fg(Color::DarkGray)),
         crate::app::AuthStatus::Checking => Span::styled("Auth: Checking...", Style::default().fg(Color::Yellow)),
+        crate::app::AuthStatus::Refreshing => Span::styled("Auth: 🔄 Refreshing", Style::default().fg(Color::Cyan)),
         crate::app::AuthStatus::Valid(msg) => Span::styled(format!("Auth: ✅ {}", msg), Style::default().fg(Color::Green)),
         crate::app::AuthStatus::Invalid(msg) => Span::styled(format!("Auth: ❌ {}", msg), Style::default().fg(Color::Red)),
     };
