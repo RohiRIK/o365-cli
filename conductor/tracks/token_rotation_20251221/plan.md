@@ -33,7 +33,7 @@
 - [ ] Task: Conductor - User Manual Verification 'UI & TUI Integration' (Protocol in workflow.md)
 
 ## Phase 4: Final Verification [checkpoint: ]
-- [ ] Task: End-to-End Manual Test
+- [x] Task: End-to-End Manual Test [0a76b0d]
     -   Sub-task: Log in normally. Manually modify the token file to set an expired timestamp.
     -   Sub-task: Run a task (e.g., `sec:shadow-it`) and verify that rotation happens silently and successfully.
-- [ ] Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md) [0a76b0d]
