@@ -1,6 +1,6 @@
 # Track Plan: Portable Token Storage and Automatic Rotation
 
-## Phase 1: Migration to JSON Storage [checkpoint: ]
+## Phase 1: Migration to JSON Storage [checkpoint: 8867797]
 - [x] Task: Implement JSON Token Storage in `AuthManager` [211d784]
     -   Context: Refactor `cli/src/auth.rs` to replace `keyring` usage with file-based I/O.
     -   Sub-task: Define `TokenStorage` struct and implement `load` and `save` methods using `serde_json`.
