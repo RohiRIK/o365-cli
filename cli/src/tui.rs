@@ -195,7 +195,34 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app
                                 }
                             }
                             app.is_loading = false;
-                        }
+                        },
+                        Some(crate::app::AppAction::ReviewProposedActions { name, mut args }) => {
+                            app.add_log("🛡️ Performing silent dry-run for review...".to_string());
+                            
+                            // Force dry-run for the review phase
+                            if let Some(pos) = args.iter().position(|x| x == "--dry-run") {
+                                if pos + 1 < args.len() {
+                                    args[pos + 1] = "true".to_string();
+                                }
+                            } else {
+                                args.push("--dry-run".to_string());
+                                args.push("true".to_string());
+                            }
+
+                            app.is_loading = true;
+                            let tenant_to_use = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() { "common".to_string() } else { app.tenant_id.clone() };
+                            let auth = AuthManager::new(&tenant_to_use)?;
+                            if let Ok(token) = auth.get_access_token().await {
+                                let result = crate::runner::run_task(&name, &args, &token, |msg| {
+                                    app.add_log(msg);
+                                    let _ = terminal.draw(|f| crate::ui::render(f, &mut app));
+                                });
+                                if let Ok(output) = result {
+                                    app.task_output = Some(output);
+                                }
+                            }
+                            app.is_loading = false;
+                        },
                         Some(crate::app::AppAction::BackToMenu) => {
                             app.task_output = None;
                             app.add_log("🔙 Returned to Menu".to_string());

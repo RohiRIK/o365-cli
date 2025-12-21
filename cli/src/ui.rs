@@ -114,6 +114,40 @@ pub fn render(f: &mut Frame, app: &mut App) {
              let lines: Vec<&str> = json.lines().collect();
              render_list(f, right_area, "Raw JSON Result", lines, 0, content_border_style, is_content_focused);
         }
+    } else if app.focus == Focus::Review {
+        // Render Review Summary Overlay
+        let area = centered_rect(70, 40, f.area());
+        
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title("⚠️  ACTION REVIEW (PROPOSED CHANGES)");
+            
+        let mut text = vec![
+            Line::from(Span::styled("The following actions will be performed LIVE:", Style::default().add_modifier(Modifier::BOLD))),
+            Line::from(""),
+        ];
+
+        // If we have a task result (from the silent dry-run), show it
+        if let Some(output) = &app.task_output {
+            for row in &output.rows {
+                let detail = row[1].clone();
+                text.push(Line::from(format!(" • {}", detail)));
+            }
+        } else {
+            text.push(Line::from("Preparing action summary..."));
+        }
+
+        text.push(Line::from(""));
+        text.push(Line::from(Span::styled("PRESS <Enter> TO CONFIRM LIVE EXECUTION", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))));
+        text.push(Line::from(Span::styled("PRESS <Esc> TO CANCEL", Style::default().fg(Color::Red))));
+
+        let paragraph = Paragraph::new(text)
+            .block(block)
+            .wrap(Wrap { trim: true });
+            
+        f.render_widget(Clear, area);
+        f.render_widget(paragraph, area);
     } else if app.focus == Focus::Input {
         // Render Input Prompt Overlay
         let (prompt_title, prompt_text) = match &app.input_context {
