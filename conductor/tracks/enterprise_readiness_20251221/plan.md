@@ -26,7 +26,7 @@
     -   Sub-task: Implement local search/filter logic in the TUI for the task results table.
 - [ ] Task: Conductor - User Manual Verification 'UI Safety & Interaction Polish' (Protocol in workflow.md)
 
-## Phase 3: Guest User Lifecycle Module [checkpoint: ]
+## Phase 3: Guest User Lifecycle Module [checkpoint: 114206a]
 - [x] Task: Implement `iam:guest-cleanup` Worker [f8b8959]
     -   Context: Create `core/src/commands/iam/guest-cleanup.ts`.
     -   Sub-task: Port PowerShell logic for identifying stale guests (>90 days).
