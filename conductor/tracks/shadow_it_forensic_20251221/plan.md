@@ -16,7 +16,7 @@
 - [ ] Task: Conductor - User Manual Verification 'API & Data Model Enrichment' (Protocol in workflow.md)
 
 ## Phase 2: TUI Detail View Refactor [checkpoint: ]
-- [ ] Task: Enhance "Row Details" Popup for Forensic Data
+- [x] Task: Enhance "Row Details" Popup for Forensic Data [7c2bbf7]
     -   Context: Modify `cli/src/ui.rs`.
     -   Sub-task: Refactor the detail popup to use a structured, multi-section layout (e.g., "Identifiers", "Permissions", "Activity", "Hygiene").
     -   Sub-task: Ensure long lists of secrets or permissions are readable (implement scrolling or better wrapping).
