@@ -80,7 +80,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .border_style(Style::default().fg(Color::Cyan))
                 .title("🔎  ENHANCED FORENSIC DETAILS");
 
-            if let Some(row) = output.rows.get(app.selected_row) {
+            let filtered_rows = app.get_filtered_rows();
+            if let Some(row) = filtered_rows.get(app.selected_row) {
                 let mut text = Vec::new();
 
                 // Define fields to show in specific order/sections
@@ -137,10 +138,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
         // --- RESULTS TABLE ---
         if !output.headers.is_empty() {
+            let filtered_rows = app.get_filtered_rows();
+            
             let header_cells = output.headers.iter().take(5).map(|h| Cell::from(Span::styled(h.as_str(), Style::default().fg(Color::White).add_modifier(Modifier::BOLD))));
             let header = Row::new(header_cells).height(1).bottom_margin(1);
             
-            let rows = output.rows.iter().map(|row| {
+            let rows = filtered_rows.iter().map(|row| {
                 let cells: Vec<Cell> = row.iter().take(5).enumerate().map(|(i, val)| {
                     let style = if i == 0 { get_action_style(val) } else { Style::default().fg(Color::White) };
                     Cell::from(Span::styled(val.replace('\n', " "), style))
@@ -156,14 +159,29 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 Constraint::Min(10),    // Last Active
             ];
 
+            let title = if app.filter_buffer.is_empty() {
+                "Task Results".to_string()
+            } else {
+                format!("Task Results (Filtered: '{}')", app.filter_buffer)
+            };
+
             let t = Table::new(rows, widths)
                 .header(header)
-                .block(Block::default().borders(Borders::ALL).border_style(content_border_style).title("Task Results"))
+                .block(Block::default().borders(Borders::ALL).border_style(content_border_style).title(title))
                 .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
                 .highlight_symbol(">> ");
             
             f.render_widget(Clear, right_area);
             f.render_stateful_widget(t, right_area, &mut app.results_state);
+
+            // Render Filter Bar if focused
+            if app.focus == Focus::Filter {
+                let area = centered_rect(50, 10, f.area());
+                let block = Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Yellow)).title("Live Filter");
+                let paragraph = Paragraph::new(format!("Search: {}", app.filter_buffer)).block(block);
+                f.render_widget(Clear, area);
+                f.render_widget(paragraph, area);
+            }
         } else if let Some(msg) = &output.message {
              render_list(f, right_area, "Result Message", vec![msg], 0, content_border_style, is_content_focused);
         } else if let Some(json) = &output.raw_json {

@@ -16,7 +16,8 @@ pub enum Focus {
     Content,
     Logs,
     Input,
-    Review, // New focus for the summary/confirmation screen
+    Review,
+    Filter, // New focus for live filtering of results
 }
 
 #[allow(dead_code)]
@@ -76,6 +77,7 @@ pub struct App {
     pub show_detail: bool,
     pub selected_row: usize,
     pub results_state: ratatui::widgets::TableState,
+    pub filter_buffer: String, // NEW
 }
 
 impl App {
@@ -107,6 +109,7 @@ impl App {
             show_detail: false,
             selected_row: 0,
             results_state: ratatui::widgets::TableState::default(),
+            filter_buffer: String::new(),
         }
     }
 
@@ -122,6 +125,27 @@ impl App {
     }
 
     pub fn on_key(&mut self, key: KeyCode) -> Option<AppAction> {
+        // Handle Filter Mode
+        if self.focus == Focus::Filter {
+            match key {
+                KeyCode::Enter | KeyCode::Esc => {
+                    self.focus = Focus::Content;
+                    return None;
+                }
+                KeyCode::Backspace => {
+                    self.filter_buffer.pop();
+                    self.selected_row = 0; // Reset selection on filter change
+                    return None;
+                }
+                KeyCode::Char(c) => {
+                    self.filter_buffer.push(c);
+                    self.selected_row = 0;
+                    return None;
+                }
+                _ => return None,
+            }
+        }
+
         // Handle Review Mode
         if self.focus == Focus::Review {
             match key {
@@ -162,7 +186,7 @@ impl App {
         }
 
         // Special handling if we are showing results
-        if let Some(output) = &self.task_output {
+        if let Some(_output) = &self.task_output {
             if self.show_detail {
                 match key {
                     KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter | KeyCode::Char(' ') => {
@@ -180,12 +204,18 @@ impl App {
                     return Some(AppAction::BackToMenu);
                 }
                 KeyCode::Char('e') | KeyCode::Char('E') => return Some(AppAction::ExportResults),
+                KeyCode::Char('/') => {
+                    self.focus = Focus::Filter;
+                    self.filter_buffer.clear();
+                    return None;
+                }
                 KeyCode::Enter | KeyCode::Char(' ') => {
                     self.show_detail = true;
                     return None;
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
-                    if self.selected_row < output.rows.len().saturating_sub(1) {
+                    let count = self.get_filtered_rows().len();
+                    if self.selected_row < count.saturating_sub(1) {
                         self.selected_row += 1;
                         self.results_state.select(Some(self.selected_row));
                     }
@@ -371,6 +401,23 @@ impl App {
     }
 
     pub fn on_tick(&mut self) {}
+
+    pub fn get_filtered_rows(&self) -> Vec<Vec<String>> {
+        if let Some(output) = &self.task_output {
+            if self.filter_buffer.is_empty() {
+                return output.rows.clone();
+            }
+            let query = self.filter_buffer.to_lowercase();
+            output.rows.iter()
+                .filter(|row| {
+                    row.iter().any(|col| col.to_lowercase().contains(&query))
+                })
+                .cloned()
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 #[cfg(test)]
