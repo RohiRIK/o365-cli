@@ -23,11 +23,11 @@
 - [ ] Task: Conductor - User Manual Verification 'Automatic Rotation Logic' (Protocol in workflow.md)
 
 ## Phase 3: UI & TUI Integration [checkpoint: ]
-- [ ] Task: Update TUI Status Display
+- [x] Task: Update TUI Status Display [4e3e866]
     -   Context: Modify `cli/src/app.rs` and `cli/src/ui.rs`.
     -   Sub-task: Update `AuthStatus` to reflect proactive refresh attempts.
     -   Sub-task: Ensure the TUI periodically checks token health (via `on_tick`).
-- [ ] Task: Integrate Refresh in Command Execution
+- [x] Task: Integrate Refresh in Command Execution [4e3e866]
     -   Context: Update the `RunTask` handler in `cli/src/tui.rs`.
     -   Sub-task: Ensure a fresh token is always requested from `AuthManager` before starting a worker.
 - [ ] Task: Conductor - User Manual Verification 'UI & TUI Integration' (Protocol in workflow.md)
