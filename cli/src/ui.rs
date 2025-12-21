@@ -74,24 +74,49 @@ pub fn render(f: &mut Frame, app: &mut App) {
     if let Some(output) = &app.task_output {
         // --- DETAIL VIEW POPUP ---
         if app.show_detail {
-            let area = centered_rect(80, 80, f.area());
+            let area = centered_rect(85, 85, f.area());
             let block = Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Cyan))
-                .title("🔎  ROW DETAILS");
+                .title("🔎  ENHANCED FORENSIC DETAILS");
 
             if let Some(row) = output.rows.get(app.selected_row) {
                 let mut text = Vec::new();
 
-                for (i, header) in output.headers.iter().enumerate() {
-                    if let Some(value) = row.get(i) {
-                        let header_style = Style::default().add_modifier(Modifier::BOLD).fg(Color::Cyan);
-                        let value_style = if i == 0 { get_action_style(value) } else { Style::default().fg(Color::White) };
+                // Define fields to show in specific order/sections
+                let sections = vec![
+                    ("RISK & RECOMMENDATION", vec![0, 2, 16, 18]),
+                    ("APPLICATION IDENTITY", vec![1, 8, 9, 10, 5, 6]),
+                    ("USER CONTEXT", vec![3, 7, 4]),
+                    ("PERMISSIONS", vec![14]), // 15 is special handled below
+                    ("CREDENTIAL HYGIENE", vec![11, 12, 13, 17]),
+                ];
 
-                        text.push(Line::from(vec![
-                            Span::styled(format!("{:<20}: ", header), header_style),
-                            Span::styled(value, value_style),
-                        ]));
+                for (title, fields) in sections {
+                    text.push(Line::from(""));
+                    text.push(Line::from(Span::styled(format!("─── {} ───", title), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))));
+                    
+                    for idx in fields {
+                        if let (Some(header), Some(value)) = (output.headers.get(idx), row.get(idx)) {
+                            let label_style = Style::default().add_modifier(Modifier::BOLD).fg(Color::Cyan);
+                            let value_style = if idx == 0 { get_action_style(value) } else { Style::default().fg(Color::White) };
+                            text.push(Line::from(vec![
+                                Span::styled(format!("{:<20}: ", header), label_style),
+                                Span::styled(value, value_style),
+                            ]));
+                        }
+                    }
+
+                    // Special case for Scope Details (idx 15) in Permissions section
+                    if title == "PERMISSIONS" {
+                        if let Some(details) = row.get(15) {
+                            text.push(Line::from(vec![
+                                Span::styled(format!("{:<20}: ", "Scope Details"), Style::default().add_modifier(Modifier::BOLD).fg(Color::Cyan)),
+                            ]));
+                            for line in details.split("; ") {
+                                text.push(Line::from(format!("  • {}", line)));
+                            }
+                        }
                     }
                 }
 
@@ -112,21 +137,24 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
         // --- RESULTS TABLE ---
         if !output.headers.is_empty() {
-            let header_cells = output.headers.iter().map(|h| Cell::from(Span::styled(h.as_str(), Style::default().fg(Color::White).add_modifier(Modifier::BOLD))));
+            let header_cells = output.headers.iter().take(5).map(|h| Cell::from(Span::styled(h.as_str(), Style::default().fg(Color::White).add_modifier(Modifier::BOLD))));
             let header = Row::new(header_cells).height(1).bottom_margin(1);
             
             let rows = output.rows.iter().map(|row| {
-                let action_type = &row[0];
-                let detail_message = row[1].replace('\n', " ").replace('\r', "");
-                let type_style = get_action_style(action_type);
-                
-                Row::new(vec![
-                    Cell::from(Span::styled(action_type.as_str(), type_style)),
-                    Cell::from(Span::styled(detail_message, Style::default().fg(Color::White))),
-                ]).height(1)
+                let cells: Vec<Cell> = row.iter().take(5).enumerate().map(|(i, val)| {
+                    let style = if i == 0 { get_action_style(val) } else { Style::default().fg(Color::White) };
+                    Cell::from(Span::styled(val.replace('\n', " "), style))
+                }).collect();
+                Row::new(cells).height(1)
             });
             
-            let widths = [Constraint::Length(10), Constraint::Min(0)];
+            let widths = [
+                Constraint::Length(10), // Risk
+                Constraint::Length(25), // App Name
+                Constraint::Length(15), // Severity
+                Constraint::Length(30), // User/Scope
+                Constraint::Min(10),    // Last Active
+            ];
 
             let t = Table::new(rows, widths)
                 .header(header)
