@@ -475,4 +475,37 @@ mod tests {
             _ => panic!("Expected RunTask for guest cleanup"),
         }
     }
+
+    #[test]
+    fn test_results_filtering_logic() {
+        let mut app = App::new();
+        let output = TaskOutput {
+            headers: vec!["Col1".to_string(), "Col2".to_string()],
+            rows: vec![
+                vec!["Apple".to_string(), "Fruit".to_string()],
+                vec!["Banana".to_string(), "Fruit".to_string()],
+                vec!["Carrot".to_string(), "Veggie".to_string()],
+            ],
+            raw_json: None,
+            message: None,
+            file_path: None,
+        };
+        app.task_output = Some(output);
+
+        // No filter
+        assert_eq!(app.get_filtered_rows().len(), 3);
+
+        // Filter by content
+        app.filter_buffer = "apple".to_string();
+        assert_eq!(app.get_filtered_rows().len(), 1);
+        assert_eq!(app.get_filtered_rows()[0][0], "Apple");
+
+        // Case insensitive
+        app.filter_buffer = "FRUIT".to_string();
+        assert_eq!(app.get_filtered_rows().len(), 2);
+
+        // No match
+        app.filter_buffer = "Zebra".to_string();
+        assert_eq!(app.get_filtered_rows().len(), 0);
+    }
 }
