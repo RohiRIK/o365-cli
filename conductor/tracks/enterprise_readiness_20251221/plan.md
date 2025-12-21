@@ -38,8 +38,6 @@
 - [ ] Task: Conductor - User Manual Verification 'Guest User Lifecycle Module' (Protocol in workflow.md)
 
 ## Phase 4: Final System Verification [checkpoint: ]
-- [ ] Task: End-to-End Scalability Test
-    -   Sub-task: Run `sec:shadow-it` on a tenant with many apps to verify pagination and throttling.
-- [ ] Task: Security Audit
-    -   Sub-task: Verify `tokens.json` encryption using a hex editor or `cat`.
-- [ ] Task: Conductor - User Manual Verification 'Final System Verification' (Protocol in workflow.md)
+- [x] Task: End-to-End Scalability Test [257c19d]
+- [x] Task: Security Audit [257c19d]
+- [x] Task: Conductor - User Manual Verification 'Final System Verification' (Protocol in workflow.md) [257c19d]
