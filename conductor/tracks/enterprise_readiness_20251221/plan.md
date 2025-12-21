@@ -15,12 +15,12 @@
 - [ ] Task: Conductor - User Manual Verification 'Security & Scalability Foundation' (Protocol in workflow.md)
 
 ## Phase 2: UI Safety & Interaction Polish [checkpoint: ]
-- [ ] Task: Implement "Review & Confirm" Flow for Destructive Actions
+- [x] Task: Implement "Review & Confirm" Flow for Destructive Actions [088a94d]
     -   Context: Modify `cli/src/app.rs` and `cli/src/ui.rs`.
     -   Sub-task: Add `AppAction::ReviewProposedActions` and corresponding state.
     -   Sub-task: Update `iam:offboard` flow to stop at a "Review" screen before live execution.
     -   Sub-task: Add a final confirmation hotkey (e.g., `<Ctrl-X>`).
-- [ ] Task: Enhance Results Navigation (Detail View & Filtering)
+- [x] Task: Enhance Results Navigation (Detail View & Filtering) [3adca01]
     -   Context: Modify `cli/src/ui.rs`.
     -   Sub-task: Create a popup widget for "Selected Row Detail".
     -   Sub-task: Implement local search/filter logic in the TUI for the task results table.
