@@ -1,16 +1,16 @@
 # Track Plan: Enterprise Production Readiness & Guest Lifecycle
 
 ## Phase 1: Security & Scalability Foundation [checkpoint: ]
-- [ ] Task: Implement Encrypted Token Storage in `AuthManager`
+- [x] Task: Implement Encrypted Token Storage in `AuthManager` [e2192b1]
     -   Context: Refactor `cli/src/auth.rs`.
     -   Sub-task: Add `aes-gcm` or equivalent crate to `cli/Cargo.toml`.
     -   Sub-task: Implement key derivation from machine-specific info (e.g., machine-id).
     -   Sub-task: Update `TokenStorage` load/save to handle encryption/decryption.
-- [ ] Task: Enhance Graph Service with Pagination & Throttling
+- [x] Task: Enhance Graph Service with Pagination & Throttling [936736d]
     -   Context: Modify `core/src/services/graph.ts`.
     -   Sub-task: Implement a generic `fetchAll` wrapper that follows `@odata.nextLink`.
     -   Sub-task: Add a global interceptor to catch 429 status codes and wait for `Retry-After`.
-- [ ] Task: Write Tests for Security & Scalability
+- [x] Task: Write Tests for Security & Scalability [936736d]
     -   Context: Add Rust tests for token encryption and TypeScript tests for pagination logic.
 - [ ] Task: Conductor - User Manual Verification 'Security & Scalability Foundation' (Protocol in workflow.md)
 
