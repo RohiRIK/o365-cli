@@ -22,7 +22,7 @@
     -   Sub-task: Verify that the storage file is updated with new tokens after rotation.
 - [ ] Task: Conductor - User Manual Verification 'Automatic Rotation Logic' (Protocol in workflow.md)
 
-## Phase 3: UI & TUI Integration [checkpoint: ]
+## Phase 3: UI & TUI Integration [checkpoint: 5c00e5b]
 - [x] Task: Update TUI Status Display [4e3e866]
     -   Context: Modify `cli/src/app.rs` and `cli/src/ui.rs`.
     -   Sub-task: Update `AuthStatus` to reflect proactive refresh attempts.
