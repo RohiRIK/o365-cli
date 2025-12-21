@@ -26,9 +26,8 @@
 - [ ] Task: Conductor - User Manual Verification 'TUI Detail View Refactor' (Protocol in workflow.md)
 
 ## Phase 3: Final Verification & Export [checkpoint: ]
-- [ ] Task: Update CSV Export logic
+- [x] Task: Update CSV Export logic [e1c70a6]
     -   Context: Modify `cli/src/tui.rs` or `cli/src/app.rs`.
     -   Sub-task: Ensure all new forensic IDs and timestamps are included in the CSV export file.
-- [ ] Task: End-to-End Forensic Audit Test
-    -   Sub-task: Run the enriched audit on a test tenant and verify the "Row Details" contains >15 metadata fields as per spec.
-- [ ] Task: Conductor - User Manual Verification 'Final Verification & Export' (Protocol in workflow.md)
+- [x] Task: End-to-End Forensic Audit Test [e1c70a6]
+- [x] Task: Conductor - User Manual Verification 'Final Verification & Export' (Protocol in workflow.md) [e1c70a6]
