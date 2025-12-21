@@ -874,21 +874,30 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             `${severityEmoji} ${g.permissionSeverity || "LOW"}`,
             g.user && g.user.length > 25 ? g.user.substring(0, 22) + "..." : (g.user || "N/A"),
             lastActiveDisplay,
-            g.appId || "N/A", // NEW
-            g.servicePrincipalId || "N/A", // NEW
-            g.principalId || "N/A", // NEW
-            g.riskyScopes && g.riskyScopes.length > 40 ? g.riskyScopes.substring(0, 37) + "..." : (g.riskyScopes || ""),
-            g.recommendation && g.recommendation.length > 50 ? g.recommendation.substring(0, 47) + "..." : (g.recommendation || "Review required")
+            g.appId || "N/A",
+            g.servicePrincipalId || "N/A",
+            g.principalId || "N/A",
+            g.publisher || "N/A", // NEW
+            g.appOwnerType || "N/A", // NEW
+            g.homepage || "N/A", // NEW
+            g.secretStatus || "N/A", // NEW
+            g.certStatus || "N/A", // NEW
+            g.credentialHealth || "N/A", // NEW
+            g.riskyScopes || "N/A",
+            g.scopeDescriptions || "N/A", // NEW
+            g.classificationSource || "N/A", // NEW
+            `${g.credentialAgeDays || 0} days`, // NEW
+            g.recommendation || "Review required"
           ];
         } catch (rowError: any) {
           console.error(`[ERROR] Failed to format row ${idx}: ${rowError.message}`);
-          return ["Error", "Error formatting row", "", "", "", "", "", "", "", ""];
+          return ["Error", "Error formatting row", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
         }
       });
       
       IPC.progress(`Table rows prepared (${tableRows.length} rows)`, 94);
     } catch (e: any) {
-      tableRows = [["Error", "Failed to generate table", "", "", "", "", "", "", "", ""]];
+      tableRows = [["Error", "Failed to generate table", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]];
     }
 
     IPC.progress(`Building summary...`, 95);
@@ -916,7 +925,12 @@ ${riskyGrants.length > 50 ? `\n⚠️ Showing top 50 of ${riskyGrants.length} ri
     const successPayload = {
         message: dryRun ? summaryMessage : "Remediation Complete",
         table: {
-            headers: ["Risk", "App Name", "Severity", "User/Scope", "Last Active", "App ID", "SP ID", "Principal ID", "Risky Permissions", "Recommendation"],
+            headers: [
+                "Risk", "App Name", "Severity", "User/Scope", "Last Active", 
+                "App ID", "SP ID", "Principal ID", "Publisher", "Owner Type", 
+                "Homepage", "Secrets", "Certs", "Cred Health", "Risky Scopes", 
+                "Scope Details", "Source", "Cred Age", "Recommendation"
+            ],
             rows: tableRows
         }
     };
