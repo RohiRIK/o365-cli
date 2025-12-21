@@ -72,41 +72,75 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // Check if we have a task result to show
     if let Some(output) = &app.task_output {
-        // Render Result Table
+        // --- DETAIL VIEW POPUP ---
+        if app.show_detail {
+            let area = centered_rect(80, 60, f.area());
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title("🔎  ROW DETAILS");
+
+            if let Some(row) = output.rows.get(app.selected_row) {
+                let action_type = &row[0];
+                let detail = &row[1];
+                let type_style = get_action_style(action_type);
+
+                let mut text = vec![
+                    Line::from(vec![
+                        Span::styled("Type:   ", Style::default().add_modifier(Modifier::BOLD)),
+                        Span::styled(action_type, type_style),
+                    ]),
+                    Line::from(""),
+                    Line::from(Span::styled("Details:", Style::default().add_modifier(Modifier::BOLD))),
+                ];
+
+                // Wrap long details into multiple lines
+                let wrapped_detail = detail.replace("; ", "\n • ").replace(". ", ".\n");
+                for line in wrapped_detail.lines() {
+                    text.push(Line::from(format!("  {}", line)));
+                }
+
+                text.push(Line::from(""));
+                text.push(Line::from(Span::styled("PRESS ANY KEY TO CLOSE", Style::default().fg(Color::DarkGray))));
+
+                let paragraph = Paragraph::new(text)
+                    .block(block)
+                    .wrap(Wrap { trim: true });
+                
+                f.render_widget(Clear, area);
+                f.render_widget(paragraph, area);
+            } else {
+                app.show_detail = false;
+            }
+            return; // Don't render underlying table if showing detail
+        }
+
+        // --- RESULTS TABLE ---
         if !output.headers.is_empty() {
             let header_cells = output.headers.iter().map(|h| Cell::from(Span::styled(h.as_str(), Style::default().fg(Color::White).add_modifier(Modifier::BOLD))));
             let header = Row::new(header_cells).height(1).bottom_margin(1);
             
             let rows = output.rows.iter().map(|row| {
                 let action_type = &row[0];
-                // Sanitize detail message: replace newlines with spaces to prevent table layout breakage
                 let detail_message = row[1].replace('\n', " ").replace('\r', "");
-
                 let type_style = get_action_style(action_type);
                 
-                let detail_cell = Cell::from(Span::styled(detail_message.clone(), Style::default().fg(Color::White)))
-                    .style(Style::default()); 
-
                 Row::new(vec![
                     Cell::from(Span::styled(action_type.as_str(), type_style)),
-                    detail_cell,
-                ]).height(1) // Force single line height for cleanliness, let user scroll or export for full details
+                    Cell::from(Span::styled(detail_message, Style::default().fg(Color::White))),
+                ]).height(1)
             });
             
-            // Fixed width for "Type", dynamic for "Detail"
-            let widths = [
-                Constraint::Length(10), // "Type" column fixed width
-                Constraint::Min(0),     // "Detail" column takes remaining space
-            ];
-
+            let widths = [Constraint::Length(10), Constraint::Min(0)];
 
             let t = Table::new(rows, widths)
                 .header(header)
                 .block(Block::default().borders(Borders::ALL).border_style(content_border_style).title("Task Results"))
-                .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD)); // Use row_highlight_style
+                .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
+                .highlight_symbol(">> ");
             
             f.render_widget(Clear, right_area);
-            f.render_widget(t, right_area);
+            f.render_stateful_widget(t, right_area, &mut app.results_state);
         } else if let Some(msg) = &output.message {
              render_list(f, right_area, "Result Message", vec![msg], 0, content_border_style, is_content_focused);
         } else if let Some(json) = &output.raw_json {
@@ -289,6 +323,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
         
     f.render_widget(Clear, bottom_area);
     f.render_stateful_widget(log_list_with_help, bottom_area, &mut app.logs_state);
+
+    // --- LOADING OVERLAY ---
+    if app.is_loading {
+        let area = centered_rect(30, 10, f.area());
+        let loading_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title("Processing");
+        let loading_text = Paragraph::new("\n  Please wait...")
+            .block(loading_block)
+            .alignment(ratatui::layout::Alignment::Center);
+        
+        f.render_widget(Clear, area);
+        f.render_widget(loading_text, area);
+    }
 }
     
 fn render_list<S: Into<String>>(

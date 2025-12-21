@@ -24,7 +24,7 @@ pub enum AppAction {
     Login,
     ToggleDryRun,
     RunTask { name: String, args: Vec<String> },
-    ReviewProposedActions { name: String, args: Vec<String> }, // New action
+    ReviewProposedActions { name: String, args: Vec<String> },
     ExportResults,
     BackToMenu,
 }
@@ -72,6 +72,9 @@ pub struct App {
 
     // Task Results
     pub task_output: Option<TaskOutput>,
+    pub show_detail: bool,
+    pub selected_row: usize,
+    pub results_state: ratatui::widgets::TableState,
 }
 
 impl App {
@@ -92,14 +95,17 @@ impl App {
             input_buffer: String::new(),
             input_context: InputContext::None,
             pending_action: None,
-            auth_status: AuthStatus::Unknown,
             security_index: 0,
             iam_index: 0,
             settings_index: 0,
             tenant_id,
             dry_run: true,
             user_profile,
+            auth_status: AuthStatus::Unknown,
             task_output: None,
+            show_detail: false,
+            selected_row: 0,
+            results_state: ratatui::widgets::TableState::default(),
         }
     }
 
@@ -118,7 +124,7 @@ impl App {
         // Handle Review Mode
         if self.focus == Focus::Review {
             match key {
-                // Confirm with Enter or Ctrl-X
+                // Confirm with Enter or x
                 KeyCode::Enter | KeyCode::Char('x') => {
                     if let Some((name, args)) = self.pending_action.take() {
                         self.focus = Focus::Content;
@@ -154,10 +160,43 @@ impl App {
             }
         }
 
-        if self.task_output.is_some() {
+        // Special handling if we are showing results
+        if let Some(output) = &self.task_output {
+            if self.show_detail {
+                match key {
+                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter | KeyCode::Char(' ') => {
+                        self.show_detail = false;
+                        return None;
+                    }
+                    _ => return None,
+                }
+            }
+
             match key {
-                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('q') => return Some(AppAction::BackToMenu),
+                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('q') => {
+                    self.selected_row = 0;
+                    self.results_state.select(None);
+                    return Some(AppAction::BackToMenu);
+                }
                 KeyCode::Char('e') | KeyCode::Char('E') => return Some(AppAction::ExportResults),
+                KeyCode::Enter | KeyCode::Char(' ') => {
+                    self.show_detail = true;
+                    return None;
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if self.selected_row < output.rows.len().saturating_sub(1) {
+                        self.selected_row += 1;
+                        self.results_state.select(Some(self.selected_row));
+                    }
+                    return None;
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if self.selected_row > 0 {
+                        self.selected_row -= 1;
+                        self.results_state.select(Some(self.selected_row));
+                    }
+                    return None;
+                }
                 _ => {} 
             }
         }
