@@ -11,7 +11,7 @@
     -   Sub-task: Verify that file permissions are set correctly on Unix-like systems.
 - [ ] Task: Conductor - User Manual Verification 'Migration to JSON Storage' (Protocol in workflow.md)
 
-## Phase 2: Automatic Rotation Logic [checkpoint: ]
+## Phase 2: Automatic Rotation Logic [checkpoint: f12ad94]
 - [x] Task: Implement Token Refresh in `AuthManager` [fc0448a]
     -   Context: Update `cli/src/auth.rs` to include rotation logic.
     -   Sub-task: Implement `refresh_tokens` method using the OAuth2 refresh token flow.
