@@ -1,6 +1,6 @@
 # Track Plan: Enterprise Production Readiness & Guest Lifecycle
 
-## Phase 1: Security & Scalability Foundation [checkpoint: ]
+## Phase 1: Security & Scalability Foundation [checkpoint: 3839338]
 - [x] Task: Implement Encrypted Token Storage in `AuthManager` [e2192b1]
     -   Context: Refactor `cli/src/auth.rs`.
     -   Sub-task: Add `aes-gcm` or equivalent crate to `cli/Cargo.toml`.
