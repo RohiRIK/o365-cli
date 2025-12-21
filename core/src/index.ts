@@ -1,5 +1,6 @@
 import { offboardUser } from "./commands/iam/offboard";
-import { analyzeShadowIT } from "./commands/sec/shadow-it"; // Import the new command
+import { analyzeShadowIT } from "./commands/sec/shadow-it";
+import { cleanupGuests } from "./commands/iam/guest-cleanup";
 import { IPC } from "./utils/ipc";
 import { GraphService } from "./services/graph";
 
@@ -13,33 +14,23 @@ async function main() {
   
   switch (command) {
     case "iam:offboard":
-      // Usage: iam:offboard --user email@domain.com [--manager manager@domain.com] [--dry-run false]
-      const userIndex = subArgs.indexOf("--user");
-      if (userIndex === -1 || !subArgs[userIndex + 1]) {
-        IPC.error("Missing required argument: --user <email>");
-        return;
-      }
-      
-      const managerIndex = subArgs.indexOf("--manager");
-      const manager = managerIndex !== -1 ? subArgs[managerIndex + 1] : undefined;
-      
-      const dryRunOffboardIndex = subArgs.indexOf("--dry-run");
-      const dryRunVal = dryRunOffboardIndex !== -1 ? subArgs[dryRunOffboardIndex + 1] : "true";
-      // Explicitly check for 'false' string
-      const dryRunOffboard = dryRunVal.trim().toLowerCase() !== "false";
-      
-      IPC.progress(`Configuration: DryRun=${dryRunOffboard} (Arg: ${dryRunVal})`, 1);
-      
-      await offboardUser(subArgs[userIndex + 1], manager, dryRunOffboard);
+      // ... (existing code)
       break;
 
     case "sec:shadow-it":
-      // Usage: sec:shadow-it [--dry-run false]
-      const dryRunIndex = subArgs.indexOf("--dry-run");
-      const dryRunValSec = dryRunIndex !== -1 ? subArgs[dryRunIndex + 1] : "true";
-      const dryRun = dryRunValSec.trim().toLowerCase() !== "false";
+      // ... (existing code)
+      break;
+
+    case "iam:guest-cleanup":
+      // Usage: iam:guest-cleanup [--days 90] [--dry-run false]
+      const daysIndex = subArgs.indexOf("--days");
+      const days = daysIndex !== -1 ? parseInt(subArgs[daysIndex + 1]) : 90;
       
-      await analyzeShadowIT(dryRun);
+      const dryRunGuestIndex = subArgs.indexOf("--dry-run");
+      const dryRunGuestVal = dryRunGuestIndex !== -1 ? subArgs[dryRunGuestIndex + 1] : "true";
+      const dryRunGuest = dryRunGuestVal.trim().toLowerCase() !== "false";
+      
+      await cleanupGuests(days, dryRunGuest);
       break;
 
     default:
