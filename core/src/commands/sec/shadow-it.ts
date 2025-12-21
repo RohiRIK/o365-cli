@@ -146,7 +146,9 @@ interface RiskyGrant {
     consentType: string;
     scopes: string;
     riskyScopes: string;
-    scopeDescriptions: string; // NEW: Forensic description
+    scopeDescriptions: string;
+    classificationSource: string; // NEW
+    credentialAgeDays: number;    // NEW
 }
 
 // Helper: Calculate risk score
@@ -160,7 +162,8 @@ function calculateRiskScore(
   daysSinceLastSignIn: number,
   userEnabled: boolean,
   userType: string,
-  consentType: string
+  consentType: string,
+  credentialAgeDays: number // NEW
 ): number {
   let score = 0;
   
@@ -177,6 +180,7 @@ function calculateRiskScore(
   // Credential Hygiene (0-15 points)
   if (credHealth.includes("EXPIRED")) score += 10;
   if (credHealth.includes("EXPIRING")) score += 5;
+  if (credentialAgeDays > 365) score += 5; // Stale credential
   
   // User Context (0-20 points)
   if (daysSinceLastSignIn > 180) score += 10; // Zombie grant
@@ -471,13 +475,21 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
 
       const allCreds = [...(app.passwordCredentials || []), ...(app.keyCredentials || [])];
       let credHealth = "None";
+      let credentialAgeDays = 0;
 
       if (allCreds.length > 0) {
-          // Find the latest expiration date (the date the app will stop working)
+          // Find the latest expiration date
           const maxExpiry = allCreds.reduce((latest, current) => {
               const currentEnd = new Date(current.endDateTime);
               return currentEnd > latest ? currentEnd : latest;
           }, new Date(0)); 
+
+          // Find the earliest start date (creation)
+          const minStart = allCreds.reduce((earliest, current) => {
+              const currentStart = new Date(current.startDateTime);
+              return currentStart < earliest ? currentStart : earliest;
+          }, new Date());
+          credentialAgeDays = Math.floor((now.getTime() - minStart.getTime()) / (1000 * 60 * 60 * 24));
 
           if (maxExpiry < now) {
               credHealth = "ALL EXPIRED";
@@ -523,15 +535,21 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         daysSinceLastSignIn,
         user.accountEnabled,
         user.userType,
-        grant.consentType
+        grant.consentType,
+        credentialAgeDays
       );
 
       // Classify permissions and generate recommendation
       let permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED" = "LOW";
       let recommendation = "Monitor for unusual activity";
+      let classificationSource = "Internal High-Risk List";
       
       try {
         permissionSeverity = classifyPermissions(riskyScopeList);
+        // Check if any critical/high scopes are in the Microsoft Official list
+        if (riskyScopeList.some(s => PERMISSION_SEVERITY.CRITICAL.includes(s) || PERMISSION_SEVERITY.HIGH.includes(s))) {
+            classificationSource = "Microsoft Security Classification";
+        }
         
         const grantData: Partial<RiskyGrant> = {
           appName: app.displayName,
@@ -590,7 +608,9 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         consentType: grant.consentType,
         scopes: grant.scope,
         riskyScopes: riskyScopeList.join(" "),
-        scopeDescriptions: resolveScopeDescriptions(grant.scope)
+        scopeDescriptions: resolveScopeDescriptions(grant.scope),
+        classificationSource,
+        credentialAgeDays
       });
     }
 
@@ -650,11 +670,20 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
           // Analyze credentials
           const allCreds = [...(app.passwordCredentials || []), ...(app.keyCredentials || [])];
           let credHealth = "None";
+          let credentialAgeDays = 0;
           if (allCreds.length > 0) {
             const maxExpiry = allCreds.reduce((latest, current) => {
               const currentEnd = new Date(current.endDateTime);
               return currentEnd > latest ? currentEnd : latest;
             }, new Date(0));
+            
+            // Find creation date
+            const minStart = allCreds.reduce((earliest, current) => {
+                const currentStart = new Date(current.startDateTime);
+                return currentStart < earliest ? currentStart : earliest;
+            }, new Date());
+            credentialAgeDays = Math.floor((now.getTime() - minStart.getTime()) / (1000 * 60 * 60 * 24));
+
             const warningWindow = new Date();
             warningWindow.setDate(warningWindow.getDate() + 30);
             if (maxExpiry < now) credHealth = "ALL EXPIRED";
@@ -679,15 +708,20 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             0, // No user context for app permissions
             true,
             "N/A",
-            "Admin"
+            "Admin",
+            credentialAgeDays
           );
           
           // Classify permissions and generate recommendation
           let permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED" = "LOW";
           let recommendation = "Monitor for unusual activity";
+          let classificationSource = "Internal High-Risk List";
           
           try {
             permissionSeverity = classifyPermissions([permissionValue]);
+            if (PERMISSION_SEVERITY.CRITICAL.includes(permissionValue) || PERMISSION_SEVERITY.HIGH.includes(permissionValue)) {
+                classificationSource = "Microsoft Security Classification";
+            }
             
             const grantData: Partial<RiskyGrant> = {
               appName: app.displayName,
@@ -746,7 +780,9 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             consentType: "Admin",
             scopes: permissionValue,
             riskyScopes: permissionValue,
-            scopeDescriptions: resolveScopeDescriptions(permissionValue)
+            scopeDescriptions: resolveScopeDescriptions(permissionValue),
+            classificationSource,
+            credentialAgeDays
           });
         }
       } catch (e: any) {
