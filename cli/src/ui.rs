@@ -117,7 +117,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
     } else if app.focus == Focus::Input {
         // Render Input Prompt Overlay
         let (prompt_title, prompt_text) = match &app.input_context {
-            crate::app::InputContext::OffboardUser => ("Graceful Offboarding", "Enter User Email (UPN):"),
+            crate::app::InputContext::OffboardUserEmail => ("Graceful Offboarding (1/2)", "Enter User Email (UPN):"),
+            crate::app::InputContext::OffboardManagerEmail { .. } => ("Graceful Offboarding (2/2)", "Enter Manager Email (Optional):"),
             crate::app::InputContext::None => ("Input", "Processing..."),
         };
 

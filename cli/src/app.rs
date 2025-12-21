@@ -30,7 +30,8 @@ pub enum AppAction {
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputContext {
     None,
-    OffboardUser,
+    OffboardUserEmail,
+    OffboardManagerEmail { user_email: String },
 }
 
 #[derive(Debug, Clone)]
@@ -235,8 +236,8 @@ impl App {
     }
 
     fn handle_input_submission(&mut self, input: String) -> Option<AppAction> {
-        match &self.input_context {
-            InputContext::OffboardUser => {
+        match self.input_context.clone() {
+            InputContext::OffboardUserEmail => {
                 if input.trim().is_empty() {
                     self.add_log("❌ Operation cancelled: User email is required.".to_string());
                     self.input_context = InputContext::None;
@@ -245,19 +246,30 @@ impl App {
                 }
                 
                 let user = input.trim().to_string();
-                self.add_log(format!("Queueing: Graceful Offboarding for {} (Auto-detecting manager)...", user));
+                self.input_context = InputContext::OffboardManagerEmail { user_email: user };
+                // Keep focus on input for the next step
+                None
+            },
+            InputContext::OffboardManagerEmail { user_email } => {
+                let manager = input.trim().to_string();
+                let manager_log = if manager.is_empty() { "Auto-detecting manager".to_string() } else { format!("Manager: {}", manager) };
+                
+                self.add_log(format!("Queueing: Graceful Offboarding for {} ({})...", user_email, manager_log));
                 
                 self.input_context = InputContext::None;
                 self.focus = Focus::Content;
                 
-                // We don't pass --manager anymore, the backend will fetch it.
-                let args = vec!["--user".to_string(), user, "--dry-run".to_string(), self.dry_run.to_string()];
+                let mut args = vec!["--user".to_string(), user_email, "--dry-run".to_string(), self.dry_run.to_string()];
+                if !manager.is_empty() {
+                    args.push("--manager".to_string());
+                    args.push(manager);
+                }
 
                 Some(AppAction::RunTask { 
                     name: "iam:offboard".to_string(), 
                     args 
                 })
-            },
+            }
             InputContext::None => {
                 self.focus = Focus::Content;
                 None
@@ -349,7 +361,7 @@ impl App {
             CurrentTab::IAM => match self.iam_index {
                 0 => { 
                     // Switch to Input Mode for Graceful Offboarding
-                    self.input_context = InputContext::OffboardUser;
+                    self.input_context = InputContext::OffboardUserEmail;
                     self.focus = Focus::Input;
                     self.input_buffer.clear();
                     None 
@@ -383,5 +395,44 @@ impl App {
 
     pub fn on_tick(&mut self) {
         // Logic to handle background updates
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_offboarding_input_flow() {
+        let mut app = App::new();
+        app.focus = Focus::Input;
+        app.input_context = InputContext::OffboardUserEmail;
+        app.input_buffer = "user@example.com".to_string();
+
+        // 1. Submit User Email
+        let action = app.handle_input_submission("user@example.com".to_string());
+        
+        // Should NOT trigger task yet, but transition to Manager Email
+        assert!(action.is_none());
+        assert_eq!(app.input_context, InputContext::OffboardManagerEmail { user_email: "user@example.com".to_string() });
+        assert_eq!(app.focus, Focus::Input);
+
+        // 2. Submit Manager Email (Optional - empty)
+        app.input_buffer = "".to_string();
+        let action = app.handle_input_submission("".to_string());
+
+        // Should trigger task now
+        match action {
+            Some(AppAction::RunTask { name, args }) => {
+                assert_eq!(name, "iam:offboard");
+                assert!(args.contains(&"--user".to_string()));
+                assert!(args.contains(&"user@example.com".to_string()));
+                // Manager should be excluded if empty
+                assert!(!args.contains(&"--manager".to_string()));
+            }
+            _ => panic!("Expected RunTask action"),
+        }
+        assert_eq!(app.input_context, InputContext::None);
+        assert_eq!(app.focus, Focus::Content);
     }
 }
