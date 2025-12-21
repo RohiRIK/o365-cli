@@ -61,6 +61,7 @@ pub struct AuthManager {
     client_id: ClientId,
     auth_url: AuthUrl,
     token_url: TokenUrl,
+    storage_path: Option<PathBuf>, // For testing
 }
 
 #[derive(Debug)]
@@ -97,15 +98,6 @@ fn get_token_storage_path() -> Result<PathBuf> {
     Ok(PathBuf::from(home).join(".o365-cli").join("tokens.json"))
 }
 
-pub fn clear_token_storage() -> Result<()> {
-    let path = get_token_storage_path()?;
-    if path.exists() {
-        fs::remove_file(path).context("Failed to remove token storage file")?;
-        log::info!("[AUTH] Token storage cleared successfully");
-    }
-    Ok(())
-}
-
 impl AuthManager {
     pub fn new(tenant_id: &str) -> Result<Self> {
         let client_id_str = env::var("AZURE_CLIENT_ID").unwrap_or_else(|_| DEFAULT_CLIENT_ID.to_string());
@@ -120,7 +112,23 @@ impl AuthManager {
                 "https://login.microsoftonline.com/{}/oauth2/v2.0/token",
                 tenant_id
             ))?,
+            storage_path: None,
         })
+    }
+
+    // Constructor for testing with specific storage path
+    #[cfg(test)]
+    pub fn with_storage(tenant_id: &str, storage_path: PathBuf) -> Result<Self> {
+        let mut manager = Self::new(tenant_id)?;
+        manager.storage_path = Some(storage_path);
+        Ok(manager)
+    }
+
+    fn get_current_storage_path(&self) -> Result<PathBuf> {
+        match &self.storage_path {
+            Some(p) => Ok(p.clone()),
+            None => get_token_storage_path(),
+        }
     }
 
     async fn http_client(request: HttpRequest) -> Result<HttpResponse, HttpClientError> {
@@ -149,7 +157,10 @@ impl AuthManager {
 
     pub async fn login(&self) -> Result<String> {
         log::info!("[AUTH] Starting login flow...");
-        let _ = clear_token_storage();
+        let path = self.get_current_storage_path()?;
+        if path.exists() {
+            let _ = fs::remove_file(&path);
+        }
 
         // 1. Setup Local Listener
         let listener = TcpListener::bind("127.0.0.1:0")?;
@@ -218,7 +229,7 @@ impl AuthManager {
             .await?;
 
         let access_token = token_result.access_token().secret().clone();
-        let refresh_token = token_result.refresh_token()
+        let refresh_token = token_result.refresh_token() 
             .ok_or_else(|| anyhow::anyhow!("Microsoft did not return a refresh token. Ensure 'offline_access' scope was consented."))?
             .secret().clone();
 
@@ -231,14 +242,14 @@ impl AuthManager {
             expires_at,
         };
 
-        storage.save(&get_token_storage_path()?)?;
+        storage.save(&path)?;
         log::info!("[AUTH] ✅ Tokens stored in JSON file successfully");
 
         Ok(access_token)
     }
 
     pub async fn get_access_token(&self) -> Result<String> {
-        let path = get_token_storage_path()?;
+        let path = self.get_current_storage_path()?;
         let mut storage = TokenStorage::load(&path).context("No credentials found. Please run `o365-cli login`.")?;
 
         // Check if token is expired or expiring soon (5 minute buffer)
@@ -308,6 +319,27 @@ mod tests {
         assert_eq!(loaded.expires_at.timestamp(), expires_at.timestamp());
 
         // Cleanup
+        fs::remove_file(&storage_path).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_access_token_checks_expiration() {
+        let temp_dir = std::env::temp_dir();
+        let storage_path = temp_dir.join("check_expiry_tokens.json");
+        
+        let storage = TokenStorage {
+            access_token: "still_valid".to_string(),
+            refresh_token: "refresh".to_string(),
+            expires_at: Utc::now() + Duration::minutes(10), // Not expired yet
+        };
+        storage.save(&storage_path).unwrap();
+
+        let manager = AuthManager::with_storage("common", storage_path.clone()).unwrap();
+        let token = manager.get_access_token().await.unwrap();
+        
+        // Should return existing token without refreshing (since it won't fail yet)
+        assert_eq!(token, "still_valid");
+
         fs::remove_file(&storage_path).unwrap();
     }
 }
