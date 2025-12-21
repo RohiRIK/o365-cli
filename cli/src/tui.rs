@@ -159,14 +159,26 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app
                         },
                         Some(crate::app::AppAction::RunTask { name, args }) => {
                             app.is_loading = true;
-                            // Need token
-                            let auth = AuthManager::new("common")?;
+                            
+                            // Get token using the current tenant
+                            let tenant_to_use = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() {
+                                "common".to_string()
+                            } else {
+                                app.tenant_id.clone()
+                            };
+
+                            let auth = AuthManager::new(&tenant_to_use)?;
                             match auth.get_access_token().await {
                                 Ok(token) => {
                                     app.add_log(format!("🚀 Running Task: {}", name));
                                     terminal.draw(|f| crate::ui::render(f, &mut app))?;
 
-                                    let result = crate::runner::run_task(&name, &args, &token, |_msg| {});
+                                    // Pass terminal reference to closure for real-time draw
+                                    let result = crate::runner::run_task(&name, &args, &token, |msg| {
+                                        app.add_log(msg);
+                                        // We ignore draw errors inside the callback to keep worker running
+                                        let _ = terminal.draw(|f| crate::ui::render(f, &mut app));
+                                    });
 
                                     match result {
                                         Ok(output) => {
