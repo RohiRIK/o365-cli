@@ -10,7 +10,7 @@
     -   Context: Modify `calculateRiskScore` and `generateRecommendation` in `shadow-it.ts`.
     -   Sub-task: Incorporate "Credential Age" and "Sign-in Failure Rate" into the risk algorithm.
     -   Sub-task: Add "Classification Source" metadata to each finding.
-- [ ] Task: Write Tests for Data Enrichment
+- [x] Task: Write Tests for Data Enrichment [cd9be43]
     -   Context: Create `core/src/commands/sec/shadow-it.test.ts` (Red Phase).
     -   Sub-task: Verify that all new forensic fields are correctly populated from mock Graph responses.
 - [ ] Task: Conductor - User Manual Verification 'API & Data Model Enrichment' (Protocol in workflow.md)
