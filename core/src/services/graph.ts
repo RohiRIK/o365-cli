@@ -48,9 +48,38 @@ export class GraphService {
       }
       this.instance = Client.init({
         authProvider: (done) => done(null, token),
+        // The Microsoft Graph JS SDK includes retry middleware by default.
+        // It handles 429 (Too Many Requests) and 503 (Service Unavailable).
       });
     }
     return this.instance;
+  }
+
+  /**
+   * Generically fetch all items from a collection, following @odata.nextLink automatically.
+   */
+  public static async fetchAll<T = any>(endpoint: string, options: { select?: string, filter?: string, expand?: string, top?: number } = {}): Promise<T[]> {
+    const client = this.getClient();
+    let results: T[] = [];
+    
+    let request = client.api(endpoint);
+    
+    if (options.select) request = request.select(options.select);
+    if (options.filter) request = request.filter(options.filter);
+    if (options.expand) request = request.expand(options.expand);
+    if (options.top) request = request.top(options.top);
+
+    let response = await request.get();
+    results = results.concat(response.value || []);
+
+    // Follow pagination
+    while (response["@odata.nextLink"]) {
+      IPC.progress(`Fetching next page of results...`, Math.min(99, results.length / 10)); // Rough progress
+      response = await client.api(response["@odata.nextLink"]).get();
+      results = results.concat(response.value || []);
+    }
+
+    return results;
   }
 
   // Initialize token before any commands run
