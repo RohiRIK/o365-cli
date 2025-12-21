@@ -116,6 +116,8 @@ interface RiskyGrant {
     grantType: "Delegated" | "Application";
     appName: string;
     appId: string;
+    servicePrincipalId: string;
+    principalId: string;
     publisher: string;
     publisherVerified: boolean;
     appOwnerType: "Microsoft" | "Internal" | "ThirdParty";
@@ -128,8 +130,8 @@ interface RiskyGrant {
     hasOfflineAccess: boolean;
     riskScore: number;
     riskLevel: "Critical" | "High" | "Medium" | "Low";
-    permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED"; // NEW
-    recommendation: string; // NEW
+    permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED";
+    recommendation: string;
     user: string;
     userDisplayName: string;
     userEnabled: boolean;
@@ -144,6 +146,7 @@ interface RiskyGrant {
     consentType: string;
     scopes: string;
     riskyScopes: string;
+    scopeDescriptions: string; // NEW: Forensic description
 }
 
 // Helper: Calculate risk score
@@ -287,6 +290,26 @@ function generateRecommendation(grant: Partial<RiskyGrant>): string {
   } catch (e) {
     return "Review required";
   }
+}
+
+// Helper: Resolve scope descriptions (simplified mapping for core scopes)
+function resolveScopeDescriptions(scopes: string): string {
+  const scopeMap: Record<string, string> = {
+    "Mail.Read": "Read user mail",
+    "Mail.ReadWrite": "Read and write user mail",
+    "Mail.Send": "Send mail as user",
+    "Files.Read.All": "Read all files in the organization",
+    "Files.ReadWrite.All": "Read and write all files in the organization",
+    "Directory.ReadWrite.All": "Full control over the directory",
+    "Directory.AccessAsUser.All": "Access the directory as any user",
+    "User.Read": "Read basic user profile",
+    "User.ReadWrite.All": "Read and write all user profiles",
+    "offline_access": "Maintain access to data even when user is offline"
+  };
+
+  return scopes.split(" ")
+    .map(s => scopeMap[s] || s)
+    .join("; ");
 }
 
 export async function analyzeShadowIT(dryRun: boolean = true) {
@@ -537,6 +560,8 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         grantType: "Delegated",
         appName: app.displayName,
         appId: app.appId,
+        servicePrincipalId: grant.clientId,
+        principalId: grant.principalId || "Tenant",
         publisher: app.publisherName || "Unverified",
         publisherVerified,
         appOwnerType,
@@ -564,7 +589,8 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         grantExpiry: grant.expiryTime || "Never",
         consentType: grant.consentType,
         scopes: grant.scope,
-        riskyScopes: riskyScopeList.join(" ")
+        riskyScopes: riskyScopeList.join(" "),
+        scopeDescriptions: resolveScopeDescriptions(grant.scope)
       });
     }
 
@@ -690,6 +716,8 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             grantType: "Application",
             appName: app.displayName,
             appId: app.appId,
+            servicePrincipalId: sp.id,
+            principalId: "Tenant-Wide",
             publisher: app.publisherName || "Unverified",
             publisherVerified,
             appOwnerType,
@@ -717,7 +745,8 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             grantExpiry: "Never",
             consentType: "Admin",
             scopes: permissionValue,
-            riskyScopes: permissionValue
+            riskyScopes: permissionValue,
+            scopeDescriptions: resolveScopeDescriptions(permissionValue)
           });
         }
       } catch (e: any) {
@@ -806,12 +835,12 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
           return [
             `${riskEmoji} ${g.riskScore || 0}`,
             g.appName || "Unknown",
-            publisherDisplay && publisherDisplay.length > 20 ? publisherDisplay.substring(0, 17) + "..." : (publisherDisplay || "Unknown"),
             `${severityEmoji} ${g.permissionSeverity || "LOW"}`,
-            g.grantType || "Unknown",
             g.user && g.user.length > 25 ? g.user.substring(0, 22) + "..." : (g.user || "N/A"),
             lastActiveDisplay,
-            g.consentType === "AllPrincipals" || g.consentType === "Admin" ? "🌐 Tenant" : "👤 User",
+            g.appId || "N/A", // NEW
+            g.servicePrincipalId || "N/A", // NEW
+            g.principalId || "N/A", // NEW
             g.riskyScopes && g.riskyScopes.length > 40 ? g.riskyScopes.substring(0, 37) + "..." : (g.riskyScopes || ""),
             g.recommendation && g.recommendation.length > 50 ? g.recommendation.substring(0, 47) + "..." : (g.recommendation || "Review required")
           ];
@@ -851,7 +880,7 @@ ${riskyGrants.length > 50 ? `\n⚠️ Showing top 50 of ${riskyGrants.length} ri
     const successPayload = {
         message: dryRun ? summaryMessage : "Remediation Complete",
         table: {
-            headers: ["Risk", "App Name", "Publisher", "Permission Severity", "Type", "User/Scope", "Last Active", "Consent", "Risky Permissions", "Recommendation"],
+            headers: ["Risk", "App Name", "Severity", "User/Scope", "Last Active", "App ID", "SP ID", "Principal ID", "Risky Permissions", "Recommendation"],
             rows: tableRows
         }
     };
