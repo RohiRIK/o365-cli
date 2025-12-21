@@ -14,11 +14,30 @@ async function main() {
   
   switch (command) {
     case "iam:offboard":
-      // ... (existing code)
+      // Usage: iam:offboard --user email@domain.com [--manager manager@domain.com] [--dry-run false]
+      const userIndex = subArgs.indexOf("--user");
+      if (userIndex === -1 || !subArgs[userIndex + 1]) {
+        IPC.error("Missing required argument: --user <email>");
+        return;
+      }
+      
+      const managerIndex = subArgs.indexOf("--manager");
+      const manager = managerIndex !== -1 ? subArgs[managerIndex + 1] : undefined;
+      
+      const dryRunOffboardIndex = subArgs.indexOf("--dry-run");
+      const dryRunVal = dryRunOffboardIndex !== -1 ? subArgs[dryRunOffboardIndex + 1] : "true";
+      const dryRunOffboard = dryRunVal.trim().toLowerCase() !== "false";
+      
+      await offboardUser(subArgs[userIndex + 1], manager, dryRunOffboard);
       break;
 
     case "sec:shadow-it":
-      // ... (existing code)
+      // Usage: sec:shadow-it [--dry-run false]
+      const dryRunIndex = subArgs.indexOf("--dry-run");
+      const dryRunValSec = dryRunIndex !== -1 ? subArgs[dryRunIndex + 1] : "true";
+      const dryRun = dryRunValSec.trim().toLowerCase() !== "false";
+      
+      await analyzeShadowIT(dryRun);
       break;
 
     case "iam:guest-cleanup":
