@@ -14,7 +14,7 @@
     -   Context: Add Rust tests for token encryption and TypeScript tests for pagination logic.
 - [ ] Task: Conductor - User Manual Verification 'Security & Scalability Foundation' (Protocol in workflow.md)
 
-## Phase 2: UI Safety & Interaction Polish [checkpoint: ]
+## Phase 2: UI Safety & Interaction Polish [checkpoint: d765f7d]
 - [x] Task: Implement "Review & Confirm" Flow for Destructive Actions [088a94d]
     -   Context: Modify `cli/src/app.rs` and `cli/src/ui.rs`.
     -   Sub-task: Add `AppAction::ReviewProposedActions` and corresponding state.
