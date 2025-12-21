@@ -12,11 +12,11 @@
 - [ ] Task: Conductor - User Manual Verification 'Migration to JSON Storage' (Protocol in workflow.md)
 
 ## Phase 2: Automatic Rotation Logic [checkpoint: ]
-- [ ] Task: Implement Token Refresh in `AuthManager`
+- [x] Task: Implement Token Refresh in `AuthManager` [fc0448a]
     -   Context: Update `cli/src/auth.rs` to include rotation logic.
     -   Sub-task: Implement `refresh_tokens` method using the OAuth2 refresh token flow.
     -   Sub-task: Update `get_access_token` to proactively check expiration and call `refresh_tokens` if needed.
-- [ ] Task: Write Tests for Token Rotation
+- [x] Task: Write Tests for Token Rotation [fc0448a]
     -   Context: Add unit tests in `cli/src/auth.rs` (Red Phase).
     -   Sub-task: Mock the OAuth2 provider to simulate token expiration and successful refresh.
     -   Sub-task: Verify that the storage file is updated with new tokens after rotation.
