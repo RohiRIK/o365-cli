@@ -42,6 +42,9 @@ To facilitate ideation, modules are tracked through the following stages:
     - *Legacy:* `legacy/01-IAM-GuestUserCleanup`
 - **New User Onboarding:** Automated setup for new joiners.
     - *Legacy:* `legacy/01-IAM-NewUserOnboarding`
+- **[CONCEPT] RBAC Auditor:** Review custom roles and assignment hygiene.
+- **[CONCEPT] Conditional Access Optimizer:** Detect redundant or conflicting CA policies.
+- **[CONCEPT] Service Principal Lifecycle:** Prune unused or expired service principals.
 
 ### 4.2 SEC Pillar
 - **Shadow IT Governance:** Detecting and remediating risky OAuth applications.
@@ -52,21 +55,33 @@ To facilitate ideation, modules are tracked through the following stages:
     - *Legacy:* `legacy/02-SEC-MailboxPermissionsAudit`
 - **Surgical Lockdown:** Rapid containment of compromised accounts.
     - *Legacy:* `legacy/02-SEC-SurgicalLockdown`
+- **[CONCEPT] Unified Threat Containment:** Rapid block-listing across the tenant.
+- **[CONCEPT] Secure Score Benchmarking:** Interactive tracking of security posture.
+- **[CONCEPT] Data Exfiltration Detector:** Monitor for bulk downloads or unusual sharing.
 
 ### 4.3 GOV Pillar
-*(Modules to be added)*
+- **[CONCEPT] Sign-in Forensic Analyzer:** Deep-dive into suspicious sign-in attempts.
+- **[CONCEPT] Audit Log Proactive Monitor:** Real-time alerting for sensitive admin actions.
+- **[CONCEPT] PII Discovery Engine:** Scanning public sites for PII patterns.
 
 ### 4.4 END Pillar
-*(Modules to be added)*
+- **[CONCEPT] Configuration Drift Detector:** Ensure devices adhere to baseline policies.
+- **[CONCEPT] App Deployment Orchestrator:** CLI-driven orchestration of Win32 deployments.
+- **[CONCEPT] Autopilot Profile Auditor:** Review and optimize OOBE profiles.
 
 ### 4.5 RES Pillar
 - **License Optimization:** Identifying unused or redundant licenses.
     - *Legacy:* `legacy/03-RES-LicenseOptimization`
 - **Stale Device Cleanup:** Removing inactive or untrusted devices.
     - *Legacy:* `legacy/03-RES-StaleDeviceCleanup`
+- **[CONCEPT] SharePoint Storage Optimizer:** Identify large, unused sites and old versions.
+- **[CONCEPT] Mailbox Archive Manager:** Automate move of data to cheaper storage.
+- **[CONCEPT] Power Platform Guard:** Monitor for shadow environments and unused flows.
 
 ### 4.6 REP Pillar
 - **360° Offboarding Analyzer:** Comprehensive forensic report for departed users.
     - *Legacy:* `legacy/04-REP-360OffboardingAnalyzer`
 - **Teams Activity Report:** Usage and engagement metrics for Microsoft Teams.
     - *Legacy:* `legacy/04-REP-TeamsActivityReport`
+- **[CONCEPT] Executive Governance Dashboard:** High-level PDF/HTML report for C-suite.
+- **[CONCEPT] Forensic Timeline Generator:** Build event maps for specific identities.
