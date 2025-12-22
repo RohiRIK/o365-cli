@@ -1,15 +1,15 @@
 # Plan: IAM - Graceful Offboarding Implementation
 
-## Phase 1: Worker Core Logic (TypeScript)
+## Phase 1: Worker Core Logic (TypeScript) [checkpoint: 38db438]
 - [x] Task: Create `core/src/commands/iam/offboard.ts` skeleton and setup TDD environment. 3c369e4
 - [x] Task: Implement Identity Containment (Disable account, Revoke sessions, Hide from GAL). 553f23f
 - [x] Task: Implement Device Isolation (Find associated Intune/Entra devices and Retire/Disable them). 553f23f
 - [x] Task: Implement License Reclamation (Remove direct licenses and purge user from all groups). 20840c6
 - [x] Task: Implement Mailbox & Data Handoff (Convert to shared, set OOF, and grant manager access). faa578e
-- [~] Task: Conductor - User Manual Verification 'Worker Core Logic' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Worker Core Logic' (Protocol in workflow.md) 38db438
 
 ## Phase 2: Rust TUI Expansion
-- [ ] Task: Extend `App` state and `InputContext` to support the multi-step offboarding wizard.
+- [~] Task: Extend `App` state and `InputContext` to support the multi-step offboarding wizard.
 - [ ] Task: Update `ui.rs` to render the new wizard screens (Target -> Manager -> Device Options -> Review).
 - [ ] Task: Integrate `iam:offboard` execution into the TUI action handler and process IPC updates.
 - [ ] Task: Conductor - User Manual Verification 'TUI Integration' (Protocol in workflow.md)
