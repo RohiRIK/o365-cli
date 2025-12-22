@@ -154,54 +154,51 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
         actions.push({type: "MANUAL", detail: `Grant Manager Access > Exchange PS: Add-MailboxPermission -Identity ${email} -User ${managerEmail} -AccessRights FullAccess`});
     }
 
-    // === STEP 5: LICENSE RECLAMATION (Group Aware) ===
-    IPC.progress("Analyzing Licenses...", 80);
+    // === STEP 5: LICENSE RECLAMATION (Zero-Trust Group Purge) ===
+    IPC.progress("Purging memberships and licenses...", 80);
+    
+    // Fetch groups user is member of
+    IPC.log(`Fetching group memberships for ${userId}...`);
+    const groups = await client.api(`/users/${userId}/memberOf`).select("id,displayName").get();
+    IPC.log(`Found ${groups.value.length} groups.`);
+    
+    if (dryRun) {
+        if (groups.value.length > 0) {
+            actions.push({type: "DRY-RUN", detail: `Would remove user from ${groups.value.length} groups (License & Security cleanup)`});
+        }
+    } else {
+        let removedFromGroups = 0;
+        for (const group of groups.value) {
+            try {
+                await client.api(`/groups/${group.id}/members/${userId}/$ref`).delete();
+                removedFromGroups++;
+                actions.push({type: "SUCCESS", detail: `Removed from group: ${group.displayName}`});
+            } catch (grpErr: any) {
+                IPC.log(`Failed to remove from group ${group.id}: ${grpErr.message}`, "warn");
+            }
+        }
+    }
+
+    // Direct License Removal
     if (user.assignedLicenses && user.assignedLicenses.length > 0) {
-      
       const allSkuIds = user.assignedLicenses.map((l: any) => l.skuId);
       
       if (dryRun) {
-          actions.push({type: "DRY-RUN", detail: `Would remove ${allSkuIds.length} licenses (checking for groups...)`});
+          actions.push({type: "DRY-RUN", detail: `Would remove ${allSkuIds.length} direct license assignments`});
       } else {
           try {
-              IPC.log(`Attempting direct license removal for ${allSkuIds.length} SKUs...`);
               await client.api(`/users/${userId}/assignLicense`).post({
                   addLicenses: [],
                   removeLicenses: allSkuIds
               });
               actions.push({type: "SUCCESS", detail: `Removed ${allSkuIds.length} direct license(s)`});
           } catch (e: any) {
-              IPC.log(`Direct removal failed: ${e.message}`);
-              if (e.message.includes("inherited")) {
-                  actions.push({type: "INFO", detail: `Some licenses are group-inherited. Scanning groups...`});
-                  
-                  // Fetch groups user is member of
-                  IPC.log(`Fetching group memberships for ${userId}...`);
-                  const groups = await client.api(`/users/${userId}/memberOf`).select("id,displayName,groupTypes").get();
-                  IPC.log(`Found ${groups.value.length} groups.`);
-                  let removedFromGroups = 0;
-                  
-                  for (const group of groups.value) {
-                      try {
-                          IPC.log(`Removing user from group ${group.displayName} (${group.id})...`);
-                          await client.api(`/groups/${group.id}/members/${userId}/$ref`).delete();
-                          removedFromGroups++;
-                          actions.push({type: "SUCCESS", detail: `Removed from group: ${group.displayName}`});
-                      } catch (grpErr: any) {
-                          IPC.log(`Failed to remove from group ${group.id}: ${grpErr.message}`);
-                      }
-                  }
-                  
-                  if (removedFromGroups === 0) {
-                      actions.push({type: "WARNING", detail: `Could not remove group-based licenses. User might be in Dynamic Groups or On-Prem Synced Groups.`});
-                  }
-              } else {
-                  actions.push({type: "ERROR", detail: `License removal failed: ${e.message}`});
-              }
+              IPC.log(`Direct license removal failed: ${e.message}`, "error");
+              actions.push({type: "ERROR", detail: `License removal failed: ${e.message}`});
           }
       }
     } else {
-      actions.push({type: "INFO", detail: `No licenses found.`});
+      actions.push({type: "INFO", detail: `No direct licenses found.`});
     }
 
     IPC.progress("Offboarding complete", 100);

@@ -64,6 +64,8 @@ describe("IAM Offboarding Worker", () => {
     });
     mockChain.get.mockResolvedValueOnce({ value: [{ id: "dev-intune-1", deviceName: "Laptop", operatingSystem: "Windows" }] });
     mockChain.get.mockResolvedValueOnce({ value: [{ id: "dev-entra-1", displayName: "Phone", operatingSystem: "iOS", accountEnabled: true }] });
+    // 4. Group memberships check
+    mockChain.get.mockResolvedValueOnce({ value: [] });
 
     await offboardUser("test@company.com", undefined, true);
 
@@ -90,16 +92,16 @@ describe("IAM Offboarding Worker", () => {
     // 3. Entra devices
     mockChain.get.mockResolvedValueOnce({ value: [] }); 
 
-    // 4. Revoke sessions
-    mockChain.post.mockResolvedValueOnce({}); 
-
-    // 5. Direct license removal (FAIL)
-    mockChain.post.mockRejectedValueOnce(new Error("User license is inherited from a group membership"));
-
-    // 6. Fetch group membership
+    // 4. Fetch group membership (to purge)
     mockChain.get.mockResolvedValueOnce({ 
         value: [{ id: "group-1", displayName: "Licensing Group" }] 
     });
+
+    // 5. Revoke sessions
+    mockChain.post.mockResolvedValueOnce({}); 
+
+    // 6. Direct license removal (FAIL)
+    mockChain.post.mockRejectedValueOnce(new Error("User license is inherited from a group membership"));
 
     // 7. Delete group member
     mockChain.delete.mockResolvedValueOnce({});
