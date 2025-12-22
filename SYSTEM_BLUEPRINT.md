@@ -284,6 +284,9 @@ Detecting brute force or impossible travel requires correlation of sign-in logs 
 
 - **[SWISS-ARMY] MFA Fatigue Monitor:** Detect and alert on MFA spamming attempts.
 - **[SWISS-ARMY] Admin Audit Forensic:** Deep-dive into high-risk administrative changes.
+- **[SWISS-ARMY] Cross-Tenant Collaboration Auditor:** Review B2B sync and access hygiene.
+- **[SWISS-ARMY] CA Policy Simulator:** Test policy impact using the What If API.
+- **[SWISS-ARMY] OAuth Permission "Blast Radius" Analyzer:** Identify full resource access for apps.
 
 ### 6.4 END Pillar
 
@@ -330,6 +333,9 @@ Intune policies can fail to apply or be bypassed. IT needs a way to verify that 
 
 - **[SWISS-ARMY] Autopilot Deployment Forensic:** Audit OOBE profiles and deployment failures.
 - **[SWISS-ARMY] Proactive Remediation Launcher:** Trigger Intune remediations from the CLI.
+- **[SWISS-ARMY] Intune "Remediation" Fleet Monitor:** Real-time visibility into script package success/failure.
+- **[SWISS-ARMY] Device Compliance "Reason for Failure" Forensic:** Setting-level deep-dive for non-compliant devices.
+- **[SWISS-ARMY] Managed App "Protection Policy" Auditor:** Verify MAM policies on BYOD devices.
 
 ### 6.5 RES Pillar
 - **License Optimization:** Identifying unused or redundant licenses.
