@@ -5,8 +5,8 @@
 - [x] Task: Implement Identity Containment (Disable account, Revoke sessions, Hide from GAL). 553f23f
 - [x] Task: Implement Device Isolation (Find associated Intune/Entra devices and Retire/Disable them). 553f23f
 - [x] Task: Implement License Reclamation (Remove direct licenses and purge user from all groups). 20840c6
-- [~] Task: Implement Mailbox & Data Handoff (Convert to shared, set OOF, and grant manager access).
-- [ ] Task: Conductor - User Manual Verification 'Worker Core Logic' (Protocol in workflow.md)
+- [x] Task: Implement Mailbox & Data Handoff (Convert to shared, set OOF, and grant manager access). faa578e
+- [~] Task: Conductor - User Manual Verification 'Worker Core Logic' (Protocol in workflow.md)
 
 ## Phase 2: Rust TUI Expansion
 - [ ] Task: Extend `App` state and `InputContext` to support the multi-step offboarding wizard.
