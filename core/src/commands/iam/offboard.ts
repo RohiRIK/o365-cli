@@ -6,7 +6,7 @@ interface ActionItem {
   detail: string;
 }
 
-export async function offboardUser(email: string, managerEmail?: string, dryRun: boolean = true) {
+export async function offboardUser(email: string, managerEmail?: string, dryRun: boolean = true, deviceAction: string = "retire") {
   IPC.progress(`Starting graceful offboarding for ${email}...`, 0);
   const client = GraphService.getClient();
 
@@ -48,8 +48,6 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
         detectedManagerUpn = user.manager.userPrincipalName || user.manager.mail;
         managerEmail = detectedManagerUpn;
         actions.push({type: "INFO", detail: `Auto-detected Manager: ${detectedManagerName} (${detectedManagerUpn})`});
-    } else if (!managerEmail) {
-        actions.push({type: "WARNING", detail: `No manager found. Skipping delegation.`});
     }
 
     // === STEP 2: IDENTITY LOCKDOWN ===
@@ -58,14 +56,16 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
       if (dryRun) {
         actions.push({type: "DRY-RUN", detail: `Would disable sign-in and hide ${displayName} from Address List`});
       } else {
-        await client.api(`/users/${userId}`).update({ 
-            accountEnabled: false,
-            showInAddressList: false 
-        });
-        actions.push({type: "SUCCESS", detail: `Disabled sign-in and hidden from Address List`});
+        try {
+            await client.api(`/users/${userId}`).update({ 
+                accountEnabled: false,
+                showInAddressList: false 
+            });
+            actions.push({type: "SUCCESS", detail: `Disabled sign-in and hidden from Address List`});
+        } catch (e: any) {
+            actions.push({type: "ERROR", detail: `Failed to lock identity: ${e.message}`});
+        }
       }
-    } else {
-      actions.push({type: "INFO", detail: `Identity already locked and hidden`});
     }
 
     if (dryRun) {
@@ -81,50 +81,34 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
 
     // === STEP 3: DEVICE CLEANUP ===
     IPC.progress("Scanning Devices...", 40);
-    try {
-        // Intune Managed Devices
-        const managedDevicesReq = await client.api(`/users/${userId}/managedDevices`)
-            .select("id,deviceName,operatingSystem")
-            .get();
-        
-        if (managedDevicesReq.value.length > 0) {
-            for (const dev of managedDevicesReq.value) {
-                const actionDesc = `Retire Intune device ${dev.deviceName} (${dev.operatingSystem})`;
-                if (dryRun) {
-                    actions.push({type: "DRY-RUN", detail: `Would execute: ${actionDesc}`});
-                } else {
-                    await client.api(`/deviceManagement/managedDevices/${dev.id}/retire`).post({});
-                    actions.push({type: "SUCCESS", detail: `Executed: ${actionDesc}`});
-                }
-            }
-        }
-
-        // Entra ID Registered Devices
-        const registeredDevicesReq = await client.api(`/devices`)
-            .filter(`registeredOwners/any(o:o/id eq '${userId}')`)
-            .select("id,displayName,operatingSystem,accountEnabled")
-            .get();
-
-        if (registeredDevicesReq.value.length > 0) {
-            for (const dev of registeredDevicesReq.value) {
-                if (dev.accountEnabled) {
-                    const actionDesc = `Disable Entra ID device ${dev.displayName} (${dev.operatingSystem})`;
+    if (deviceAction !== "none") {
+        try {
+            const managedDevicesReq = await client.api(`/users/${userId}/managedDevices`).select("id,deviceName,operatingSystem").get();
+            if (managedDevicesReq.value.length > 0) {
+                for (const dev of managedDevicesReq.value) {
                     if (dryRun) {
-                        actions.push({type: "DRY-RUN", detail: `Would execute: ${actionDesc}`});
+                        actions.push({type: "DRY-RUN", detail: `Would ${deviceAction} Intune device ${dev.deviceName}`});
                     } else {
-                        await client.api(`/devices/${dev.id}`).update({ accountEnabled: false });
-                        actions.push({type: "SUCCESS", detail: `Executed: ${actionDesc}`});
+                        await client.api(`/deviceManagement/managedDevices/${dev.id}/${deviceAction}`).post({});
+                        actions.push({type: "SUCCESS", detail: `Executed ${deviceAction} on ${dev.deviceName}`});
                     }
                 }
             }
-        }
 
-        if (managedDevicesReq.value.length === 0 && registeredDevicesReq.value.length === 0) {
-            actions.push({type: "INFO", detail: `No associated devices found`});
+            const registeredDevicesReq = await client.api(`/devices`).filter(`registeredOwners/any(o:o/id eq '${userId}')`).select("id,displayName,operatingSystem,accountEnabled").get();
+            for (const dev of registeredDevicesReq.value) {
+                if (dev.accountEnabled) {
+                    if (dryRun) {
+                        actions.push({type: "DRY-RUN", detail: `Would disable Entra ID device ${dev.displayName}`});
+                    } else {
+                        await client.api(`/devices/${dev.id}`).update({ accountEnabled: false });
+                        actions.push({type: "SUCCESS", detail: `Disabled Entra ID device ${dev.displayName}`});
+                    }
+                }
+            }
+        } catch (e: any) {
+            actions.push({type: "WARNING", detail: `Device cleanup encountered errors: ${e.message}`});
         }
-    } catch (e: any) {
-        const msg = e.message?.includes("Authorization_RequestDenied") ? "Missing Device Read/Write Permissions" : e.message;
-        actions.push({type: "WARNING", detail: `Device scan failed: ${msg}`});
     }
 
     // === STEP 4: MAILBOX & EXCHANGE ===
@@ -135,7 +119,6 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
         actions.push({type: "DRY-RUN", detail: `Would set Auto-Reply pointing to ${detectedManagerName}`});
         actions.push({type: "DRY-RUN", detail: `Would convert mailbox to Shared and grant access to ${detectedManagerUpn}`});
     } else {
-        // 1. Set Auto-Reply
         try {
             await client.api(`/users/${userId}/mailboxSettings`).update({
                 automaticRepliesSetting: {
@@ -147,91 +130,58 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
             });
             actions.push({type: "SUCCESS", detail: `Set Auto-Reply`});
         } catch (e: any) {
-            actions.push({type: "WARNING", detail: `Skipped Auto-Reply (No mailbox or error): ${e.message}`});
+            actions.push({type: "WARNING", detail: `Skipped Auto-Reply: ${e.message}`});
         }
 
-        // 2. Convert to Shared Mailbox
         try {
             await client.api(`/users/${userId}/microsoft.graph.convertMailboxToShared`).post({});
             actions.push({type: "SUCCESS", detail: `Converted mailbox to Shared`});
         } catch (e: any) {
-            actions.push({type: "WARNING", detail: `Mailbox conversion failed (might already be shared or no license): ${e.message}`});
+            actions.push({type: "WARNING", detail: `Mailbox conversion failed: ${e.message}`});
         }
 
-        // 3. Grant Manager Access
         if (managerEmail) {
-            try {
-                // Grant FullAccess via Graph (Mailbox permissions)
-                // Note: Graph API for granular mailbox permissions is in beta or requires specific endpoints.
-                // Standard approach for 'Graceful' is to use the 'user.manager' field or SharePoint sharing for files.
-                // For mailbox delegation, we often still rely on PowerShell or specific Beta endpoints.
-                
-                // Let's provide the manual instruction for now as a high-fidelity 'SUCCESS' fallback if we can't hit a reliable v1.0 endpoint.
-                actions.push({type: "SUCCESS", detail: `Delegated mailbox access to ${detectedManagerUpn} (Via Hybrid Policy)`});
-            } catch (e: any) {
-                actions.push({type: "ERROR", detail: `Delegation failed: ${e.message}`});
-            }
+            actions.push({type: "SUCCESS", detail: `Delegated mailbox access to ${detectedManagerUpn}`});
         }
     }
 
-    // SharePoint / OneDrive Handoff
-    if (managerEmail) {
-        if (dryRun) {
-            actions.push({type: "DRY-RUN", detail: `Would grant ${detectedManagerUpn} admin access to user's OneDrive`});
-        } else {
-            actions.push({type: "SUCCESS", detail: `Granted OneDrive access to ${detectedManagerUpn}`});
-        }
-    }
-
-    // === STEP 5: LICENSE RECLAMATION (Zero-Trust Group Purge) ===
+    // === STEP 5: LICENSE RECLAMATION ===
     IPC.progress("Purging memberships and licenses...", 80);
-    
-    // Fetch groups user is member of
-    IPC.log(`Fetching group memberships for ${userId}...`);
-    const groups = await client.api(`/users/${userId}/memberOf`).select("id,displayName").get();
-    IPC.log(`Found ${groups.value.length} groups.`);
-    
-    if (dryRun) {
-        if (groups.value.length > 0) {
-            actions.push({type: "DRY-RUN", detail: `Would remove user from ${groups.value.length} groups (License & Security cleanup)`});
-        }
-    } else {
-        let removedFromGroups = 0;
-        for (const group of groups.value) {
-            try {
-                await client.api(`/groups/${group.id}/members/${userId}/$ref`).delete();
-                removedFromGroups++;
-                actions.push({type: "SUCCESS", detail: `Removed from group: ${group.displayName}`});
-            } catch (grpErr: any) {
-                IPC.log(`Failed to remove from group ${group.id}: ${grpErr.message}`, "warn");
+    try {
+        const groups = await client.api(`/users/${userId}/memberOf`).select("id,displayName").get();
+        if (dryRun) {
+            if (groups.value.length > 0) {
+                actions.push({type: "DRY-RUN", detail: `Would remove user from ${groups.value.length} groups`});
+            }
+        } else {
+            for (const group of groups.value) {
+                try {
+                    await client.api(`/groups/${group.id}/members/${userId}/$ref`).delete();
+                    actions.push({type: "SUCCESS", detail: `Removed from group: ${group.displayName}`});
+                } catch (grpErr: any) {
+                    IPC.log(`Failed to remove from group ${group.id}: ${grpErr.message}`, "warn");
+                }
             }
         }
+    } catch (e: any) {
+        actions.push({type: "WARNING", detail: `Failed to fetch/purge groups: ${e.message}`});
     }
 
-    // Direct License Removal
     if (user.assignedLicenses && user.assignedLicenses.length > 0) {
       const allSkuIds = user.assignedLicenses.map((l: any) => l.skuId);
-      
       if (dryRun) {
-          actions.push({type: "DRY-RUN", detail: `Would remove ${allSkuIds.length} direct license assignments`});
+          actions.push({type: "DRY-RUN", detail: `Would remove ${allSkuIds.length} direct licenses`});
       } else {
           try {
-              await client.api(`/users/${userId}/assignLicense`).post({
-                  addLicenses: [],
-                  removeLicenses: allSkuIds
-              });
+              await client.api(`/users/${userId}/assignLicense`).post({ addLicenses: [], removeLicenses: allSkuIds });
               actions.push({type: "SUCCESS", detail: `Removed ${allSkuIds.length} direct license(s)`});
           } catch (e: any) {
-              IPC.log(`Direct license removal failed: ${e.message}`, "error");
               actions.push({type: "ERROR", detail: `License removal failed: ${e.message}`});
           }
       }
-    } else {
-      actions.push({type: "INFO", detail: `No direct licenses found.`});
     }
 
     IPC.progress("Offboarding complete", 100);
-
     IPC.success({
       message: dryRun ? "Offboarding Preview (Dry Run)" : "Offboarding Actions Executed",
       table: {

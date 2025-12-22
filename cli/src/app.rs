@@ -402,10 +402,12 @@ impl App {
                     self.input_buffer.push_str("90"); // Default
                     None
                 },
-                2 => Some(AppAction::RunTask { 
-                    name: "iam:offboard".to_string(), 
-                    args: vec!["--user".to_string(), "test@example.com".to_string(), "--dry-run".to_string(), "true".to_string()] 
-                }),
+                2 => { 
+                    self.input_context = InputContext::OffboardUserEmail;
+                    self.focus = Focus::Input;
+                    self.input_buffer.clear();
+                    None 
+                },
                 _ => None,
             },
             CurrentTab::Settings => match self.settings_index {

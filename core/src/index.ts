@@ -24,11 +24,14 @@ async function main() {
       const managerIndex = subArgs.indexOf("--manager");
       const manager = managerIndex !== -1 ? subArgs[managerIndex + 1] : undefined;
       
+      const deviceActionIndex = subArgs.indexOf("--device-action");
+      const deviceAction = deviceActionIndex !== -1 ? subArgs[deviceActionIndex + 1] : "retire";
+      
       const dryRunOffboardIndex = subArgs.indexOf("--dry-run");
       const dryRunVal = dryRunOffboardIndex !== -1 ? subArgs[dryRunOffboardIndex + 1] : "true";
       const dryRunOffboard = dryRunVal.trim().toLowerCase() !== "false";
       
-      await offboardUser(subArgs[userIndex + 1], manager, dryRunOffboard);
+      await offboardUser(subArgs[userIndex + 1], manager, dryRunOffboard, deviceAction);
       break;
 
     case "sec:shadow-it":

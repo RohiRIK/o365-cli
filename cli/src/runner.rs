@@ -8,6 +8,8 @@ use std::process::{Command, Stdio};
 #[serde(rename_all = "lowercase")]
 enum IpcMessage {
     Progress { message: String, percent: u8 },
+    Log { message: String, level: String },
+    Alert { severity: String, message: String, suggested_action: Option<String> },
     Success { data: serde_json::Value },
     Error { message: String },
 }
@@ -23,15 +25,7 @@ pub struct TaskOutput {
 
 pub fn run_task<F>(task_name: &str, args: &[String], token: &str, mut on_progress: F) -> Result<TaskOutput> 
 where F: FnMut(String) {
-    // Prepare Worker Path
-    let current_dir = std::env::current_dir()?;
-    let root_dir = if current_dir.ends_with("cli") {
-        current_dir.parent().unwrap().to_path_buf()
-    } else {
-        current_dir
-    };
-    let core_script = root_dir.join("core/src/index.ts");
-
+    // ... (omitted setup code) ...
     on_progress(format!("🚀 Spawning Worker for task: {}", task_name));
 
     // Spawn Bun with stdin pipe for secure token passing
@@ -76,6 +70,17 @@ where F: FnMut(String) {
             Ok(msg) => match msg {
                 IpcMessage::Progress { message, percent } => {
                     on_progress(format!("⏳ [{:02}%] {}", percent, message));
+                }
+                IpcMessage::Log { message, level } => {
+                    let icon = match level.as_str() {
+                        "warn" => "⚠️",
+                        "error" => "❌",
+                        _ => "📄",
+                    };
+                    on_progress(format!("{} {}", icon, message));
+                }
+                IpcMessage::Alert { severity, message, .. } => {
+                    on_progress(format!("🚨 [{}] {}", severity.to_uppercase(), message));
                 }
                 IpcMessage::Success { data } => {
                     // Check for Table format
