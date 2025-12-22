@@ -9,6 +9,11 @@ export class IPC {
     console.log(JSON.stringify({ type: 'success', data }));
   }
 
+  // Send real-time log (Rust renders in bottom pane)
+  static log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
+    console.log(JSON.stringify({ type: 'log', message, level }));
+  }
+
   // Send fatal error (Rust renders red text)
   static error(message: string) {
     console.log(JSON.stringify({ type: 'error', message }));

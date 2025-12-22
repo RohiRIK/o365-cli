@@ -14,7 +14,7 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
     // === STEP 1: DISCOVERY ===
     IPC.progress("Searching for user in Entra ID...", 10);
     const user = await client.api(`/users/${email}`)
-      .select("id,displayName,userPrincipalName,accountEnabled,assignedLicenses,mail")
+      .select("id,displayName,userPrincipalName,accountEnabled,assignedLicenses,mail,showInAddressList")
       .expand("manager($select=id,displayName,mail,userPrincipalName)") 
       .get();
 
@@ -54,15 +54,18 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
 
     // === STEP 2: IDENTITY LOCKDOWN ===
     IPC.progress("Locking Identity...", 20);
-    if (user.accountEnabled) {
+    if (user.accountEnabled || user.showInAddressList !== false) {
       if (dryRun) {
-        actions.push({type: "DRY-RUN", detail: `Would disable sign-in for ${displayName}`});
+        actions.push({type: "DRY-RUN", detail: `Would disable sign-in and hide ${displayName} from Address List`});
       } else {
-        await client.api(`/users/${userId}`).update({ accountEnabled: false });
-        actions.push({type: "SUCCESS", detail: `Disabled sign-in for ${displayName}`});
+        await client.api(`/users/${userId}`).update({ 
+            accountEnabled: false,
+            showInAddressList: false 
+        });
+        actions.push({type: "SUCCESS", detail: `Disabled sign-in and hidden from Address List`});
       }
     } else {
-      actions.push({type: "INFO", detail: `Sign-in already disabled`});
+      actions.push({type: "INFO", detail: `Identity already locked and hidden`});
     }
 
     if (dryRun) {
@@ -79,13 +82,14 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
     // === STEP 3: DEVICE CLEANUP ===
     IPC.progress("Scanning Devices...", 40);
     try {
-        const devicesReq = await client.api(`/users/${userId}/managedDevices`)
+        // Intune Managed Devices
+        const managedDevicesReq = await client.api(`/users/${userId}/managedDevices`)
             .select("id,deviceName,operatingSystem")
             .get();
         
-        if (devicesReq.value.length > 0) {
-            for (const dev of devicesReq.value) {
-                const actionDesc = `Retire device ${dev.deviceName} (${dev.operatingSystem})`;
+        if (managedDevicesReq.value.length > 0) {
+            for (const dev of managedDevicesReq.value) {
+                const actionDesc = `Retire Intune device ${dev.deviceName} (${dev.operatingSystem})`;
                 if (dryRun) {
                     actions.push({type: "DRY-RUN", detail: `Would execute: ${actionDesc}`});
                 } else {
@@ -93,11 +97,32 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
                     actions.push({type: "SUCCESS", detail: `Executed: ${actionDesc}`});
                 }
             }
-        } else {
-            actions.push({type: "INFO", detail: `No managed devices found`});
+        }
+
+        // Entra ID Registered Devices
+        const registeredDevicesReq = await client.api(`/devices`)
+            .filter(`registeredOwners/any(o:o/id eq '${userId}')`)
+            .select("id,displayName,operatingSystem,accountEnabled")
+            .get();
+
+        if (registeredDevicesReq.value.length > 0) {
+            for (const dev of registeredDevicesReq.value) {
+                if (dev.accountEnabled) {
+                    const actionDesc = `Disable Entra ID device ${dev.displayName} (${dev.operatingSystem})`;
+                    if (dryRun) {
+                        actions.push({type: "DRY-RUN", detail: `Would execute: ${actionDesc}`});
+                    } else {
+                        await client.api(`/devices/${dev.id}`).update({ accountEnabled: false });
+                        actions.push({type: "SUCCESS", detail: `Executed: ${actionDesc}`});
+                    }
+                }
+            }
+        }
+
+        if (managedDevicesReq.value.length === 0 && registeredDevicesReq.value.length === 0) {
+            actions.push({type: "INFO", detail: `No associated devices found`});
         }
     } catch (e: any) {
-        // Clean error message
         const msg = e.message?.includes("Authorization_RequestDenied") ? "Missing Device Read/Write Permissions" : e.message;
         actions.push({type: "WARNING", detail: `Device scan failed: ${msg}`});
     }
@@ -133,72 +158,37 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
     IPC.progress("Analyzing Licenses...", 80);
     if (user.assignedLicenses && user.assignedLicenses.length > 0) {
       
-      // Fetch detailed license info to find assignment paths (Direct vs Group)
-      const licenseDetails = await client.api(`/users/${userId}/licenseDetails`).get();
-      
-      const directSkuIds: string[] = [];
-      const groupIdsToRemove: string[] = [];
-
-      for (const detail of licenseDetails.value) {
-          // Check if it's inherited
-          // assignmentPaths is array of { sourceId: string, sourceType: "Group" | "User" }
-          // If sourceId == userId, it's direct. If different, it's group.
-          // Actually, Graph returns 'Group' or 'User' in sourceType.
-          
-          // Unfortunately, licenseDetails sometimes doesn't return all info or requires specific permissions.
-          // Alternative: check group memberships.
-          
-          // Let's stick to simple logic: If we can't find assignmentPaths, assume direct and try.
-          // But we saw the error "inherited from group". 
-          
-          // Smart Logic:
-          // We iterate groups to find which ones assign licenses.
-          // This is heavy.
-          // Better: Try to remove all licenses. If it fails with "inherited", THEN fetch groups.
-          // But 'assignLicense' endpoint handles removal of direct licenses only.
-      }
-
-      // Let's try to distinguish using the licenseDetails we fetched
-      // licenseDetails.value items have property 'skuId'.
-      // But we need to know if it is group based.
-      // Graph v1.0 `licenseDetails` object doesn't always expose `assignmentPaths` clearly in JS SDK without correct types.
-      // Let's look at the error message from before: "User license is inherited..."
-      
-      // New Strategy:
-      // 1. Try to remove ALL licenses (Direct removal).
-      // 2. If it fails, assume group licenses exist and scan groups.
-      
       const allSkuIds = user.assignedLicenses.map((l: any) => l.skuId);
       
       if (dryRun) {
           actions.push({type: "DRY-RUN", detail: `Would remove ${allSkuIds.length} licenses (checking for groups...)`});
       } else {
           try {
+              IPC.log(`Attempting direct license removal for ${allSkuIds.length} SKUs...`);
               await client.api(`/users/${userId}/assignLicense`).post({
                   addLicenses: [],
                   removeLicenses: allSkuIds
               });
               actions.push({type: "SUCCESS", detail: `Removed ${allSkuIds.length} direct license(s)`});
           } catch (e: any) {
+              IPC.log(`Direct removal failed: ${e.message}`);
               if (e.message.includes("inherited")) {
                   actions.push({type: "INFO", detail: `Some licenses are group-inherited. Scanning groups...`});
                   
                   // Fetch groups user is member of
+                  IPC.log(`Fetching group memberships for ${userId}...`);
                   const groups = await client.api(`/users/${userId}/memberOf`).select("id,displayName,groupTypes").get();
+                  IPC.log(`Found ${groups.value.length} groups.`);
                   let removedFromGroups = 0;
                   
                   for (const group of groups.value) {
-                      // We can't easily know IF this group assigns the license without checking the group's properties, 
-                      // but for offboarding, we usually want to remove them from ALL security groups anyway.
-                      // Let's try to remove from groups that are likely licensing groups (Security).
-                      // Skip Sync'd groups (onPremisesSyncEnabled) if possible (checked via other props)
-                      
                       try {
+                          IPC.log(`Removing user from group ${group.displayName} (${group.id})...`);
                           await client.api(`/groups/${group.id}/members/${userId}/$ref`).delete();
                           removedFromGroups++;
                           actions.push({type: "SUCCESS", detail: `Removed from group: ${group.displayName}`});
                       } catch (grpErr: any) {
-                          // Ignore errors (e.g. dynamic groups where we can't remove)
+                          IPC.log(`Failed to remove from group ${group.id}: ${grpErr.message}`);
                       }
                   }
                   
