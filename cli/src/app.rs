@@ -35,6 +35,7 @@ pub enum InputContext {
     None,
     OffboardUserEmail,
     OffboardManagerEmail { user_email: String },
+    OffboardDeviceAction { user_email: String, manager_email: Option<String> },
     GuestCleanupThreshold,
 }
 
@@ -283,12 +284,24 @@ impl App {
                 None
             },
             InputContext::OffboardManagerEmail { user_email } => {
-                let manager = input.trim().to_string();
+                let manager = if input.trim().is_empty() { None } else { Some(input.trim().to_string()) };
+                self.input_context = InputContext::OffboardDeviceAction { user_email, manager_email: manager };
+                self.input_buffer.clear();
+                self.input_buffer.push_str("retire"); // Default
+                None
+            },
+            InputContext::OffboardDeviceAction { user_email, manager_email } => {
+                let device_action = input.trim().to_lowercase();
                 self.input_context = InputContext::None;
                 self.focus = Focus::Content;
                 
-                let mut args = vec!["--user".to_string(), user_email, "--dry-run".to_string(), self.dry_run.to_string()];
-                if !manager.is_empty() {
+                let mut args = vec![
+                    "--user".to_string(), user_email, 
+                    "--dry-run".to_string(), self.dry_run.to_string(),
+                    "--device-action".to_string(), device_action
+                ];
+                
+                if let Some(manager) = manager_email {
                     args.push("--manager".to_string());
                     args.push(manager);
                 }
