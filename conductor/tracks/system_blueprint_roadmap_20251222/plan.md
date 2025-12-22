@@ -2,7 +2,7 @@
 
 ## Phase 1: Skeleton & Ideation Workshop
 - [x] Task: Create `SYSTEM_BLUEPRINT.md` skeleton with the 6 strategic pillars. 3c369e4
-- [ ] Task: Map existing `legacy/` scripts into the new pillars.
+- [x] Task: Map existing `legacy/` scripts into the new pillars. 3a04bdc
 - [ ] Task: Brainstorm and draft 3-5 "Future Concept" modules for each pillar (Endpoint, Governance, etc.).
 - [ ] Task: Conductor - User Manual Verification 'Skeleton & Ideation' (Protocol in workflow.md)
 
