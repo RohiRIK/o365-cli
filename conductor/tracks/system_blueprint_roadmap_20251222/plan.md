@@ -8,7 +8,7 @@
 
 ## Phase 2: Deep Research & Ideation (The "Swiss Army Knife" Workshop)
 - [x] Task: Research high-value "Undocumented" or complex admin tasks in Graph API/PowerShell for IAM & SEC. dd5c940
-- [ ] Task: Research advanced GOV & END scenarios (e.g., Cross-tenant sync, Intune proactive remediations).
+- [x] Task: Research advanced GOV & END scenarios (e.g., Cross-tenant sync, Intune proactive remediations). 574ee1d
 - [ ] Task: Brainstorm "SecOps" modules (e.g., Automated Incident Response, Identity Threat Detection).
 - [ ] Task: Map out the expanded "Swiss Army Knife" module list across all 6 pillars.
 - [ ] Task: Conductor - User Manual Verification 'Research & Ideation' (Protocol in workflow.md)
