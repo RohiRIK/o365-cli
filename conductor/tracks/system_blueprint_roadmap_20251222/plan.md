@@ -7,7 +7,7 @@
 - [x] Task: Conductor - User Manual Verification 'System Design' (Protocol in workflow.md) f9c8491
 
 ## Phase 2: Deep Research & Ideation (The "Swiss Army Knife" Workshop)
-- [ ] Task: Research high-value "Undocumented" or complex admin tasks in Graph API/PowerShell for IAM & SEC.
+- [x] Task: Research high-value "Undocumented" or complex admin tasks in Graph API/PowerShell for IAM & SEC. dd5c940
 - [ ] Task: Research advanced GOV & END scenarios (e.g., Cross-tenant sync, Intune proactive remediations).
 - [ ] Task: Brainstorm "SecOps" modules (e.g., Automated Incident Response, Identity Threat Detection).
 - [ ] Task: Map out the expanded "Swiss Army Knife" module list across all 6 pillars.
