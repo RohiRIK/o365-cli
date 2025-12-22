@@ -85,10 +85,27 @@ Consistency in visual cues is critical for SecOps speed:
     - `Green`: Successful operations and compliant statuses.
 
 ### 4.3 Security & Authentication Standard
-The platform prioritizes secure token handling and persistent identity.
-- **OAuth2 PKCE Flow:** Interactive login captures the authorization code via a local loopback server.
-- **Encrypted JSON Storage:** Refresh tokens and user profiles are stored in AES-encrypted JSON files within the user's home directory (`~/.o365-cli/`).
-- **Token Rotation:** Workers receive fresh access tokens via stdin; long-lived refresh tokens are never passed to the TypeScript layer.
+The platform prioritizes secure token handling and persistent identity using enterprise-grade encryption.
+
+#### 4.3.1 OAuth2 PKCE (The "Handshake")
+Authentication is performed using the **Authorization Code Flow with PKCE (Proof Key for Code Exchange)**.
+- **Workflow:** Rust generates a cryptographically random code verifier/challenge.
+- **Callback:** A temporary local loopback server (`http://localhost:port`) captures the authorization code.
+- **Safety:** Prevents code injection attacks and eliminates the need for client secrets in the binary.
+
+#### 4.3.2 Encrypted JSON Storage (The "Vault")
+All sensitive session data is stored in **AES-256-GCM encrypted JSON files** located in `~/.o365-cli/`.
+- **Master Key:** Derived from a machine-specific hardware identifier (UUID/Serial) mixed with a project-specific salt.
+- **Storage Scope:**
+    - `profile.json.enc`: Encrypted user profile data (Name, UPN, Tenant ID).
+    - `tokens.json.enc`: Encrypted OAuth2 tokens (Access, Refresh).
+- **Security Goal:** Protects against unauthorized local access if the raw JSON files are exfiltrated.
+
+#### 4.3.3 IPC Session Security
+To maintain the "Zero-Trust" principle between processes:
+- **Naked Tokens:** Access tokens are passed to Workers via `stdin` piping, ensuring they never appear in process lists (`ps aux`) or history files.
+- **Short Life:** Workers only hold tokens in memory during execution and never persist them.
+- **Token Rotation:** The "Brain" (Rust) is the sole authority for refreshing tokens; Workers must exit and request a re-run if a token expires during long-running tasks.
 
 ### 4.4 Worker Implementation Pattern
 Each TypeScript worker must extend a base `BaseModule` class to ensure:
