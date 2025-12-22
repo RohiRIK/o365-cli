@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: System Blueprint & Roadmap
-*Link: [./conductor/tracks/system_blueprint_roadmap_20251222/](./conductor/tracks/system_blueprint_roadmap_20251222/)*
+## [~] Track: IAM - Graceful Offboarding Implementation
+*Link: [./conductor/tracks/iam_offboard_20251222/](./conductor/tracks/iam_offboard_20251222/)*
