@@ -11,8 +11,8 @@
 ## Phase 2: Rust TUI Expansion
 - [x] Task: Extend `App` state and `InputContext` to support the multi-step offboarding wizard. 7b29904
 - [x] Task: Update `ui.rs` to render the new wizard screens (Target -> Manager -> Device Options -> Review). 790e259
-- [~] Task: Integrate `iam:offboard` execution into the TUI action handler and process IPC updates.
-- [ ] Task: Conductor - User Manual Verification 'TUI Integration' (Protocol in workflow.md)
+- [x] Task: Integrate `iam:offboard` execution into the TUI action handler and process IPC updates. 3498328
+- [~] Task: Conductor - User Manual Verification 'TUI Integration' (Protocol in workflow.md)
 
 ## Phase 3: Validation & Zero-Trust Polish
 - [ ] Task: Verify 'Dry-Run' accuracy (ensure it lists all targeted devices and groups without mutation).
