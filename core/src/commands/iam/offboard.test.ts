@@ -74,7 +74,7 @@ describe("IAM Offboarding Worker", () => {
     const rows = result.table.rows;
     expect(rows.some((r: string[]) => r[0] === "DRY-RUN" && r[1].includes("disable sign-in and hide"))).toBe(true);
     expect(rows.some((r: string[]) => r[0] === "DRY-RUN" && r[1].includes("Retire Intune device"))).toBe(true);
-    expect(rows.some((r: string[]) => r[0] === "DRY-RUN" && r[1].includes("Disable Entra ID device"))).toBe(true);
+    expect(rows.some((r: string[]) => r[0] === "DRY-RUN" && r[1].includes("mailbox to Shared"))).toBe(true);
   });
 
   it("should handle group-based license removal fallback", async () => {
