@@ -1,10 +1,10 @@
 # Plan: System Blueprint & Roadmap
 
-## Phase 1: Core Architecture & System Design
+## Phase 1: Core Architecture & System Design [checkpoint: f9c8491]
 - [x] Task: Document the "Brain & Muscle" hybrid architecture (Rust orchestrator vs. Bun workers). 16fa8fd
 - [x] Task: Formalize the TUI Framework (Layouts, Focus levels, and Component reuse). 41b819e
 - [x] Task: Document the Security & Auth Layer (OAuth2 PKCE + Encrypted JSON Storage). 8ee3ccf
-- [~] Task: Conductor - User Manual Verification 'System Design' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'System Design' (Protocol in workflow.md) f9c8491
 
 ## Phase 2: Deep Research & Ideation (The "Swiss Army Knife" Workshop)
 - [ ] Task: Research high-value "Undocumented" or complex admin tasks in Graph API/PowerShell for IAM & SEC.
