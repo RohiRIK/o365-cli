@@ -402,7 +402,10 @@ impl App {
                     self.input_buffer.push_str("90"); // Default
                     None
                 },
-                2 => Some(AppAction::RunTask { name: "iam:test".to_string(), args: vec![] }),
+                2 => Some(AppAction::RunTask { 
+                    name: "iam:offboard".to_string(), 
+                    args: vec!["--user".to_string(), "test@example.com".to_string(), "--dry-run".to_string(), "true".to_string()] 
+                }),
                 _ => None,
             },
             CurrentTab::Settings => match self.settings_index {
