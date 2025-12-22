@@ -6,12 +6,12 @@
 - [x] Task: Document the Security & Auth Layer (OAuth2 PKCE + Encrypted JSON Storage). 8ee3ccf
 - [x] Task: Conductor - User Manual Verification 'System Design' (Protocol in workflow.md) f9c8491
 
-## Phase 2: Deep Research & Ideation (The "Swiss Army Knife" Workshop)
+## Phase 2: Deep Research & Ideation (The "Swiss Army Knife" Workshop) [checkpoint: a572d2d]
 - [x] Task: Research high-value "Undocumented" or complex admin tasks in Graph API/PowerShell for IAM & SEC. dd5c940
 - [x] Task: Research advanced GOV & END scenarios (e.g., Cross-tenant sync, Intune proactive remediations). 574ee1d
 - [x] Task: Brainstorm "SecOps" modules (e.g., Automated Incident Response, Identity Threat Detection). 903b672
 - [x] Task: Map out the expanded "Swiss Army Knife" module list across all 6 pillars. 903b672
-- [~] Task: Conductor - User Manual Verification 'Research & Ideation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Research & Ideation' (Protocol in workflow.md) a572d2d
 
 ## Phase 3: Technical Blueprinting (Expansion Phase)
 - [ ] Task: Document all IAM & SEC modules (Legacy + New Research) using the 5-point standard.
