@@ -9,8 +9,8 @@
 - [x] Task: Conductor - User Manual Verification 'Worker Core Logic' (Protocol in workflow.md) 38db438
 
 ## Phase 2: Rust TUI Expansion
-- [~] Task: Extend `App` state and `InputContext` to support the multi-step offboarding wizard.
-- [ ] Task: Update `ui.rs` to render the new wizard screens (Target -> Manager -> Device Options -> Review).
+- [x] Task: Extend `App` state and `InputContext` to support the multi-step offboarding wizard. 7b29904
+- [~] Task: Update `ui.rs` to render the new wizard screens (Target -> Manager -> Device Options -> Review).
 - [ ] Task: Integrate `iam:offboard` execution into the TUI action handler and process IPC updates.
 - [ ] Task: Conductor - User Manual Verification 'TUI Integration' (Protocol in workflow.md)
 
