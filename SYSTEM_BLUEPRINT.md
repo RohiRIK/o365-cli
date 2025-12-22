@@ -233,9 +233,13 @@ Users often grant high-risk permissions to third-party apps without IT approval.
 }
 ```
 
-- **[SWISS-ARMY] Unified Threat Containment:** Rapid block across User, IP, and App tenant-wide.
-- **[SWISS-ARMY] Data Exfiltration Pulse:** Monitor for bulk downloads/sharing events.
-- **[SWISS-ARMY] Secure Score Benchmarker:** Interactive posture remediation.
+- [SWISS-ARMY] Unified Threat Containment: Rapid block across User, IP, and App tenant-wide.
+- [SWISS-ARMY] Data Exfiltration Pulse: Monitor for bulk downloads/sharing events.
+- [SWISS-ARMY] Secure Score Benchmarker: Interactive posture remediation.
+- [SECOPS] Identity Risk Auto-Remediator: Auto-trigger reset/MFA for risky users.
+- [SECOPS] Phishing Blast Radius Containment: One-click quarantine of malicious mail tenant-wide.
+- [SECOPS] Suspicious OAuth Kill Switch: Instantly revoke and block high-risk apps.
+- [SECOPS] Forensic Data Collector: Auto-export full timeline for suspect identities.
 
 ### 6.3 GOV Pillar
 
