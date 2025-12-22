@@ -11,7 +11,7 @@
 - [x] Task: Research advanced GOV & END scenarios (e.g., Cross-tenant sync, Intune proactive remediations). 574ee1d
 - [x] Task: Brainstorm "SecOps" modules (e.g., Automated Incident Response, Identity Threat Detection). 903b672
 - [x] Task: Map out the expanded "Swiss Army Knife" module list across all 6 pillars. 903b672
-- [ ] Task: Conductor - User Manual Verification 'Research & Ideation' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Research & Ideation' (Protocol in workflow.md)
 
 ## Phase 3: Technical Blueprinting (Expansion Phase)
 - [ ] Task: Document all IAM & SEC modules (Legacy + New Research) using the 5-point standard.
