@@ -10,7 +10,7 @@
 - [x] Task: Research high-value "Undocumented" or complex admin tasks in Graph API/PowerShell for IAM & SEC. dd5c940
 - [x] Task: Research advanced GOV & END scenarios (e.g., Cross-tenant sync, Intune proactive remediations). 574ee1d
 - [x] Task: Brainstorm "SecOps" modules (e.g., Automated Incident Response, Identity Threat Detection). 903b672
-- [ ] Task: Map out the expanded "Swiss Army Knife" module list across all 6 pillars.
+- [x] Task: Map out the expanded "Swiss Army Knife" module list across all 6 pillars. 903b672
 - [ ] Task: Conductor - User Manual Verification 'Research & Ideation' (Protocol in workflow.md)
 
 ## Phase 3: Technical Blueprinting (Expansion Phase)
