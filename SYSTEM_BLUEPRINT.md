@@ -58,19 +58,31 @@ The interface is divided into three primary functional zones using `ratatui` lay
     - **Review Modal:** Mandatory confirmation gate for live (non-dry-run) actions.
 3. **Log & Status Bar (Bottom, Fixed Height):** Real-time feed of IPC messages and authentication status.
 
-#### 4.2.2 State Management (The "Brain")
-The Rust `App` struct manages the platform's state machine:
-- `CurrentTab`: Tracks the active strategic pillar.
-- `Focus`: Controls input routing (Menu, Content, Logs, Input, Review, Filter).
-- `TaskOutput`: Holds the current dataset returned by a Worker.
-- `InputContext`: Tracks multi-step wizards (e.g., `OffboardUserEmail` -> `OffboardManagerEmail`).
-- `FilterBuffer`: Stores live search queries for the Results Table.
+#### 4.2.2 State Management & Focus System
+The TUI uses a strict focus-based input routing system defined in `app.rs`:
+- **`Focus::Menu`:** Sidebar navigation active. `j/k` switches pillars.
+- **`Focus::Content`:** Main pillar menu active. `j/k` selects modules, `Enter` starts execution.
+- **`Focus::Input`:** Modal prompt active. Captures keyboard strings into `app.input_buffer`.
+- **`Focus::Review`:** Decision gate active. Mandatory manual review before non-dry-run execution.
+- **`Focus::Filter`:** Active during results viewing. Live search (`/`) filters table rows.
+- **`Focus::Logs`:** Bottom pane active. Allows scrolling through session history.
 
-#### 4.2.3 IPC-to-UI Mapping
-- `type: "log"` -> Appended to `app.logs` and rendered in the bottom pane.
-- `type: "progress"` -> Updates `app.is_loading` overlay text.
-- `type: "table"` -> Populates `app.task_output` for the Results Table view.
-- `type: "alert"` -> Triggers a high-visibility modal for critical forensic findings.
+#### 4.2.3 Reusable UI Components
+Every module must use these standardized widgets from `ui.rs`:
+1. **Module List:** Standardized `List` widget with active/inactive border styling based on focus.
+2. **Standard Table:** Multi-column `Table` with auto-scaling widths and custom styling for "Risk" levels.
+3. **Forensic Detail View:** A centered popup that renders key-value pairs from a selected table row.
+4. **Action Summary Overlay:** A high-visibility modal used in `Focus::Review` to list proposed changes.
+5. **Progress Overlay:** A simple status indicator shown during async IPC operations.
+
+#### 4.2.4 TUI Color & Icon Language
+Consistency in visual cues is critical for SecOps speed:
+- **Icons:** 🕵️ (Security), 👋 (IAM), 🧹 (Cleanup), 🧪 (Test), 🔐 (Auth), 🔎 (Forensics).
+- **Colors:**
+    - `Blue` / `Cyan`: Active focus and primary information.
+    - `Yellow`: Warnings, "Concept" modules, and Dry-Run mode.
+    - `Red`: Critical risks, errors, and live destructive actions.
+    - `Green`: Successful operations and compliant statuses.
 
 ### 4.3 Security & Authentication Standard
 The platform prioritizes secure token handling and persistent identity.
