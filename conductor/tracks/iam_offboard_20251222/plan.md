@@ -14,8 +14,8 @@
 - [x] Task: Integrate `iam:offboard` execution into the TUI action handler and process IPC updates. be844e0
 - [x] Task: Conductor - User Manual Verification 'TUI Integration' (Protocol in workflow.md) be844e0
 
-## Phase 3: Validation & Zero-Trust Polish
-- [~] Task: Verify 'Dry-Run' accuracy (ensure it lists all targeted devices and groups without mutation).
-- [~] Task: Conduct end-to-end integration tests using mock Graph API responses.
-- [ ] Task: Final code review for security (zero-trust group pruning verification).
-- [ ] Task: Conductor - User Manual Verification 'Final Validation' (Protocol in workflow.md)
+## Phase 3: Validation & Zero-Trust Polish [checkpoint: ed95eb7]
+- [x] Task: Verify 'Dry-Run' accuracy (ensure it lists all targeted devices and groups without mutation). be844e0
+- [x] Task: Conduct end-to-end integration tests using mock Graph API responses. be844e0
+- [x] Task: Final code review for security (zero-trust group pruning verification). be844e0
+- [x] Task: Conductor - User Manual Verification 'Final Validation' (Protocol in workflow.md) ed95eb7
