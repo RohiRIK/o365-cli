@@ -36,10 +36,22 @@ To facilitate ideation, modules are tracked through the following stages:
 ## 4. Module Definitions
 
 ### 4.1 IAM Pillar
-*(Modules to be added)*
+- **Graceful Offboarding:** Standard user termination protocol.
+    - *Legacy:* `legacy/01-IAM-GracefulOffboarding`
+- **Guest User Cleanup:** Identifying and removing stale guest accounts.
+    - *Legacy:* `legacy/01-IAM-GuestUserCleanup`
+- **New User Onboarding:** Automated setup for new joiners.
+    - *Legacy:* `legacy/01-IAM-NewUserOnboarding`
 
 ### 4.2 SEC Pillar
-*(Modules to be added)*
+- **Shadow IT Governance:** Detecting and remediating risky OAuth applications.
+    - *Legacy:* `legacy/02-SEC-ShadowITGovernance`
+- **External Sharing Audit:** Reviewing SharePoint/OneDrive external links.
+    - *Legacy:* `legacy/02-SEC-ExternalSharingAudit`
+- **Mailbox Permissions Audit:** Forensic review of delegation and access.
+    - *Legacy:* `legacy/02-SEC-MailboxPermissionsAudit`
+- **Surgical Lockdown:** Rapid containment of compromised accounts.
+    - *Legacy:* `legacy/02-SEC-SurgicalLockdown`
 
 ### 4.3 GOV Pillar
 *(Modules to be added)*
@@ -48,7 +60,13 @@ To facilitate ideation, modules are tracked through the following stages:
 *(Modules to be added)*
 
 ### 4.5 RES Pillar
-*(Modules to be added)*
+- **License Optimization:** Identifying unused or redundant licenses.
+    - *Legacy:* `legacy/03-RES-LicenseOptimization`
+- **Stale Device Cleanup:** Removing inactive or untrusted devices.
+    - *Legacy:* `legacy/03-RES-StaleDeviceCleanup`
 
 ### 4.6 REP Pillar
-*(Modules to be added)*
+- **360° Offboarding Analyzer:** Comprehensive forensic report for departed users.
+    - *Legacy:* `legacy/04-REP-360OffboardingAnalyzer`
+- **Teams Activity Report:** Usage and engagement metrics for Microsoft Teams.
+    - *Legacy:* `legacy/04-REP-TeamsActivityReport`
