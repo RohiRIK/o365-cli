@@ -1,73 +1,276 @@
 # SYSTEM BLUEPRINT & ROADMAP: o365-cli
 
 ## 1. Executive Summary
-This document serves as the master functional roadmap for the `o365-cli` platform. It bridges legacy PowerShell logic with a modern, hybrid Rust/TypeScript architecture while proactively defining new administrative modules for enterprise Microsoft 365 governance.
+This document serves as the master functional roadmap for the `o365-cli` platform. It bridges legacy PowerShell logic with a modern, hybrid Rust/TypeScript architecture. The ultimate goal is to transform `o365-cli` into the **"Swiss Army Knife" for Microsoft 365 Systems Administrators and SecOps professionals**—providing a single, high-performance interface for forensics, governance, automation, and threat containment.
 
 ## 2. Strategic Pillars
-The platform is organized into six core pillars, each addressing a critical domain of M365 administration.
+... (pillars) ...
 
-### 2.1 IAM: Identity & Access Management
-*Focus: Lifecycle management, guest governance, and identity security.*
+## 3. Core Architecture: The "Brain & Muscle" Hybrid Model
+The platform employs a decoupled, high-performance architecture that balances terminal responsiveness with flexible business logic.
 
-### 2.2 SEC: Security
-*Focus: Threat detection, shadow IT, and security posture enforcement.*
+### 3.1 The Brain: Rust Orchestrator (`cli/`)
+The Rust layer serves as the secure orchestration engine. Its responsibilities include:
+- **TUI Rendering:** High-performance UI management using `ratatui`.
+- **Authentication & Security:** Managing OAuth2 PKCE flows and AES-encrypted credential storage.
+- **Worker Management:** Spawning, monitoring, and capturing output from child processes.
+- **IPC Protocol Enforcement:** Parsing incoming JSON-line streams and updating the UI state machine.
 
-### 2.3 GOV: Governance & Compliance
-*Focus: Audit forensics, risk detection, and regulatory compliance.*
+### 3.2 The Muscle: TypeScript Workers (`core/`)
+The TypeScript layer, executed via the `Bun` runtime, handles all Microsoft Graph API business logic. Its responsibilities include:
+- **API Interaction:** Complex Graph API queries, pagination, and data transformation.
+- **Stateful Logic:** Evaluating risk scores, detecting configuration drift, and processing bulk updates.
+- **Zero-Trust Networking:** Using the access tokens provided by the "Brain" to interact securely with the M365 tenant.
 
-### 2.4 END: Endpoint & Device Management
-*Focus: Intune orchestration, device health, and endpoint security.*
-
-### 2.5 RES: Resource Management
-*Focus: License optimization and stale asset reclamation.*
-
-### 2.6 REP: Reporting
-*Focus: 360-degree forensics and executive-level activity summaries.*
-
-## 3. Module Maturity Model
-To facilitate ideation, modules are tracked through the following stages:
-1. **DRAFT:** Initial concept and problem statement identified.
-2. **TECH DESIGN:** Graph API endpoints, permissions, and IPC protocols defined.
-3. **READY:** Approved for implementation.
-4. **LIVE:** Fully implemented in the hybrid stack.
+### 3.3 The "Nerve" System: JSON-based IPC
+Communication is strictly asynchronous and unidirectional from Muscle to Brain using `stdout`.
+1. **Request:** Brain spawns the Worker with command-line arguments.
+2. **Context:** Brain passes the access token via `stdin` (preventing sensitive data from appearing in process lists).
+3. **Execution:** Worker streams structured JSON updates (Progress, Table Data, Alerts).
+4. **Resolution:** Worker exits with code 0 on success or >0 on failure.
 
 ---
 
-## 4. Module Definitions
+## 4. Module Maturity Model
+... (stages) ...
+
+## 4. System Integration Standard
+To ensure all modules "work and feel the same," every implementation must adhere to this architectural standard.
+
+### 4.1 The Rust-to-TypeScript IPC Protocol
+Communication follows a strict JSON-line format over `stdin`/`stdout`.
+- **Command Dispatch:** Rust spawns `bun core/src/index.ts <module_name> --args...`
+- **Standard Message Types:**
+    - `{"type": "log", "level": "info", "message": "..."}`: Real-time status in TUI footer.
+    - `{"type": "progress", "data": {"step": "...", "percent": 50}}`: Updates the TUI progress bar.
+    - `{"type": "table", "data": {"headers": [], "rows": [[]]}}`: Renders the main data view.
+    - `{"type": "error", "message": "...", "code": 500}`: Triggers the TUI error modal.
+
+### 4.2 TUI Framework & UX Guidelines (The "Feel")
+
+#### 4.2.1 Global Layout Structure
+The interface is divided into three primary functional zones using `ratatui` layouts:
+1. **Navigation Sidebar (Left, 20%):** Persistent menu for switching between strategic pillars (Security, IAM, GOV, END, RES, Settings).
+2. **Main Workspace (Right, 80%):** Dynamic area that switches between:
+    - **Module Menu:** List of available tasks for the current pillar.
+    - **Input Prompt:** Modal overlay for gathering task arguments (e.g., Target UPN).
+    - **Results Table:** Interactive table with live filtering (`/`), sorting, and detail views (`Enter`).
+    - **Review Modal:** Mandatory confirmation gate for live (non-dry-run) actions.
+3. **Log & Status Bar (Bottom, Fixed Height):** Real-time feed of IPC messages and authentication status.
+
+#### 4.2.2 State Management (The "Brain")
+The Rust `App` struct manages the platform's state machine:
+- `CurrentTab`: Tracks the active strategic pillar.
+- `Focus`: Controls input routing (Menu, Content, Logs, Input, Review, Filter).
+- `TaskOutput`: Holds the current dataset returned by a Worker.
+- `InputContext`: Tracks multi-step wizards (e.g., `OffboardUserEmail` -> `OffboardManagerEmail`).
+- `FilterBuffer`: Stores live search queries for the Results Table.
+
+#### 4.2.3 IPC-to-UI Mapping
+- `type: "log"` -> Appended to `app.logs` and rendered in the bottom pane.
+- `type: "progress"` -> Updates `app.is_loading` overlay text.
+- `type: "table"` -> Populates `app.task_output` for the Results Table view.
+- `type: "alert"` -> Triggers a high-visibility modal for critical forensic findings.
+
+### 4.3 Security & Authentication Standard
+The platform prioritizes secure token handling and persistent identity.
+- **OAuth2 PKCE Flow:** Interactive login captures the authorization code via a local loopback server.
+- **Encrypted JSON Storage:** Refresh tokens and user profiles are stored in AES-encrypted JSON files within the user's home directory (`~/.o365-cli/`).
+- **Token Rotation:** Workers receive fresh access tokens via stdin; long-lived refresh tokens are never passed to the TypeScript layer.
+
+### 4.4 Worker Implementation Pattern
+Each TypeScript worker must extend a base `BaseModule` class to ensure:
+- **Graph Client Initialization:** Auto-authenticated via tokens passed from Rust.
+- **Graceful Termination:** Listening for `SIGTERM` to close open requests.
+- **Standardized Output:** Using a central `IPCService` to format all JSON responses.
+
+---
+
+## 5. Module Definitions
 
 ### 4.1 IAM Pillar
-- **Graceful Offboarding:** Standard user termination protocol.
-    - *Legacy:* `legacy/01-IAM-GracefulOffboarding`
-- **Guest User Cleanup:** Identifying and removing stale guest accounts.
-    - *Legacy:* `legacy/01-IAM-GuestUserCleanup`
-- **New User Onboarding:** Automated setup for new joiners.
-    - *Legacy:* `legacy/01-IAM-NewUserOnboarding`
-- **[CONCEPT] RBAC Auditor:** Review custom roles and assignment hygiene.
-- **[CONCEPT] Conditional Access Optimizer:** Detect redundant or conflicting CA policies.
-- **[CONCEPT] Service Principal Lifecycle:** Prune unused or expired service principals.
+
+#### 4.1.1 Graceful Offboarding
+**1. Problem Statement & Value:**
+Manual offboarding is prone to error. Leaving access active after departure is a major security risk, while deleting accounts too early can cause data loss. Automated offboarding ensures a consistent "Clean Slate" for every departure.
+
+**2. Legacy Mapping:**
+- `legacy/01-IAM-GracefulOffboarding/Invoke-GracefulOffboarding_Action.ps1`
+
+**3. Technical Blueprint:**
+- **Endpoints:** 
+    - `PATCH /users/{id}` (Block login)
+    - `POST /users/{id}/assignLicense` (Remove licenses)
+    - `POST /users/{id}/microsoft.graph.convertMailboxToShared` (Exchange Online)
+    - `PATCH /users/{id}` (Hide from Address List)
+- **Worker Logic:** Verify manager, convert mailbox, set OOF message, remove from groups, and eventually revoke sessions.
+
+**4. TUI Interface Design:**
+```text
+┌─ IAM: Graceful Offboarding ────────────────────────────────┐
+│ User: rohirikman@example.com                               │
+│ Manager: admin@example.com                                 │
+│                                                            │
+│ [~] Blocking Sign-in...                       [ DONE ]     │
+│ [~] Converting to Shared Mailbox...           [ DONE ]     │
+│ [ ] Granting Manager Access...                [ PEND ]     │
+│ [ ] Removing Licenses...                      [ PEND ]     │
+│                                                            │
+│ Status: Processing... (Stage 2/5)                          │
+└────────────────────────────────────────────────────────────┘
+```
+
+**5. IPC Protocol Definition:**
+```json
+{
+  "type": "progress",
+  "data": {
+    "step": "Blocking Sign-in",
+    "status": "complete",
+    "percent": 20
+  }
+}
+```
+
+---
 
 ### 4.2 SEC Pillar
-- **Shadow IT Governance:** Detecting and remediating risky OAuth applications.
-    - *Legacy:* `legacy/02-SEC-ShadowITGovernance`
-- **External Sharing Audit:** Reviewing SharePoint/OneDrive external links.
-    - *Legacy:* `legacy/02-SEC-ExternalSharingAudit`
-- **Mailbox Permissions Audit:** Forensic review of delegation and access.
-    - *Legacy:* `legacy/02-SEC-MailboxPermissionsAudit`
-- **Surgical Lockdown:** Rapid containment of compromised accounts.
-    - *Legacy:* `legacy/02-SEC-SurgicalLockdown`
-- **[CONCEPT] Unified Threat Containment:** Rapid block-listing across the tenant.
-- **[CONCEPT] Secure Score Benchmarking:** Interactive tracking of security posture.
-- **[CONCEPT] Data Exfiltration Detector:** Monitor for bulk downloads or unusual sharing.
+
+#### 4.2.1 Shadow IT Governance
+**1. Problem Statement & Value:**
+Users often grant high-risk permissions to third-party apps without IT approval. This module identifies "Over-Permissioned" apps and provides one-click remediation.
+
+**2. Legacy Mapping:**
+- `legacy/02-SEC-ShadowITGovernance/Invoke-ShadowIT_Report.ps1`
+
+**3. Technical Blueprint:**
+- **Endpoints:**
+    - `GET /servicePrincipals` (Get all apps)
+    - `GET /oauth2PermissionGrants` (Analyze delegated permissions)
+    - `GET /appRoleAssignments` (Analyze application permissions)
+- **Worker Logic:** Calculate risk score based on scope (e.g., `Mail.ReadWrite` = CRITICAL). Filter out verified Microsoft publishers.
+
+**4. TUI Interface Design:**
+```text
+┌─ SEC: Shadow IT Audit ─────────────────────────────────────┐
+│ Found 42 Third-Party Applications                          │
+│                                                            │
+│ APP NAME          | PUBLISHER   | RISK     | USERS         │
+│ ------------------|-------------|----------|---------------│
+│ "Cool Calendar"   | Unverified  | CRITICAL | 12            │
+│ "PDF Converter"   | Unknown     | HIGH     | 4             │
+│ "Office Themes"   | Verified    | LOW      | 150           │
+│                                                            │
+│ [ENTER] View Details   [R] Revoke App   [W] Whitelist      │
+└────────────────────────────────────────────────────────────┘
+```
+
+**5. IPC Protocol Definition:**
+```json
+{
+  "type": "table",
+  "data": {
+    "headers": ["App", "Publisher", "Risk", "Users"],
+    "rows": [
+      ["Cool Calendar", "Unverified", "CRITICAL", "12"]
+    ]
+  }
+}
+```
+
+---
 
 ### 4.3 GOV Pillar
-- **[CONCEPT] Sign-in Forensic Analyzer:** Deep-dive into suspicious sign-in attempts.
-- **[CONCEPT] Audit Log Proactive Monitor:** Real-time alerting for sensitive admin actions.
-- **[CONCEPT] PII Discovery Engine:** Scanning public sites for PII patterns.
+
+#### 4.3.1 Sign-in Forensic Analyzer
+**1. Problem Statement & Value:**
+Detecting brute force or impossible travel requires correlation of sign-in logs across various sources. This module provides a forensic "Blast Radius" report for any identity.
+
+**2. Legacy Mapping:**
+- N/A (New Module)
+
+**3. Technical Blueprint:**
+- **Endpoints:**
+    - `GET /auditLogs/signIns` (Main source)
+    - `GET /identityProtection/riskyUsers`
+    - `GET /users/{id}/authentication/methods`
+- **Worker Logic:** Group sign-ins by IP/Location/Device. Flag MFA failures or "MFA Fatigue" patterns. Cross-reference with `riskyUsers` endpoint.
+
+**4. TUI Interface Design:**
+```text
+┌─ GOV: Sign-in Forensic Analyzer ───────────────────────────┐
+│ User: rohirikman@example.com                               │
+│ Range: Last 24 Hours                                       │
+│                                                            │
+│ TIME (UTC)   | LOCATION      | IP           | STATUS       │
+│ -------------|---------------|--------------|--------------│
+│ 14:20:01     | New York, US  | 1.1.1.1      | SUCCESS      │
+│ 14:15:30     | London, UK    | 2.2.2.2      | MFA FAILURE  │
+│ 14:12:00     | London, UK    | 2.2.2.2      | PASSWD FAIL  │
+│                                                            │
+│ [!] ALERT: Impossible Travel Detected (NY -> London)       │
+│ [K] Kill Sessions   [B] Block IP   [R] Require Password Reset│
+└────────────────────────────────────────────────────────────┘
+```
+
+**5. IPC Protocol Definition:**
+```json
+{
+  "type": "alert",
+  "data": {
+    "severity": "CRITICAL",
+    "message": "Impossible Travel Detected",
+    "suggested_action": "kill_sessions"
+  }
+}
+```
+
+---
 
 ### 4.4 END Pillar
-- **[CONCEPT] Configuration Drift Detector:** Ensure devices adhere to baseline policies.
-- **[CONCEPT] App Deployment Orchestrator:** CLI-driven orchestration of Win32 deployments.
-- **[CONCEPT] Autopilot Profile Auditor:** Review and optimize OOBE profiles.
+
+#### 4.4.1 Configuration Drift Detector
+**1. Problem Statement & Value:**
+Intune policies can fail to apply or be bypassed. IT needs a way to verify that the "Desired State" matches the "Actual State" on endpoints.
+
+**2. Legacy Mapping:**
+- N/A (New Module)
+
+**3. Technical Blueprint:**
+- **Endpoints:**
+    - `GET /deviceManagement/managedDevices`
+    - `GET /deviceManagement/deviceConfigurationDeviceStatuses`
+    - `GET /deviceManagement/deviceCompliancePolicies`
+- **Worker Logic:** Fetch baseline policies. Compare against individual device check-in results. Identify "Non-Compliant" devices with specific setting-level failures.
+
+**4. TUI Interface Design:**
+```text
+┌─ END: Configuration Drift ─────────────────────────────────┐
+│ Policy: Windows 11 Security Baseline                       │
+│                                                            │
+│ DEVICE NAME   | USER         | STATUS       | DRIFTED SETTINGS│
+│ --------------|--------------|--------------|-----------------│
+│ WKSTN-01      | Alice        | COMPLIANT    | 0               │
+│ WKSTN-05      | Bob          | DRIFTED      | BitLocker, FW   │
+│ WKSTN-09      | Charlie      | OFFLINE      | Unknown         │
+│                                                            │
+│ [S] Sync Policy   [W] Wipe Device   [L] View Logs          │
+└────────────────────────────────────────────────────────────┘
+```
+
+**5. IPC Protocol Definition:**
+```json
+{
+  "type": "drift_report",
+  "data": {
+    "device_id": "WKSTN-05",
+    "drifted_settings": ["BitLockerEncryption", "FirewallEnabled"],
+    "last_sync": "2025-12-22T08:00:00Z"
+  }
+}
+```
+
+---
 
 ### 4.5 RES Pillar
 - **License Optimization:** Identifying unused or redundant licenses.
