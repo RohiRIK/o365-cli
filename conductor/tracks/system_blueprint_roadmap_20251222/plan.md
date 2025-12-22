@@ -2,7 +2,7 @@
 
 ## Phase 1: Core Architecture & System Design
 - [x] Task: Document the "Brain & Muscle" hybrid architecture (Rust orchestrator vs. Bun workers). 16fa8fd
-- [ ] Task: Formalize the TUI Framework (Layouts, Focus levels, and Component reuse).
+- [x] Task: Formalize the TUI Framework (Layouts, Focus levels, and Component reuse). 41b819e
 - [ ] Task: Document the Security & Auth Layer (OAuth2 PKCE + Encrypted JSON Storage).
 - [ ] Task: Conductor - User Manual Verification 'System Design' (Protocol in workflow.md)
 
