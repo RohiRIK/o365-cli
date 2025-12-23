@@ -277,8 +277,8 @@ mod tests {
     fn test_module_config_loading() {
         let config = ModuleConfig::load("../modules.toml").expect("Failed to load modules.toml");
 
-        // Should have 11 modules total
-        assert_eq!(config.modules.len(), 11);
+        // Should have 29 modules total (expanded catalog)
+        assert_eq!(config.modules.len(), 29);
 
         // Check system config
         assert_eq!(config.system.max_concurrent_workers, 3);
@@ -310,17 +310,17 @@ mod tests {
         let iam_modules = config.modules_by_category(ModuleCategory::IAM);
         assert_eq!(iam_modules.len(), 3);
 
-        // Security should have 4 modules
+        // Security should have 12 modules (expanded with device, compliance, advanced security)
         let sec_modules = config.modules_by_category(ModuleCategory::Security);
-        assert_eq!(sec_modules.len(), 4);
+        assert_eq!(sec_modules.len(), 12);
 
-        // Resources should have 2 modules
+        // Resources should have 10 modules (expanded with device mgmt, cost optimization, collaboration)
         let res_modules = config.modules_by_category(ModuleCategory::Resources);
-        assert_eq!(res_modules.len(), 2);
+        assert_eq!(res_modules.len(), 10);
 
-        // Reporting should have 2 modules
+        // Reporting should have 4 modules (expanded with compliance exports)
         let rep_modules = config.modules_by_category(ModuleCategory::Reporting);
-        assert_eq!(rep_modules.len(), 2);
+        assert_eq!(rep_modules.len(), 4);
     }
 
     #[test]
@@ -366,10 +366,10 @@ mod tests {
         assert_eq!(iam_modules.len(), 3);
 
         let total = helpers::total_module_count();
-        assert_eq!(total, 11);
+        assert_eq!(total, 29); // Expanded catalog with device mgmt, compliance, advanced security, cost optimization
 
         let implemented = helpers::implemented_module_count();
-        assert_eq!(implemented, 3); // Currently: offboard, guest-cleanup, shadow-it
+        assert_eq!(implemented, 3); // Currently: offboard, guest-cleanup, shadow-it (others marked as supported=false)
 
         assert!(helpers::is_module_supported("iam:offboard"));
         assert!(helpers::is_module_supported("sec:shadow-it"));

@@ -204,3 +204,283 @@ supported = false  # To be implemented in Phase 4 (Week 9)
 inputs = [
   { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 90, min = 30, max = 180 }
 ]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## DEVICE MANAGEMENT (DEV) MODULES - Windows/macOS/Mobile
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "dev:windows-updates"
+display_name = "Windows Update Compliance"
+category = "Resources"
+description = "Audit Windows Update status across Intune-managed devices - identify outdated builds, patch gaps, and update rings"
+priority = 88
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementConfiguration.Read.All"
+]
+supported = false
+inputs = [
+  { name = "min_os_build", type = "text", prompt = "Minimum required OS build (e.g., 22H2)", default = "22H2" },
+  { name = "max_days_behind", type = "number", prompt = "Maximum days behind current patch (e.g., 30)", default = 30, min = 7, max = 90 }
+]
+
+[[modules]]
+id = "dev:macos-compliance"
+display_name = "macOS Device Compliance"
+category = "Resources"
+description = "Audit macOS device compliance policies - encryption status, OS version, security settings via Intune"
+priority = 85
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementConfiguration.Read.All"
+]
+supported = false
+inputs = [
+  { name = "min_os_version", type = "text", prompt = "Minimum macOS version (e.g., 14.0 Sonoma)", default = "14.0" }
+]
+
+[[modules]]
+id = "dev:mobile-hygiene"
+display_name = "Mobile Device Hygiene"
+category = "Resources"
+description = "Audit iOS/Android devices for jailbreak/root status, outdated OS versions, missing compliance policies"
+priority = 82
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementConfiguration.Read.All"
+]
+supported = false
+inputs = []
+
+[[modules]]
+id = "dev:bitlocker-audit"
+display_name = "BitLocker Encryption Audit"
+category = "Security"
+description = "Verify BitLocker encryption status across Windows devices - identify unencrypted or suspended volumes"
+priority = 90
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "BitlockerKey.Read.All"
+]
+supported = false
+inputs = []
+
+## ═══════════════════════════════════════════════════════════════════════════
+## COMPLIANCE & DATA GOVERNANCE (COMP) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "comp:gdpr-export"
+display_name = "GDPR User Data Export"
+category = "Reporting"
+description = "Generate comprehensive GDPR data subject access request (DSAR) export - mailbox, OneDrive, Teams, audit logs"
+priority = 95
+permissions = [
+  "User.Read.All",
+  "Mail.Read",
+  "Files.Read.All",
+  "AuditLog.Read.All",
+  "Chat.Read.All"
+]
+supported = false
+inputs = [
+  { name = "user", type = "email", prompt = "User email for GDPR export", required = true }
+]
+
+[[modules]]
+id = "comp:retention-audit"
+display_name = "Retention Policy Audit"
+category = "Security"
+description = "Audit retention policies across Exchange, SharePoint, Teams - detect gaps, overlaps, and policy conflicts"
+priority = 86
+permissions = [
+  "InformationProtectionPolicy.Read",
+  "Policy.Read.All"
+]
+supported = false
+inputs = []
+
+[[modules]]
+id = "comp:dlp-violations"
+display_name = "DLP Violation Report"
+category = "Security"
+description = "Generate DLP policy violation report - identify users, file types, and sensitive data exposure patterns"
+priority = 92
+permissions = [
+  "SecurityEvents.Read.All",
+  "InformationProtectionPolicy.Read"
+]
+supported = false
+inputs = [
+  { name = "days", type = "number", prompt = "Report lookback period (days)", default = 30, min = 7, max = 90 }
+]
+
+[[modules]]
+id = "comp:audit-log-export"
+display_name = "Unified Audit Log Export"
+category = "Reporting"
+description = "Export filtered unified audit logs for compliance investigations - supports O365, Entra ID, Intune events"
+priority = 84
+permissions = [
+  "AuditLog.Read.All"
+]
+supported = false
+inputs = [
+  { name = "start_date", type = "text", prompt = "Start date (YYYY-MM-DD)", required = true },
+  { name = "end_date", type = "text", prompt = "End date (YYYY-MM-DD)", required = true },
+  { name = "operations", type = "text", prompt = "Filter operations (comma-separated, optional)", optional = true }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## ADVANCED SECURITY (SEC-ADV) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "sec:mfa-enforcement"
+display_name = "MFA Enforcement Audit"
+category = "Security"
+description = "Identify users without MFA enabled, legacy auth usage, and conditional access gaps - generate remediation plan"
+priority = 98
+permissions = [
+  "User.Read.All",
+  "UserAuthenticationMethod.Read.All",
+  "Policy.Read.All"
+]
+supported = false
+inputs = []
+
+[[modules]]
+id = "sec:risky-signins"
+display_name = "Risky Sign-In Report"
+category = "Security"
+description = "Analyze Entra ID risky sign-ins - detect impossible travel, unfamiliar locations, anonymous IPs"
+priority = 94
+permissions = [
+  "IdentityRiskyUser.Read.All",
+  "IdentityRiskEvent.Read.All"
+]
+supported = false
+inputs = [
+  { name = "days", type = "number", prompt = "Lookback period (days)", default = 7, min = 1, max = 30 }
+]
+
+[[modules]]
+id = "sec:privileged-access"
+display_name = "Privileged Access Audit"
+category = "Security"
+description = "Audit privileged roles (Global Admin, Security Admin) - detect stale assignments, PIM gaps, over-privileged users"
+priority = 96
+permissions = [
+  "RoleManagement.Read.All",
+  "Directory.Read.All",
+  "PrivilegedAccess.Read.AzureAD"
+]
+supported = false
+inputs = []
+
+[[modules]]
+id = "sec:conditional-access"
+display_name = "Conditional Access Review"
+category = "Security"
+description = "Audit conditional access policies - detect disabled policies, exclusion sprawl, and coverage gaps"
+priority = 93
+permissions = [
+  "Policy.Read.All",
+  "Directory.Read.All"
+]
+supported = false
+inputs = []
+
+## ═══════════════════════════════════════════════════════════════════════════
+## COST OPTIMIZATION (COST) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "cost:mailbox-sizing"
+display_name = "Mailbox Storage Optimization"
+category = "Resources"
+description = "Identify oversized mailboxes, archive candidates, and potential downgrades from E5 to E3 based on usage"
+priority = 85
+permissions = [
+  "MailboxSettings.Read",
+  "User.Read.All"
+]
+supported = false
+inputs = [
+  { name = "threshold_gb", type = "number", prompt = "Large mailbox threshold (GB)", default = 50, min = 25, max = 100 }
+]
+
+[[modules]]
+id = "cost:unused-groups"
+display_name = "Unused Group Cleanup"
+category = "Resources"
+description = "Detect inactive M365 groups, distribution lists, and security groups - reclaim licenses and storage"
+priority = 83
+permissions = [
+  "Group.Read.All",
+  "Reports.Read.All"
+]
+supported = false
+inputs = [
+  { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 180, min = 90, max = 365 }
+]
+
+[[modules]]
+id = "cost:power-platform"
+display_name = "Power Platform License Audit"
+category = "Resources"
+description = "Audit Power Apps, Power Automate, and Power BI usage - identify unused premium licenses"
+priority = 88
+permissions = [
+  "User.Read.All",
+  "Organization.Read.All"
+]
+supported = false
+inputs = []
+
+## ═══════════════════════════════════════════════════════════════════════════
+## COLLABORATION HYGIENE (COLLAB) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "collab:calendar-permissions"
+display_name = "Calendar Permission Audit"
+category = "Security"
+description = "Audit calendar sharing permissions - detect oversharing, external delegates, and default permissions"
+priority = 81
+permissions = [
+  "Calendars.Read",
+  "User.Read.All"
+]
+supported = false
+inputs = []
+
+[[modules]]
+id = "collab:shared-mailboxes"
+display_name = "Shared Mailbox Hygiene"
+category = "Resources"
+description = "Audit shared mailbox delegates, size limits, and identify candidates for conversion to M365 groups"
+priority = 79
+permissions = [
+  "MailboxSettings.Read",
+  "User.Read.All"
+]
+supported = false
+inputs = []
+
+[[modules]]
+id = "collab:onedrive-sprawl"
+display_name = "OneDrive Storage Cleanup"
+category = "Resources"
+description = "Identify users approaching OneDrive quota limits and large file hoarders - generate cleanup recommendations"
+priority = 77
+permissions = [
+  "Files.Read.All",
+  "Sites.Read.All",
+  "User.Read.All"
+]
+supported = false
+inputs = [
+  { name = "threshold_gb", type = "number", prompt = "Large storage threshold (GB)", default = 500, min = 100, max = 5000 }
+]
