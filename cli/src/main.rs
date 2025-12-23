@@ -1,9 +1,11 @@
 mod app;
 mod auth;
+mod modules;
 mod profile;
 mod runner;
 mod tui;
 mod ui;
+mod worker_pool;
 
 use anyhow::Result;
 use auth::AuthManager;

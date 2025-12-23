@@ -3,15 +3,54 @@ use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 
+/// IPC Protocol v1.0
+/// All messages include a version field for forward compatibility
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
 enum IpcMessage {
-    Progress { message: String, percent: u8 },
-    Log { message: String, level: String },
-    Alert { severity: String, message: String, suggested_action: Option<String> },
-    Success { data: serde_json::Value },
-    Error { message: String },
+    Progress {
+        #[serde(default)]
+        version: String,
+        message: String,
+        percent: u8,
+    },
+    Log {
+        #[serde(default)]
+        version: String,
+        message: String,
+        level: String,
+    },
+    Alert {
+        #[serde(default)]
+        version: String,
+        severity: String,
+        message: String,
+        suggested_action: Option<String>,
+    },
+    Success {
+        #[serde(default)]
+        version: String,
+        data: serde_json::Value,
+    },
+    Error {
+        #[serde(default)]
+        version: String,
+        message: String,
+    },
+}
+
+impl IpcMessage {
+    /// Get the protocol version of this message (defaults to "0.0" for legacy messages)
+    fn version(&self) -> &str {
+        match self {
+            IpcMessage::Progress { version, .. } => version,
+            IpcMessage::Log { version, .. } => version,
+            IpcMessage::Alert { version, .. } => version,
+            IpcMessage::Success { version, .. } => version,
+            IpcMessage::Error { version, .. } => version,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -25,7 +64,15 @@ pub struct TaskOutput {
 
 pub fn run_task<F>(task_name: &str, args: &[String], token: &str, mut on_progress: F) -> Result<TaskOutput> 
 where F: FnMut(String) {
-    // ... (omitted setup code) ...
+    // Prepare Worker Path
+    let current_dir = std::env::current_dir()?;
+    let root_dir = if current_dir.ends_with("cli") {
+        current_dir.parent().unwrap().to_path_buf()
+    } else {
+        current_dir
+    };
+    let core_script = root_dir.join("core/src/index.ts");
+
     on_progress(format!("🚀 Spawning Worker for task: {}", task_name));
 
     // Spawn Bun with stdin pipe for secure token passing
@@ -68,10 +115,10 @@ where F: FnMut(String) {
 
         match serde_json::from_str::<IpcMessage>(&line) {
             Ok(msg) => match msg {
-                IpcMessage::Progress { message, percent } => {
+                IpcMessage::Progress { message, percent, .. } => {
                     on_progress(format!("⏳ [{:02}%] {}", percent, message));
                 }
-                IpcMessage::Log { message, level } => {
+                IpcMessage::Log { message, level, .. } => {
                     let icon = match level.as_str() {
                         "warn" => "⚠️",
                         "error" => "❌",
@@ -82,7 +129,7 @@ where F: FnMut(String) {
                 IpcMessage::Alert { severity, message, .. } => {
                     on_progress(format!("🚨 [{}] {}", severity.to_uppercase(), message));
                 }
-                IpcMessage::Success { data } => {
+                IpcMessage::Success { data, .. } => {
                     // Check for Table format
                     if let Some(table_data) = data.get("table") {
                         if let Some(headers) = table_data.get("headers").and_then(|h| h.as_array()) {
@@ -109,7 +156,7 @@ where F: FnMut(String) {
                         output.raw_json = Some(serde_json::to_string_pretty(&data)?);
                     }
                 }
-                IpcMessage::Error { message } => {
+                IpcMessage::Error { message, .. } => {
                     return Err(anyhow::anyhow!("Worker Error: {}", message));
                 }
             },

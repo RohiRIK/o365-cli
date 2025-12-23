@@ -1,0 +1,206 @@
+# O365-CLI Module Configuration
+# This is the single source of truth for all module metadata, permissions, and input definitions.
+# Used by both Rust TUI (module registry) and TypeScript workers (task routing).
+
+[system]
+# Maximum number of concurrent Bun workers for parallel task execution
+max_concurrent_workers = 3
+
+# Default dry-run mode (true = simulate, false = execute)
+default_dry_run = true
+
+# IPC protocol version for compatibility checking
+ipc_version = "1.0"
+
+## ═══════════════════════════════════════════════════════════════════════════
+## IDENTITY & ACCESS MANAGEMENT (IAM) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "iam:offboard"
+display_name = "Graceful Offboarding"
+category = "IAM"
+description = "Comprehensive user offboarding with mailbox preservation, license reclamation, and device cleanup"
+priority = 100
+permissions = [
+  "User.ReadWrite.All",
+  "Directory.ReadWrite.All",
+  "Mail.ReadWrite",
+  "Device.ReadWrite.All",
+  "DeviceManagementManagedDevices.ReadWrite.All"
+]
+supported = true  # Currently implemented in TypeScript
+inputs = [
+  { name = "user", type = "email", prompt = "Email of user to offboard", required = true },
+  { name = "manager", type = "email", prompt = "Manager email (for mailbox delegation)", optional = true },
+  { name = "device_action", type = "choice", choices = ["retire", "wipe", "none"], default = "retire", prompt = "Device action (retire/wipe/none)" }
+]
+
+[[modules]]
+id = "iam:guest-cleanup"
+display_name = "Guest Lifecycle Cleanup"
+category = "IAM"
+description = "Identify and remediate stale guest accounts based on inactivity threshold"
+priority = 90
+permissions = ["User.ReadWrite.All", "Directory.Read.All"]
+supported = true  # Currently implemented in TypeScript
+inputs = [
+  { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 90, min = 30, max = 365 }
+]
+
+[[modules]]
+id = "iam:onboard"
+display_name = "New User Onboarding"
+category = "IAM"
+description = "Automated provisioning for Day 1 readiness with template-based cloning or department defaults"
+priority = 85
+permissions = [
+  "User.ReadWrite.All",
+  "Group.ReadWrite.All",
+  "Directory.ReadWrite.All"
+]
+supported = false  # To be implemented in Phase 3 (Week 7)
+inputs = [
+  { name = "firstname", type = "text", prompt = "First name", required = true },
+  { name = "lastname", type = "text", prompt = "Last name", required = true },
+  { name = "department", type = "text", prompt = "Department", required = true },
+  { name = "template_user", type = "email", prompt = "Template user email (for cloning groups/licenses)", optional = true }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## SECURITY & COMPLIANCE (SEC) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "sec:shadow-it"
+display_name = "Shadow IT Governance"
+category = "Security"
+description = "Detect risky OAuth applications with dangerous permissions, unverified publishers, and credential hygiene issues"
+priority = 95
+permissions = [
+  "Application.Read.All",
+  "Directory.Read.All",
+  "AuditLog.Read.All"
+]
+supported = true  # Currently implemented in TypeScript (production-ready)
+inputs = []  # No user inputs required - scans entire tenant
+
+[[modules]]
+id = "sec:surgical-lockdown"
+display_name = "Surgical Lockdown"
+category = "Security"
+description = "Emergency user lockdown (<60s response) for incident response - disables account, revokes sessions, wipes devices, blocks mail"
+priority = 98
+permissions = [
+  "User.ReadWrite.All",
+  "Directory.ReadWrite.All",
+  "Device.ReadWrite.All",
+  "DeviceManagementManagedDevices.ReadWrite.All",
+  "Mail.ReadWrite"
+]
+supported = false  # To be implemented in Phase 2 (Week 4)
+inputs = [
+  { name = "user", type = "email", prompt = "Email of user to lock down (EMERGENCY)", required = true }
+]
+
+[[modules]]
+id = "sec:external-sharing"
+display_name = "External Sharing Audit"
+category = "Security"
+description = "Scan SharePoint/OneDrive for anonymous links, external shares, and DLP violations"
+priority = 92
+permissions = [
+  "Sites.Read.All",
+  "Files.Read.All",
+  "User.Read.All"
+]
+supported = false  # To be implemented in Phase 3 (Week 5)
+inputs = []  # No user inputs - scans entire tenant
+
+[[modules]]
+id = "sec:mailbox-permissions"
+display_name = "Mailbox Permissions Audit"
+category = "Security"
+description = "Detect unauthorized full-access delegates, cross-departmental mailbox access, and dormant delegates"
+priority = 88
+permissions = [
+  "MailboxSettings.Read",
+  "User.Read.All",
+  "Directory.Read.All"
+]
+supported = false  # To be implemented in Phase 3 (Week 6)
+inputs = []  # No user inputs - scans all mailboxes
+
+## ═══════════════════════════════════════════════════════════════════════════
+## RESOURCE OPTIMIZATION (RES) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "res:license-optimization"
+display_name = "License Optimization"
+category = "Resources"
+description = "Detect license waste (zombies, ghosts, downgrade candidates) with ROI calculations - potential $50K-200K/year savings"
+priority = 100  # Highest ROI module
+permissions = [
+  "User.Read.All",
+  "Organization.Read.All",
+  "Directory.Read.All",
+  "Reports.Read.All"
+]
+supported = false  # To be implemented in Phase 2 (Week 3) - PRIORITY 1
+inputs = []  # No user inputs - analyzes all licensed users
+
+[[modules]]
+id = "res:device-cleanup"
+display_name = "Stale Device Cleanup"
+category = "Resources"
+description = "Remove stale Intune/Entra devices based on inactivity threshold - improves CMDB accuracy and removes security risks"
+priority = 82
+permissions = [
+  "Device.ReadWrite.All",
+  "DeviceManagementManagedDevices.ReadWrite.All"
+]
+supported = false  # To be implemented in Phase 4 (Week 8)
+inputs = [
+  { name = "days", type = "number", prompt = "Device inactivity threshold (days)", default = 90, min = 60, max = 180 }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## DEEP REPORTING (REP) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "rep:user-analyzer"
+display_name = "360° User Analyzer"
+category = "Reporting"
+description = "Comprehensive pre-offboarding asset map - aggregates groups, files, sites, teams, devices, and mail delegates"
+priority = 87
+permissions = [
+  "User.Read.All",
+  "Sites.Read.All",
+  "Files.Read.All",
+  "Mail.Read",
+  "Group.Read.All",
+  "Directory.Read.All",
+  "Device.Read.All"
+]
+supported = false  # To be implemented in Phase 4 (Week 8-9)
+inputs = [
+  { name = "user", type = "email", prompt = "Email of user to analyze", required = true }
+]
+
+[[modules]]
+id = "rep:teams-sprawl"
+display_name = "Teams Sprawl Report"
+category = "Reporting"
+description = "Identify abandoned Teams workspaces based on activity thresholds - reclaim SharePoint storage"
+priority = 80
+permissions = [
+  "Team.ReadBasic.All",
+  "Group.Read.All",
+  "Reports.Read.All"
+]
+supported = false  # To be implemented in Phase 4 (Week 9)
+inputs = [
+  { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 90, min = 30, max = 180 }
+]
