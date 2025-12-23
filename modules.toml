@@ -206,7 +206,7 @@ inputs = [
 ]
 
 ## ═══════════════════════════════════════════════════════════════════════════
-## DEVICE MANAGEMENT (DEV) MODULES - Windows/macOS/Mobile
+## DEVICE MANAGEMENT (DEV) MODULES - Windows/macOS/Mobile + Intune Compliance
 ## ═══════════════════════════════════════════════════════════════════════════
 
 [[modules]]
@@ -267,13 +267,13 @@ supported = false
 inputs = []
 
 ## ═══════════════════════════════════════════════════════════════════════════
-## COMPLIANCE & DATA GOVERNANCE (COMP) MODULES
+## GOVERNANCE MODULES - GDPR, Retention, DLP, Audit Logs
 ## ═══════════════════════════════════════════════════════════════════════════
 
 [[modules]]
-id = "comp:gdpr-export"
+id = "gov:gdpr-export"
 display_name = "GDPR User Data Export"
-category = "Reporting"
+category = "Governance"
 description = "Generate comprehensive GDPR data subject access request (DSAR) export - mailbox, OneDrive, Teams, audit logs"
 priority = 95
 permissions = [
@@ -289,9 +289,9 @@ inputs = [
 ]
 
 [[modules]]
-id = "comp:retention-audit"
+id = "gov:retention-audit"
 display_name = "Retention Policy Audit"
-category = "Security"
+category = "Governance"
 description = "Audit retention policies across Exchange, SharePoint, Teams - detect gaps, overlaps, and policy conflicts"
 priority = 86
 permissions = [
@@ -302,9 +302,9 @@ supported = false
 inputs = []
 
 [[modules]]
-id = "comp:dlp-violations"
+id = "gov:dlp-violations"
 display_name = "DLP Violation Report"
-category = "Security"
+category = "Governance"
 description = "Generate DLP policy violation report - identify users, file types, and sensitive data exposure patterns"
 priority = 92
 permissions = [
@@ -317,9 +317,9 @@ inputs = [
 ]
 
 [[modules]]
-id = "comp:audit-log-export"
+id = "gov:audit-log-export"
 display_name = "Unified Audit Log Export"
-category = "Reporting"
+category = "Governance"
 description = "Export filtered unified audit logs for compliance investigations - supports O365, Entra ID, Intune events"
 priority = 84
 permissions = [

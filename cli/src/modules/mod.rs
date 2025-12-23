@@ -57,6 +57,7 @@ pub trait Module: Send + Sync {
 pub enum ModuleCategory {
     IAM,
     Security,
+    Governance,
     Resources,
     Reporting,
     Settings, // Special category for system settings
@@ -67,6 +68,7 @@ impl ModuleCategory {
         match self {
             ModuleCategory::IAM => "IAM",
             ModuleCategory::Security => "Security",
+            ModuleCategory::Governance => "Governance",
             ModuleCategory::Resources => "Resources",
             ModuleCategory::Reporting => "Reporting",
             ModuleCategory::Settings => "Settings",
@@ -77,6 +79,7 @@ impl ModuleCategory {
         match s {
             "IAM" => Some(ModuleCategory::IAM),
             "Security" => Some(ModuleCategory::Security),
+            "Governance" => Some(ModuleCategory::Governance),
             "Resources" => Some(ModuleCategory::Resources),
             "Reporting" => Some(ModuleCategory::Reporting),
             "Settings" => Some(ModuleCategory::Settings),
@@ -310,17 +313,21 @@ mod tests {
         let iam_modules = config.modules_by_category(ModuleCategory::IAM);
         assert_eq!(iam_modules.len(), 3);
 
-        // Security should have 12 modules (expanded with device, compliance, advanced security)
+        // Security should have 10 modules (MFA, risky sign-ins, privileged access, conditional access, BitLocker, Shadow IT, etc.)
         let sec_modules = config.modules_by_category(ModuleCategory::Security);
-        assert_eq!(sec_modules.len(), 12);
+        assert_eq!(sec_modules.len(), 10);
 
-        // Resources should have 10 modules (expanded with device mgmt, cost optimization, collaboration)
+        // Governance should have 4 modules (GDPR, retention, DLP, audit logs)
+        let gov_modules = config.modules_by_category(ModuleCategory::Governance);
+        assert_eq!(gov_modules.len(), 4);
+
+        // Resources should have 10 modules (device mgmt, cost optimization, collaboration)
         let res_modules = config.modules_by_category(ModuleCategory::Resources);
         assert_eq!(res_modules.len(), 10);
 
-        // Reporting should have 4 modules (expanded with compliance exports)
+        // Reporting should have 2 modules (user analyzer, teams sprawl)
         let rep_modules = config.modules_by_category(ModuleCategory::Reporting);
-        assert_eq!(rep_modules.len(), 4);
+        assert_eq!(rep_modules.len(), 2);
     }
 
     #[test]
