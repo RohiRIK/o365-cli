@@ -5,6 +5,7 @@ import { GraphService } from "./services/graph";
 import "./handlers/iam/offboard";
 import "./handlers/iam/guest-cleanup";
 import "./handlers/sec/shadow-it";
+import "./handlers/gov/gdpr-export";
 
 const args = process.argv.slice(2);
 const command = args[0];

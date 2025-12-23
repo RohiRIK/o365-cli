@@ -376,7 +376,7 @@ mod tests {
         assert_eq!(total, 29); // Expanded catalog with device mgmt, compliance, advanced security, cost optimization
 
         let implemented = helpers::implemented_module_count();
-        assert_eq!(implemented, 3); // Currently: offboard, guest-cleanup, shadow-it (others marked as supported=false)
+        assert_eq!(implemented, 4); // Currently: offboard, guest-cleanup, shadow-it, gdpr-export (others marked as supported=false)
 
         assert!(helpers::is_module_supported("iam:offboard"));
         assert!(helpers::is_module_supported("sec:shadow-it"));

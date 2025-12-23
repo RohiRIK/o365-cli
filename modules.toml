@@ -283,7 +283,7 @@ permissions = [
   "AuditLog.Read.All",
   "Chat.Read.All"
 ]
-supported = false
+supported = true  # Implemented - GDPR Article 15 compliance
 inputs = [
   { name = "user", type = "email", prompt = "User email for GDPR export", required = true }
 ]
