@@ -17,7 +17,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Auth Port'
 
 ## Phase 3: Task Execution Engine
-- [~] Task: Implement Worker Runner
+- [x] Task: Implement Worker Runner [f3081f3]
     - Context: Logic to spawn and manage `bun` processes for tasks.
 - [ ] Task: Rich CLI/TUI Output
     - Context: Re-implement table rendering and progress bars (e.g., using `ink` or `cli-table3`).
