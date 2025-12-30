@@ -2,27 +2,28 @@ import { glob } from "glob";
 import path from "path";
 import { TaskRegistry } from "./handlers/registry";
 
+/**
+ * Dynamically loads all task handlers from the specified directory
+ */
 export async function loadCommands(directory: string = "./handlers") {
-  // Use glob to find all files in the handlers directory
-  // We exclude registry.ts and other non-handler files if necessary
-  // But based on current structure, handlers are in subdirectories
-  const pattern = path.join(directory, "**/*.{ts,js}");
+  const searchPath = directory.endsWith("/") ? directory : directory + "/";
+  const pattern = `${searchPath}**/*.{ts,js}`;
   
-  // Note: glob might return paths relative to CWD or absolute. 
-  // We'll handle both.
-  const files = await glob(pattern, { cwd: __dirname, absolute: true });
+  const files = await glob(pattern);
 
   for (const file of files) {
-    // Skip registry.ts and test files
-    if (file.endsWith("registry.ts") || file.endsWith(".test.ts")) {
+    // Skip registry, tests, and type definitions
+    if (file.endsWith("registry.ts") || file.endsWith(".test.ts") || file.endsWith(".d.ts")) {
       continue;
     }
 
     try {
-      // Dynamic import
-      await import(file);
-    } catch (error) {
-      console.warn(`Failed to load handler from ${file}:`, error);
+      // Dynamic import using absolute path
+      const absolutePath = path.isAbsolute(file) ? file : path.resolve(process.cwd(), file);
+      await import(absolutePath);
+    } catch (error: any) {
+      // Only log actual errors, not discovery info
+      console.warn(`[Loader] Failed to load handler from ${file}:`, error.message);
     }
   }
   

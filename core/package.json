@@ -18,6 +18,9 @@
   },
   "dependencies": {
     "@azure/identity": "^4.13.0",
+    "@inquirer/prompts": "^8.1.0",
+    "@inquirer/search": "^4.0.3",
+    "@inquirer/type": "^4.0.2",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@types/glob": "^9.0.0",
     "@types/inquirer": "^9.0.9",
@@ -28,6 +31,7 @@
     "glob": "^13.0.0",
     "inquirer": "^13.1.0",
     "isomorphic-fetch": "^3.0.0",
+    "jwt-decode": "^4.0.0",
     "keytar": "^7.9.0",
     "open": "^11.0.0",
     "ora": "^9.0.0"

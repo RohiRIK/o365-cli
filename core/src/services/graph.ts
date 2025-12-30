@@ -56,6 +56,14 @@ export class GraphService {
   }
 
   /**
+   * Fetch a single resource
+   */
+  public static async get<T = any>(endpoint: string): Promise<T> {
+    const client = this.getClient();
+    return await client.api(endpoint).get();
+  }
+
+  /**
    * Generically fetch all items from a collection, following @odata.nextLink automatically.
    * Supports both string (select fields) and options object syntax.
    */

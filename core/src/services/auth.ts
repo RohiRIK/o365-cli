@@ -124,4 +124,30 @@ export class AuthService {
       refreshToken: data.refresh_token,
     };
   }
+
+  async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken?: string }> {
+    const params = new URLSearchParams({
+      client_id: CLIENT_ID,
+      scope: SCOPES.join(" "),
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    });
+
+    const response = await fetch(`https://login.microsoftonline.com/${this.tenantId}/oauth2/v2.0/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Token refresh failed: ${text}`);
+    }
+
+    const data = await response.json() as any;
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+    };
+  }
 }
