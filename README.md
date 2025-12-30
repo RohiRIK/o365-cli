@@ -1,8 +1,8 @@
 # 🛡️ o365-cli: The Enterprise Governance Platform
 
-> **"The Amazing GUI in CLI" for Microsoft 365 Administrators.**
+> **"The High-Performance CLI" for Microsoft 365 Administrators.**
 
-`o365-cli` is not just a script repository; it is a **comprehensive governance platform** designed to tame the chaos of Microsoft 365 administration. It reimagines daily operations by replacing fragmented, slow PowerShell scripts with a **high-performance, interactive TUI (Terminal User Interface)**.
+`o365-cli` is a **comprehensive governance platform** designed to tame the chaos of Microsoft 365 administration. It reimagines daily operations by replacing fragmented, slow PowerShell scripts with a **high-performance TypeScript orchestration engine** powered by the **Bun** runtime.
 
 ---
 
@@ -19,123 +19,54 @@ We treat infrastructure as code and governance as a continuous process, not a on
 
 ---
 
-## 🖥️ The Interactive Dashboard
-
-Built with **Rust** and **Ratatui**, the CLI provides a blazing fast, keyboard-driven interface.
-
-| Feature | Description |
-| :--- | :--- |
-| **⚡ Real-Time Logs** | Watch complex backend tasks execute with millisecond precision logs scrolling in real-time. |
-| **🔐 Secure Auth** | Built-in **OAuth2 PKCE** flow with token persistence. Log in once, manage forever. |
-| **📊 Rich Results** | Results aren't just text; they are interactive **Tables** that you can sort, filter, and export to CSV. |
-| **🛑 Safety First** | "Dry Run" is the default. Every destructive action requires explicit confirmation or toggle. |
-
----
-
-## 🧩 The Module Ecosystem
-
-The platform is divided into four strategic pillars. Each module is designed to solve a specific high-value business problem.
-
-### 👤 Identity & Access Management (IAM)
-*Standardizing the chaotic lifecycle of users.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **IAM-01** | [Graceful Offboarding](legacy/01-IAM-GracefulOffboarding/README.md) | **Data Preservation** | • 100% Data retention (Mail/OneDrive)<br>• Zero "Zombie" accounts left active |
-| **IAM-01-G** | [Guest Lifecycle](legacy/01-IAM-GuestUserCleanup/README.md) | **Perimeter Hygiene** | • Reduction in stale guest accounts<br>• 100% Sponsor attribution for external users |
-| **IAM-01-N** | [User Onboarding](legacy/01-IAM-NewUserOnboarding/README.md) | **Day 1 Readiness** | • 0 Day-1 Ticket volume<br>• 100% License & Group accuracy |
-
-### 🛡️ Security & Compliance (SEC)
-*Hardening the perimeter and detecting invisible threats.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **SEC-02-S** | [Shadow IT Governance](legacy/02-SEC-ShadowITGovernance/README.md) | **App Control** | • Count of Risky OAuth Apps Revoked<br>• % Reduction in "High Risk" scopes |
-| **SEC-02-K** | [Surgical Lockdown](legacy/02-SEC-SurgicalLockdown/README.md) | **Incident Containment** | • Time-to-Neutralize (< 60 seconds)<br>• 3-Layer containment (Id, Device, Endpoint) |
-| **SEC-02** | [External Sharing](legacy/02-SEC-ExternalSharingAudit/README.md) | **DLP / Exfiltration** | • Count of Anonymous Links removed<br>• Identification of top "Over-Sharers" |
-| **SEC-02-M** | [Mailbox Permissions](legacy/02-SEC-MailboxPermissionsAudit/README.md) | **Privilege Monitoring** | • Detection of unauthorized "Full Access" delegates<br>• Identification of Cross-Dept access |
-
-### 💰 Resource Optimization (RES)
-*Turning IT from a cost center into a value driver.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **RES-03** | [License Optimization](legacy/03-RES-LicenseOptimization/README.md) | **Cost Reduction** | • **$$ Monthly Waste Reclaimed**<br>• Count of "Ghost" & "Zombie" users |
-| **RES-03-D** | [Device Sanitizer](legacy/03-RES-StaleDeviceCleanup/README.md) | **Inventory Accuracy** | • % Accuracy of CMDB / Intune<br>• Removal of security-risk (unpatched) stale devices |
-
-### 📈 Deep Reporting (REP)
-*Forensic intelligence for decision making.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **REP-04** | [360° User Analyzer](legacy/04-REP-360OffboardingAnalyzer/README.md) | **Forensic Insight** | • Full asset map per user (Keys, Sites, Teams)<br>• Flight Risk / Insider Threat indicators |
-| **REP-04-T** | [Teams Sprawl](legacy/04-REP-TeamsActivityReport/README.md) | **Collaboration Hygiene** | • Count of Abandoned Teams<br>• Storage reclaimed from dead SharePoint sites |
-
----
-
-## 📊 Implementation Status Matrix
-
-| Module ID | Module Name | Legacy (PowerShell) | Core (TypeScript) | TUI Integration (Rust) |
-| :--- | :--- | :---: | :---: | :---: |
-| **IAM-01** | Graceful Offboarding | ✅ Stable | 🚧 In Progress | ❌ Planned |
-| **IAM-01-G** | Guest User Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
-| **IAM-01-N** | New User Onboarding | 🚧 Partial | ❌ Planned | ❌ Planned |
-| **SEC-02-S** | Shadow IT Governance | ✅ Stable | ✅ Production | ✅ Accessible |
-| **SEC-02-K** | Surgical Lockdown | ✅ Stable | ❌ Planned | ❌ Planned |
-| **SEC-02** | External Sharing Audit | ✅ Stable | ❌ Planned | ❌ Planned |
-| **SEC-02-M** | Mailbox Permissions | ❌ Planned | ❌ Planned | ❌ Planned |
-| **RES-03** | License Optimization | ✅ Stable | ❌ Planned | ❌ Planned |
-| **RES-03-D** | Stale Device Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
-| **REP-04** | 360° User Analyzer | ✅ Stable | ❌ Planned | ❌ Planned |
-| **REP-04-T** | Teams Sprawl Report | ❌ Planned | ❌ Planned | ❌ Planned |
-
-**Legend:**
-*   ✅ **Stable/Production:** Fully functional and tested.
-*   🚧 **In Progress:** Code exists but may be incomplete or beta.
-*   ❌ **Planned:** Specified in architecture but implementation not started.
-
----
-
 ## 🛠️ Technical Architecture
 
-This project uses a **Hybrid Architecture** to leverage the best of all worlds:
+This project uses a **Unified TypeScript Architecture** optimized for speed and developer experience:
 
-1.  **The Brain (Rust 🦀):**
-    *   Handles the CLI/TUI, Authentication, Configuration, and State Management.
-    *   *Why?* Instant startup, binary safety, and memory efficiency.
-2.  **The Muscle (TypeScript + Bun 🍞):**
-    *   Executes the complex Graph API business logic.
-    *   *Why?* The Graph JS SDK is mature, and Bun provides incredible performance for script execution.
-3.  **The Foundation (PowerShell 🐚):**
-    *   Legacy scripts provided for backward compatibility and complex Exchange Online operations.
+1.  **The Engine (TypeScript + Bun 🍞):**
+    *   Handles Orchestration, Authentication (OAuth2 PKCE), and Business Logic.
+    *   *Why?* Bun provides incredibly fast startup times and native support for TypeScript. The Microsoft Graph JS SDK is mature and reliable.
+2.  **Secure Storage:**
+    *   Tokens and configurations are stored securely using the **OS Keychain** via `keytar`.
+3.  **Legacy Reference:**
+    *   Original PowerShell and Rust implementations are preserved in `legacy/` for architectural reference.
 
-### Prerequisites
+---
 
-*   **Rust Toolchain** (for the CLI)
-*   **Bun Runtime** (for the Core logic)
-*   **PowerShell 7+** (for legacy modules)
+## 🏁 Quick Start
 
-## 🏁 Getting Started
+### 1. Prerequisites
+*   **Bun Runtime:** [Install Bun](https://bun.sh/)
+*   **Node.js** (Optional, for some dependencies)
 
-### 1. Clone & Build
+### 2. Install & Authenticate
 ```bash
-git clone git@github.com:RohiRIK/o365-cli.git
-cd o365-cli
-cargo build --release --manifest-path cli/Cargo.toml
+cd core
+bun install
+bun src/cli.ts login --tenant <your-tenant-id>
 ```
 
-### 2. Run the Dashboard
+### 3. List Available Modules
 ```bash
-./cli/target/release/o365-cli
-# Or for development:
-cargo run --manifest-path cli/Cargo.toml
+bun src/cli.ts list
 ```
 
-### 3. Authenticate
-Navigate to the **Settings** tab (Press `3`) and select **Login**. The app will launch your browser to authenticate securely with Microsoft Entra ID.
+### 4. Execute a Module (Dry-Run by Default)
+```bash
+bun src/cli.ts run sec:shadow-it --dry-run true
+```
 
-### 4. Execute
-Navigate to **Security** or **IAM** tabs, select a module, and press **Enter**.
+---
+
+## 🧩 Module Ecosystem
+
+The platform supports a wide range of modules across Security, IAM, and Resource Management.
+
+| Category | Modules |
+| :--- | :--- |
+| **Security** | Shadow IT, MFA Enforcement, Risky Sign-ins, External Sharing |
+| **IAM** | Graceful Offboarding, Guest User Cleanup, License Reclaim |
+| **Resources** | Stale Device Cleanup, License Optimization, Teams Usage |
 
 ---
 

@@ -1,0 +1,10 @@
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/release/deps/fuzzy_matcher-75e7634761c14275.d: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/clangd.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/skim.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/util.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/release/deps/libfuzzy_matcher-75e7634761c14275.rlib: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/clangd.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/skim.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/util.rs
+
+/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Drive/06-Projects/02-package-scrpts/cli/target/release/deps/libfuzzy_matcher-75e7634761c14275.rmeta: /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/lib.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/clangd.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/skim.rs /Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/util.rs
+
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/lib.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/clangd.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/skim.rs:
+/Users/rohirikman/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fuzzy-matcher-0.3.7/src/util.rs:
