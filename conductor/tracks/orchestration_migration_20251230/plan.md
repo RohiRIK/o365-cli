@@ -9,7 +9,7 @@
 - [x] Task: Conductor - User Manual Verification 'Orchestrator Prototype'
 
 ## Phase 2: Auth & Security Port
-- [~] Task: Port OAuth2 PKCE Flow to TypeScript
+- [x] Task: Port OAuth2 PKCE Flow to TypeScript [24b4f64]
     - Context: Move logic from `cli/src/auth.rs` to a TS service.
     - Sub-task: Use `open` for browser handling and a local HTTP server for redirect.
 - [ ] Task: Secure Token Management
