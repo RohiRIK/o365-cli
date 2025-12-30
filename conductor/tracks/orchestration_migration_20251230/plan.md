@@ -1,12 +1,12 @@
 # Track Plan: Orchestration Migration (Rust to TS/Bash)
 
-## Phase 1: Orchestrator Architecture & Prototype
+## Phase 1: Orchestrator Architecture & Prototype [checkpoint: cfe2425]
 - [x] Task: Design TypeScript CLI Entry Point [90cbffd]
     - Context: Create `core/src/cli.ts` or a new `cli-ts/` package.
     - Sub-task: Implement command-line argument parsing (e.g., using `commander` or `yargs`).
 - [x] Task: Implement Task Discovery Mechanism [97d6d8b]
     - Context: Dynamic loading of modules from `core/src/commands`.
-- [ ] Task: Conductor - User Manual Verification 'Orchestrator Prototype'
+- [x] Task: Conductor - User Manual Verification 'Orchestrator Prototype'
 
 ## Phase 2: Auth & Security Port
 - [ ] Task: Port OAuth2 PKCE Flow to TypeScript
