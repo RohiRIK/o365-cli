@@ -4,7 +4,7 @@
 - [x] Task: Design TypeScript CLI Entry Point [90cbffd]
     - Context: Create `core/src/cli.ts` or a new `cli-ts/` package.
     - Sub-task: Implement command-line argument parsing (e.g., using `commander` or `yargs`).
-- [~] Task: Implement Task Discovery Mechanism
+- [x] Task: Implement Task Discovery Mechanism [97d6d8b]
     - Context: Dynamic loading of modules from `core/src/commands`.
 - [ ] Task: Conductor - User Manual Verification 'Orchestrator Prototype'
 
