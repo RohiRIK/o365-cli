@@ -1,7 +1,7 @@
 # Track Plan: Orchestration Migration (Rust to TS/Bash)
 
 ## Phase 1: Orchestrator Architecture & Prototype
-- [~] Task: Design TypeScript CLI Entry Point
+- [x] Task: Design TypeScript CLI Entry Point [90cbffd]
     - Context: Create `core/src/cli.ts` or a new `cli-ts/` package.
     - Sub-task: Implement command-line argument parsing (e.g., using `commander` or `yargs`).
 - [ ] Task: Implement Task Discovery Mechanism
