@@ -28,4 +28,4 @@
 - [x] Task: Final System Verification [ca4e2e3]
 - [x] Task: Deprecate Rust CLI Directory [125b495]
     - Context: Archive `cli/` and update build scripts.
-- [ ] Task: Conductor - User Manual Verification 'Final Migration'
+- [x] Task: Conductor - User Manual Verification 'Final Migration'

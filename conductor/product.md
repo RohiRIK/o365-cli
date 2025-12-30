@@ -10,13 +10,13 @@ To provide the ultimate "Swiss Army Knife" for Microsoft 365 Systems Administrat
 
 ## Core Value Proposition
 -   **Unified Experience:** Consolidates disparate administration tasks (Identity, Security, Resources) into a single, cohesive interface.
--   **Performance:** Leverages Rust and Bun/TypeScript to deliver blazing-fast execution compared to traditional PowerShell.
+-   **Performance:** Powered by **Bun** and **TypeScript** to deliver blazing-fast execution compared to traditional PowerShell.
 -   **Safety:** Prioritizes "Dry-Run" by default, ensuring admins can verify actions before execution to prevent critical errors.
--   **Interactive Governance:** Moves beyond static scripts to an interactive TUI (Terminal User Interface) for real-time monitoring and management.
--   **Active Incident Response:** Provides "Tactical Nuke" capabilities for rapid threat containment and identity isolation.
+-   **Interactive Governance:** Moves beyond static scripts to an interactive CLI with guided menus for real-time management.
+-   **Active Incident Response:** Provides rapid threat containment and identity isolation capabilities.
 
-## Key Features (Inferred)
--   **Hybrid Architecture:** Rust CLI/TUI frontend for speed and safety, with a TypeScript/Graph API backend for flexible business logic.
+## Key Features
+-   **Unified TypeScript Architecture:** A high-performance CLI entry point using **Commander.js** and **Inquirer.js** for guided orchestration.
 -   **Six Strategic Pillars:** Comprehensive modules for IAM, SEC, GOV (Governance), END (Endpoint), RES, and REP.
--   **Secure Authentication:** Robust OAuth2 PKCE flow with AES-256-GCM encrypted JSON storage.
--   **Rich Output:** Interactive tables, real-time logging, and export capabilities.
+-   **Secure Authentication:** Robust OAuth2 PKCE flow with system keychain storage via **keytar**.
+-   **Rich Output:** Professional terminal output with interactive tables and real-time logging.

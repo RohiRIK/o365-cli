@@ -1,1 +1,19 @@
-# Technology Stack: o365-cli\n\n## Frontend (CLI/TUI)\n-   **Language:** Rust (Edition 2021)\n-   **UI Framework:** `ratatui` with `crossterm` for high-performance terminal rendering.\n-   **Argument Parsing:** `clap` (v4) for robust CLI interaction.\n-   **Authentication:** `oauth2` (PKCE flow) with AES-256-GCM encrypted JSON storage for tokens and profiles.\n-   **Async Runtime:** `tokio` with `reqwest` for networking.\n-   **Serialization:** `serde` and `serde_json` for IPC and configuration.\n\n## Core Logic (Workers)\n-   **Language:** TypeScript\n-   **Runtime:** `Bun` for fast script execution and modern ecosystem support.\n-   **API Integration:** `@microsoft/microsoft-graph-client` for Entra ID and M365 governance.\n-   **Security Architecture:** Identity managed via `@azure/identity`.\n\n## Legacy & Integration Layers\n-   **PowerShell 7+:** Used for complex Exchange Online operations and legacy compatibility.\n\n## Architecture Summary\n-   **Hybrid Model:** A low-latency Rust binary serves as the orchestration layer (Brain), spawning TypeScript workers (Muscle) to execute business logic. Communication is strictly handled via a JSON-based IPC protocol over stdin/stdout.
+# Technology Stack: o365-cli
+
+## Frontend & Orchestration (CLI)
+-   **Language:** TypeScript
+-   **Runtime:** **Bun** for instant startup and native TS support.
+-   **CLI Framework:** `commander` for argument parsing and `inquirer` for interactive menus.
+-   **UI Utilities:** `chalk` for colors, `ora` for spinners, and `cli-table3` for rich table rendering.
+-   **Authentication:** `oauth2` (PKCE flow) with **system keychain** storage via `keytar`.
+
+## Core Logic (Graph Integration)
+-   **API Integration:** `@microsoft/microsoft-graph-client` for Entra ID and M365 governance.
+-   **Security Architecture:** Identity managed via `@azure/identity`.
+
+## Legacy & Reference Layers
+-   **Rust TUI:** Original high-performance interactive interface (preserved in `legacy/rust-tui/`).
+-   **PowerShell 7+:** Used for complex Exchange Online operations and legacy compatibility.
+
+## Architecture Summary
+-   **Unified Model:** A single TypeScript engine handles authentication, user interaction, and Graph API orchestration. Modules are dynamically discovered and executed within the Bun runtime for maximum performance.
