@@ -24,7 +24,7 @@
 - [x] Task: Conductor - User Manual Verification 'Execution Engine'
 
 ## Phase 4: Migration & Deprecation
-- [~] Task: Port All Existing Modules to New Runner
+- [x] Task: Port All Existing Modules to New Runner [9f6f53b]
 - [ ] Task: Final System Verification
 - [ ] Task: Deprecate Rust CLI Directory
     - Context: Archive `cli/` and update build scripts.
