@@ -12,7 +12,7 @@
 - [x] Task: Port OAuth2 PKCE Flow to TypeScript [24b4f64]
     - Context: Move logic from `cli/src/auth.rs` to a TS service.
     - Sub-task: Use `open` for browser handling and a local HTTP server for redirect.
-- [ ] Task: Secure Token Management
+- [~] Task: Secure Token Management
     - Context: Implement keyring integration (e.g., `node-keytar` or equivalent for Bun).
 - [ ] Task: Conductor - User Manual Verification 'Auth Port'
 
