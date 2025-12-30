@@ -21,10 +21,13 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@types/glob": "^9.0.0",
     "@types/keytar": "^4.4.2",
+    "chalk": "4",
+    "cli-table3": "^0.6.5",
     "commander": "^14.0.2",
     "glob": "^13.0.0",
     "isomorphic-fetch": "^3.0.0",
     "keytar": "^7.9.0",
-    "open": "^11.0.0"
+    "open": "^11.0.0",
+    "ora": "^9.0.0"
   }
 }

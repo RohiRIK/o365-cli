@@ -1,7 +1,9 @@
 import { Command } from "commander";
 import { loadCommands } from "./loader";
 import { TaskRegistry } from "./handlers/registry";
+import { formatTable, printError, printInfo, printSuccess } from "./utils/output";
 import path from "path";
+import chalk from "chalk";
 
 export async function setupCLI(program: Command) {
   program
@@ -15,8 +17,16 @@ export async function setupCLI(program: Command) {
     .command("run <moduleName> [args...]")
     .description("Run a specific task module")
     .action(async (moduleName, args) => {
-      console.log(`Running module: ${moduleName} with args: ${args}`);
-      await TaskRegistry.execute(moduleName, args);
+      printInfo(`Executing ${chalk.yellow(moduleName)}...`);
+      
+      // We'll capture the task output. 
+      // For now, we'll let it print directly, but in a real implementation
+      // we'd intercept IPC messages to show spinners and tables.
+      try {
+        await TaskRegistry.execute(moduleName, args);
+      } catch (error: any) {
+        printError(error.message);
+      }
     });
     
   program
@@ -24,8 +34,21 @@ export async function setupCLI(program: Command) {
     .description("List available modules")
     .action(() => {
         const tasks = TaskRegistry.getRegisteredTasks();
-        console.log("Available Modules:");
-        tasks.forEach(t => console.log(` - ${t}`));
+        console.log(chalk.cyan.bold("\nAvailable Modules:"));
+        
+        // Group by category (prefix before :)
+        const categories: Record<string, string[]> = {};
+        tasks.forEach(task => {
+            const [cat] = task.split(":");
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(task);
+        });
+
+        for (const [cat, modules] of Object.entries(categories)) {
+            console.log(chalk.yellow(`\n[${cat.toUpperCase()}]`));
+            modules.forEach(m => console.log(`  - ${m}`));
+        }
+        console.log("");
     });
 }
 
