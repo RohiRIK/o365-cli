@@ -24,6 +24,7 @@ impl UserProfile {
         Ok(root_dir.join(".o365_cli_profile.json"))
     }
 
+    #[allow(dead_code)] // Will be used when profile updates are implemented
     pub fn save(&self) -> Result<()> {
         let path = Self::get_path()?;
         let json = serde_json::to_string_pretty(self)?;

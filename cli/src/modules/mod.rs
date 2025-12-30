@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::state::AppState;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,6 +8,7 @@ use std::sync::Mutex;
 
 /// Core trait that all modules must implement
 /// This replaces the hardcoded CurrentTab enum with a dynamic, extensible system
+#[allow(dead_code)] // Scaffolding for Phase 2 dynamic module execution
 pub trait Module: Send + Sync {
     /// Unique identifier for routing (e.g., "iam:offboard", "sec:shadow-it")
     /// Must match the task_id in TypeScript TaskRegistry
@@ -28,7 +29,7 @@ pub trait Module: Send + Sync {
     /// Handle user input flow - returns TaskExecution when ready to execute
     /// Each module manages its own input state machine
     /// Returns None if still collecting input, Some(TaskExecution) when ready
-    fn handle_input(&mut self, app: &mut App) -> Option<TaskExecution>;
+    fn handle_input(&mut self, app: &mut AppState) -> Option<TaskExecution>;
 
     /// Whether this module supports dry-run mode
     fn supports_dry_run(&self) -> bool {
@@ -75,6 +76,7 @@ impl ModuleCategory {
         }
     }
 
+    #[allow(dead_code)] // Will be used for dynamic category selection
     pub fn from_string(s: &str) -> Option<Self> {
         match s {
             "IAM" => Some(ModuleCategory::IAM),
@@ -90,12 +92,14 @@ impl ModuleCategory {
 
 /// Task execution request returned by module's handle_input()
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Will be used in Phase 2 module execution
 pub struct TaskExecution {
     pub task_name: String,
     pub args: Vec<String>,
 }
 
 impl TaskExecution {
+    #[allow(dead_code)] // Will be used in Phase 2 module execution
     pub fn new(task_name: impl Into<String>, args: Vec<String>) -> Self {
         Self {
             task_name: task_name.into(),
@@ -112,6 +116,7 @@ pub struct ModuleConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)] // Will be used for concurrency control and defaults
 pub struct SystemConfig {
     pub max_concurrent_workers: usize,
     pub default_dry_run: bool,
@@ -119,6 +124,7 @@ pub struct SystemConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)] // Will be used in Phase 2 module execution
 pub struct ModuleDefinition {
     pub id: String,
     pub display_name: String,
@@ -130,7 +136,8 @@ pub struct ModuleDefinition {
     pub inputs: Vec<InputDefinition>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[allow(dead_code)] // Scaffolding for Phase 2 input collection modal
 pub struct InputDefinition {
     pub name: String,
     #[serde(rename = "type")]
@@ -188,8 +195,35 @@ pub struct ModuleRegistry {
 impl ModuleRegistry {
     /// Create new registry by loading modules.toml
     pub fn new() -> Self {
-        let config = ModuleConfig::load("../modules.toml")
-            .unwrap_or_else(|e| panic!("Failed to load modules.toml: {}", e));
+        // Try multiple locations to find modules.toml
+        let possible_paths = vec![
+            "modules.toml",           // Current directory
+            "../modules.toml",        // Parent directory (when running from cli/)
+            "./modules.toml",         // Explicit current directory
+        ];
+
+        let mut config = None;
+        let mut last_error = None;
+
+        for path in &possible_paths {
+            match ModuleConfig::load(path) {
+                Ok(c) => {
+                    config = Some(c);
+                    break;
+                }
+                Err(e) => {
+                    last_error = Some(e);
+                }
+            }
+        }
+
+        let config = config.unwrap_or_else(|| {
+            panic!(
+                "Failed to load modules.toml from any location. Tried: {:?}. Last error: {}",
+                possible_paths,
+                last_error.unwrap()
+            )
+        });
 
         Self {
             config,
@@ -198,17 +232,20 @@ impl ModuleRegistry {
     }
 
     /// Register a module instance
+    #[allow(dead_code)] // Will be used for dynamic module registration
     pub fn register(&mut self, module: Box<dyn Module>) {
         let id = module.id().to_string();
         self.modules.insert(id, module);
     }
 
     /// Get a module by ID
+    #[allow(dead_code)] // Will be used for module execution
     pub fn get(&self, id: &str) -> Option<&Box<dyn Module>> {
         self.modules.get(id)
     }
 
     /// Get a mutable reference to a module by ID
+    #[allow(dead_code)] // Will be used for module execution
     pub fn get_mut(&mut self, id: &str) -> Option<&mut Box<dyn Module>> {
         self.modules.get_mut(id)
     }
@@ -219,11 +256,13 @@ impl ModuleRegistry {
     }
 
     /// Get all registered module instances
+    #[allow(dead_code)] // Will be used for bulk operations
     pub fn all_modules(&self) -> Vec<&Box<dyn Module>> {
         self.modules.values().collect()
     }
 
     /// Get system configuration
+    #[allow(dead_code)] // Will be used for concurrency control
     pub fn system_config(&self) -> &SystemConfig {
         &self.config.system
     }
@@ -234,6 +273,7 @@ pub mod helpers {
     use super::*;
 
     /// Get modules for a category from the registry
+    #[allow(dead_code)] // Will be used for category-based operations
     pub fn get_modules_by_category(category: ModuleCategory) -> Vec<ModuleDefinition> {
         let registry = MODULE_REGISTRY.lock().unwrap();
         registry
@@ -244,24 +284,28 @@ pub mod helpers {
     }
 
     /// Get module count by category
+    #[allow(dead_code)] // Will be used for UI stats
     pub fn module_count_by_category(category: ModuleCategory) -> usize {
         let registry = MODULE_REGISTRY.lock().unwrap();
         registry.modules_by_category(category).len()
     }
 
     /// Get total module count
+    #[allow(dead_code)] // Will be used for UI stats
     pub fn total_module_count() -> usize {
         let registry = MODULE_REGISTRY.lock().unwrap();
         registry.config.modules.len()
     }
 
     /// Get implemented module count
+    #[allow(dead_code)] // Will be used for UI stats
     pub fn implemented_module_count() -> usize {
         let registry = MODULE_REGISTRY.lock().unwrap();
         registry.config.modules.iter().filter(|m| m.supported).count()
     }
 
     /// Check if a module is supported/implemented
+    #[allow(dead_code)] // Will be used for module validation
     pub fn is_module_supported(id: &str) -> bool {
         let registry = MODULE_REGISTRY.lock().unwrap();
         registry
@@ -280,8 +324,8 @@ mod tests {
     fn test_module_config_loading() {
         let config = ModuleConfig::load("../modules.toml").expect("Failed to load modules.toml");
 
-        // Should have 29 modules total (expanded catalog)
-        assert_eq!(config.modules.len(), 29);
+        // Should have 32 modules total (expanded catalog + 3 settings modules)
+        assert_eq!(config.modules.len(), 32);
 
         // Check system config
         assert_eq!(config.system.max_concurrent_workers, 3);
@@ -328,6 +372,10 @@ mod tests {
         // Reporting should have 2 modules (user analyzer, teams sprawl)
         let rep_modules = config.modules_by_category(ModuleCategory::Reporting);
         assert_eq!(rep_modules.len(), 2);
+
+        // Settings should have 3 modules (authentication, configuration, health)
+        let settings_modules = config.modules_by_category(ModuleCategory::Settings);
+        assert_eq!(settings_modules.len(), 3);
     }
 
     #[test]
@@ -373,10 +421,10 @@ mod tests {
         assert_eq!(iam_modules.len(), 3);
 
         let total = helpers::total_module_count();
-        assert_eq!(total, 29); // Expanded catalog with device mgmt, compliance, advanced security, cost optimization
+        assert_eq!(total, 32); // Expanded catalog + 3 settings modules
 
         let implemented = helpers::implemented_module_count();
-        assert_eq!(implemented, 4); // Currently: offboard, guest-cleanup, shadow-it, gdpr-export (others marked as supported=false)
+        assert_eq!(implemented, 11); // Currently: offboard, guest-cleanup, shadow-it, mfa-enforcement, gdpr-export, audit-log-export, retention-audit, dlp-violations + 3 settings modules
 
         assert!(helpers::is_module_supported("iam:offboard"));
         assert!(helpers::is_module_supported("sec:shadow-it"));

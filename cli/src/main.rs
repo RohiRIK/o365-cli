@@ -1,11 +1,14 @@
-mod app;
+mod state;  // New modular state management
+mod config; // Configuration system (Phase 2)
 mod auth;
+mod login_handler; // Background OAuth login handler (Phase 4)
 mod modules;
 mod profile;
 mod runner;
 mod tui;
-mod ui;
+mod ui;     // NEW: Modular UI components
 mod worker_pool;
+mod health_monitor; // Background health monitoring (Phase 5)
 
 use anyhow::Result;
 use auth::AuthManager;
@@ -81,10 +84,14 @@ async fn main() -> Result<()> {
     if std::env::args().len() <= 1 {
         // No args? Launch TUI!
         let mut terminal = tui::init()?;
-        let app = app::App::new();
-        let res = tui::run_app(&mut terminal, app).await;
+        let app = state::AppState::new();
+
+        // Spawn background health monitor
+        let health_rx = health_monitor::spawn_health_monitor();
+
+        let res = tui::run_app(&mut terminal, app, health_rx).await;
         tui::restore()?;
-        
+
         if let Err(err) = res {
             println!("Error running TUI: {:?}", err);
         }
@@ -116,8 +123,12 @@ async fn main() -> Result<()> {
         None => {
             // Should be unreachable due to the check at start, but safe fallback
             let mut terminal = tui::init()?;
-            let app = app::App::new();
-            let res = tui::run_app(&mut terminal, app).await;
+            let app = state::AppState::new();
+
+            // Spawn background health monitor
+            let health_rx = health_monitor::spawn_health_monitor();
+
+            let res = tui::run_app(&mut terminal, app, health_rx).await;
             tui::restore()?;
             res?;
         }

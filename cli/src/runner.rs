@@ -42,6 +42,7 @@ enum IpcMessage {
 
 impl IpcMessage {
     /// Get the protocol version of this message (defaults to "0.0" for legacy messages)
+    #[allow(dead_code)] // Will be used for IPC version negotiation
     fn version(&self) -> &str {
         match self {
             IpcMessage::Progress { version, .. } => version,
@@ -135,7 +136,7 @@ where F: FnMut(String) {
                         if let Some(headers) = table_data.get("headers").and_then(|h| h.as_array()) {
                             output.headers = headers.iter().map(|v| v.as_str().unwrap_or("").to_string()).collect();
                         }
-                        
+
                         if let Some(rows) = table_data.get("rows").and_then(|r| r.as_array()) {
                             for row in rows {
                                 if let Some(cols) = row.as_array() {
@@ -144,15 +145,18 @@ where F: FnMut(String) {
                                 }
                             }
                         }
-                        
+
                         if let Some(msg) = data.get("message").and_then(|m| m.as_str()) {
                             output.message = Some(msg.to_string());
                         }
                         if let Some(file) = data.get("file_path").and_then(|f| f.as_str()) {
                             output.file_path = Some(file.to_string());
                         }
+                    } else if let Some(msg) = data.get("message").and_then(|m| m.as_str()) {
+                        // Standalone message without table
+                        output.message = Some(msg.to_string());
                     } else {
-                        // Fallback to JSON
+                        // Fallback to JSON for unknown formats
                         output.raw_json = Some(serde_json::to_string_pretty(&data)?);
                     }
                 }

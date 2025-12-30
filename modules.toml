@@ -59,7 +59,7 @@ permissions = [
   "Group.ReadWrite.All",
   "Directory.ReadWrite.All"
 ]
-supported = false  # To be implemented in Phase 3 (Week 7)
+supported = true  # Implemented - User provisioning with template cloning for groups and licenses
 inputs = [
   { name = "firstname", type = "text", prompt = "First name", required = true },
   { name = "lastname", type = "text", prompt = "Last name", required = true },
@@ -98,7 +98,7 @@ permissions = [
   "DeviceManagementManagedDevices.ReadWrite.All",
   "Mail.ReadWrite"
 ]
-supported = false  # To be implemented in Phase 2 (Week 4)
+supported = true  # Implemented - Emergency lockdown with <60s response time
 inputs = [
   { name = "user", type = "email", prompt = "Email of user to lock down (EMERGENCY)", required = true }
 ]
@@ -114,7 +114,7 @@ permissions = [
   "Files.Read.All",
   "User.Read.All"
 ]
-supported = false  # To be implemented in Phase 3 (Week 5)
+supported = true  # Implemented - External sharing audit with risk-based scanning
 inputs = []  # No user inputs - scans entire tenant
 
 [[modules]]
@@ -128,7 +128,7 @@ permissions = [
   "User.Read.All",
   "Directory.Read.All"
 ]
-supported = false  # To be implemented in Phase 3 (Week 6)
+supported = true  # Implemented - Mailbox permissions audit with dormant delegate detection
 inputs = []  # No user inputs - scans all mailboxes
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -147,7 +147,7 @@ permissions = [
   "Directory.Read.All",
   "Reports.Read.All"
 ]
-supported = false  # To be implemented in Phase 2 (Week 3) - PRIORITY 1
+supported = true  # Implemented - License optimization with ROI calculations
 inputs = []  # No user inputs - analyzes all licensed users
 
 [[modules]]
@@ -160,7 +160,7 @@ permissions = [
   "Device.ReadWrite.All",
   "DeviceManagementManagedDevices.ReadWrite.All"
 ]
-supported = false  # To be implemented in Phase 4 (Week 8)
+supported = true  # Implemented - Stale device cleanup with configurable inactivity threshold
 inputs = [
   { name = "days", type = "number", prompt = "Device inactivity threshold (days)", default = 90, min = 60, max = 180 }
 ]
@@ -184,7 +184,7 @@ permissions = [
   "Directory.Read.All",
   "Device.Read.All"
 ]
-supported = false  # To be implemented in Phase 4 (Week 8-9)
+supported = true  # Implemented - 360° user asset aggregation across all M365 services
 inputs = [
   { name = "user", type = "email", prompt = "Email of user to analyze", required = true }
 ]
@@ -200,7 +200,7 @@ permissions = [
   "Group.Read.All",
   "Reports.Read.All"
 ]
-supported = false  # To be implemented in Phase 4 (Week 9)
+supported = true  # Implemented - Teams workspace inactivity analysis with storage reclamation recommendations
 inputs = [
   { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 90, min = 30, max = 180 }
 ]
@@ -219,7 +219,7 @@ permissions = [
   "DeviceManagementManagedDevices.Read.All",
   "DeviceManagementConfiguration.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Windows update compliance audit with build and patch analysis
 inputs = [
   { name = "min_os_build", type = "text", prompt = "Minimum required OS build (e.g., 22H2)", default = "22H2" },
   { name = "max_days_behind", type = "number", prompt = "Maximum days behind current patch (e.g., 30)", default = 30, min = 7, max = 90 }
@@ -235,7 +235,7 @@ permissions = [
   "DeviceManagementManagedDevices.Read.All",
   "DeviceManagementConfiguration.Read.All"
 ]
-supported = false
+supported = true  # Implemented - macOS compliance audit with encryption and OS version checks
 inputs = [
   { name = "min_os_version", type = "text", prompt = "Minimum macOS version (e.g., 14.0 Sonoma)", default = "14.0" }
 ]
@@ -250,7 +250,7 @@ permissions = [
   "DeviceManagementManagedDevices.Read.All",
   "DeviceManagementConfiguration.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Mobile hygiene audit with jailbreak/root detection and OS version checks
 inputs = []
 
 [[modules]]
@@ -263,7 +263,7 @@ permissions = [
   "DeviceManagementManagedDevices.Read.All",
   "BitlockerKey.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Windows BitLocker audit with risk assessment
 inputs = []
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -298,7 +298,7 @@ permissions = [
   "InformationProtectionPolicy.Read",
   "Policy.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Compliance policy auditing
 inputs = []
 
 [[modules]]
@@ -311,7 +311,7 @@ permissions = [
   "SecurityEvents.Read.All",
   "InformationProtectionPolicy.Read"
 ]
-supported = false
+supported = true  # Implemented - DLP compliance monitoring
 inputs = [
   { name = "days", type = "number", prompt = "Report lookback period (days)", default = 30, min = 7, max = 90 }
 ]
@@ -325,7 +325,7 @@ priority = 84
 permissions = [
   "AuditLog.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Compliance investigations and forensics
 inputs = [
   { name = "start_date", type = "text", prompt = "Start date (YYYY-MM-DD)", required = true },
   { name = "end_date", type = "text", prompt = "End date (YYYY-MM-DD)", required = true },
@@ -347,7 +347,7 @@ permissions = [
   "UserAuthenticationMethod.Read.All",
   "Policy.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Critical security control audit
 inputs = []
 
 [[modules]]
@@ -360,7 +360,7 @@ permissions = [
   "IdentityRiskyUser.Read.All",
   "IdentityRiskEvent.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Risky sign-in detection with configurable lookback period
 inputs = [
   { name = "days", type = "number", prompt = "Lookback period (days)", default = 7, min = 1, max = 30 }
 ]
@@ -376,7 +376,7 @@ permissions = [
   "Directory.Read.All",
   "PrivilegedAccess.Read.AzureAD"
 ]
-supported = false
+supported = true  # Implemented - Privileged role audit with risk assessment
 inputs = []
 
 [[modules]]
@@ -389,7 +389,7 @@ permissions = [
   "Policy.Read.All",
   "Directory.Read.All"
 ]
-supported = false
+supported = true  # Implemented - CA policy gap analysis with recommendations
 inputs = []
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -406,7 +406,7 @@ permissions = [
   "MailboxSettings.Read",
   "User.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Mailbox sizing analysis with archive and downgrade recommendations
 inputs = [
   { name = "threshold_gb", type = "number", prompt = "Large mailbox threshold (GB)", default = 50, min = 25, max = 100 }
 ]
@@ -421,7 +421,7 @@ permissions = [
   "Group.Read.All",
   "Reports.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Unused group cleanup with activity tracking and safe deletion
 inputs = [
   { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 180, min = 90, max = 365 }
 ]
@@ -436,7 +436,7 @@ permissions = [
   "User.Read.All",
   "Organization.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Power Platform license audit with savings calculation
 inputs = []
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -453,7 +453,7 @@ permissions = [
   "Calendars.Read",
   "User.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Calendar sharing audit with external delegate detection
 inputs = []
 
 [[modules]]
@@ -466,7 +466,7 @@ permissions = [
   "MailboxSettings.Read",
   "User.Read.All"
 ]
-supported = false
+supported = true  # Implemented - Shared mailbox delegate audit with M365 group conversion recommendations
 inputs = []
 
 [[modules]]
@@ -480,7 +480,41 @@ permissions = [
   "Sites.Read.All",
   "User.Read.All"
 ]
-supported = false
+supported = true  # Implemented - OneDrive storage analysis with quota and large file detection
 inputs = [
   { name = "threshold_gb", type = "number", prompt = "Large storage threshold (GB)", default = 500, min = 100, max = 5000 }
 ]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## SETTINGS - TUI Configuration & Management
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "settings:authentication"
+display_name = "Authentication & Tokens"
+category = "Settings"
+description = "Manage OAuth tokens, view session status, and re-authenticate with Microsoft 365"
+priority = 100
+permissions = []
+supported = true
+inputs = []
+
+[[modules]]
+id = "settings:configuration"
+display_name = "Execution Configuration"
+category = "Settings"
+description = "Adjust concurrency limits, retry attempts, and dry-run defaults"
+priority = 90
+permissions = []
+supported = true
+inputs = []
+
+[[modules]]
+id = "settings:health"
+display_name = "System Health"
+category = "Settings"
+description = "View Microsoft Graph API latency, connectivity status, and health metrics"
+priority = 80
+permissions = []
+supported = true
+inputs = []

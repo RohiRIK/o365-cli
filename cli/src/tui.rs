@@ -4,26 +4,13 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::Backend, Terminal};
-use ratatui::prelude::CrosstermBackend; // Correct import for CrosstermBackend
-use std::{io::{self, Stdout}, time::{Duration, Instant}, fs};
-use crate::auth::AuthManager;
-use crate::profile::UserProfile;
-use serde::Deserialize;
-use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
-use chrono::DateTime;
+use ratatui::prelude::CrosstermBackend;
+use std::{io::{self, Stdout}, sync::mpsc::Receiver, time::{Duration, Instant}};
+use crate::state::AppState;
+use crate::health_monitor::HealthUpdate;
 
 // Define a type alias for the Terminal
 pub type Tui = Terminal<CrosstermBackend<Stdout>>;
-
-#[derive(Debug, Deserialize)]
-struct Claims {
-    name: Option<String>,
-    preferred_username: Option<String>,
-    upn: Option<String>,
-    tid: Option<String>,
-    iat: Option<i64>,
-    scp: Option<String>,
-}
 
 pub fn init() -> Result<Tui, anyhow::Error> {
     enable_raw_mode()?;
@@ -40,237 +27,48 @@ pub fn restore() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: crate::app::App) -> Result<(), anyhow::Error> {
-    // Initial Session Check
-    if app.user_profile.is_some() {
-        app.add_log("🔄 Verifying Session...".to_string());
-        app.auth_status = crate::app::AuthStatus::Refreshing;
-        terminal.draw(|f| crate::ui::render(f, &mut app))?;
-        
-        // Use the tenant from the profile if possible, otherwise common
-        let tenant = app.user_profile.as_ref().map(|p| p.tenant_id.as_str()).unwrap_or("common");
-        let auth = AuthManager::new(tenant)?;
-        
-        match auth.get_access_token().await {
-            Ok(_) => {
-                app.auth_status = crate::app::AuthStatus::Valid("Active".to_string());
-                app.add_log("✅ Session Verified".to_string());
-            },
-            Err(e) => {
-                app.auth_status = crate::app::AuthStatus::Invalid(e.to_string());
-                app.user_profile = None; // Invalidate
-                app.add_log(format!("⚠️ Session Expired: {}", e));
-            }
-        }
-    }
+pub async fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    mut app: AppState,
+    health_rx: Receiver<HealthUpdate>,
+) -> Result<(), anyhow::Error> {
+    // TODO: Add session verification logic here
+    // For now, just run the event loop
 
     let tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
-    loop {
-        terminal.draw(|f| crate::ui::render(f, &mut app))?;
 
+    loop {
+        // Check for health updates from background monitor
+        if let Ok(health_update) = health_rx.try_recv() {
+            app.update_health(health_update.latency_ms);
+        }
+
+        // Check for login updates from background login handler
+        app.check_login_updates();
+
+        // Render the UI
+        terminal.draw(|f| crate::ui::render(f, &app))?;
+
+        // Handle input events
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if crossterm::event::poll(timeout)? {
-            match event::read()? {
-                Event::Key(key) => {
-                    let action = app.on_key(key.code);
-                    match action {
-                        Some(crate::app::AppAction::Login) => {
-                            // Start Login Flow with tenant from profile or default to common
-                            app.is_loading = true;
-                            let tenant_to_use = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() {
-                                "common".to_string()
-                            } else {
-                                app.tenant_id.clone()
-                            };
-                            log::info!("[TUI] User initiated login with tenant: {}", tenant_to_use);
-                            app.add_log(format!("🚀 Authenticating with tenant: {}...", tenant_to_use));
-                            terminal.draw(|f| crate::ui::render(f, &mut app))?; // Force redraw to show loading
-
-                            let auth = AuthManager::new(&tenant_to_use)?;
-                            match auth.login().await {
-                                Ok(token) => {
-                                    log::info!("[TUI] Login successful, token received");
-                                    app.add_log("✅ Login Successful!".to_string());
-                                    
-                                    // Decode the token (without validation for display purposes)
-                                    let mut validation = Validation::new(Algorithm::RS256);
-                                    validation.insecure_disable_signature_validation();
-                                    validation.validate_aud = false;
-                                    validation.validate_exp = false;
-                                    validation.validate_nbf = false;
-                                    
-                                    match decode::<Claims>(&token, &DecodingKey::from_secret(&[]), &validation) {
-                                        Ok(token_data) => {
-                                            let claims = token_data.claims;
-                                            let name = claims.name.unwrap_or("Unknown User".to_string());
-                                            let email = claims.preferred_username.or(claims.upn).unwrap_or("No Email".to_string());
-                                            let tenant = claims.tid.unwrap_or("Unknown Tenant".to_string());
-                                            let scopes = claims.scp.unwrap_or_default().split_whitespace().map(String::from).collect();
-                                            
-                                            let last_login = if let Some(iat) = claims.iat {
-                                                 match DateTime::from_timestamp(iat, 0) {
-                                                     Some(dt) => dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-                                                     None => "Invalid Date".to_string(),
-                                                 }
-                                            } else {
-                                                "Now".to_string()
-                                            };
-
-                                            let profile = UserProfile {
-                                                name,
-                                                email,
-                                                tenant_id: tenant,
-                                                scopes,
-                                                last_login,
-                                            };
-
-                                            if let Err(e) = profile.save() {
-                                                log::error!("[TUI] Failed to save user profile: {}", e);
-                                                app.add_log(format!("⚠️ Failed to save profile: {}", e));
-                                            } else {
-                                                log::info!("[TUI] User profile saved successfully");
-                                            }
-
-                                            app.tenant_id = profile.tenant_id.clone();
-                                            app.user_profile = Some(profile);
-                                            log::info!("[TUI] User profile updated in app state");
-                                            app.add_log("📄 Token Decoded: User Profile Updated & Saved".to_string());
-                                        },
-                                        Err(e) => {
-                                            log::error!("[TUI] Failed to parse token claims: {}", e);
-                                            app.add_log(format!("⚠️ Failed to parse token claims: {}", e));
-                                        }
-                                    }
-                                },
-                                Err(e) => {
-                                    log::error!("[TUI] Login failed: {}", e);
-                                    app.add_log(format!("❌ Login Failed: {}", e));
-                                }
-                            }
-                            app.is_loading = false;
-                            log::info!("[TUI] Login flow completed");
-                        },
-                        Some(crate::app::AppAction::ToggleDryRun) => {
-                            // already handled in app.rs, just here for completeness if needed
-                        },
-                        Some(crate::app::AppAction::RunTask { name, args }) => {
-                            app.is_loading = true;
-                            
-                            // Get token using the current tenant
-                            let tenant_to_use = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() {
-                                "common".to_string()
-                            } else {
-                                app.tenant_id.clone()
-                            };
-
-                            let auth = AuthManager::new(&tenant_to_use)?;
-                            match auth.get_access_token().await {
-                                Ok(token) => {
-                                    app.add_log(format!("🚀 Running Task: {}", name));
-                                    terminal.draw(|f| crate::ui::render(f, &mut app))?;
-
-                                    // Pass terminal reference to closure for real-time draw
-                                    let result = crate::runner::run_task(&name, &args, &token, |msg| {
-                                        app.add_log(msg);
-                                        // We ignore draw errors inside the callback to keep worker running
-                                        let _ = terminal.draw(|f| crate::ui::render(f, &mut app));
-                                    });
-
-                                    match result {
-                                        Ok(output) => {
-                                            app.task_output = Some(output);
-                                            app.add_log("✅ Task Completed Successfully".to_string());
-                                        },
-                                        Err(e) => {
-                                            app.add_log(format!("❌ Task Failed: {}", e));
-                                        }
-                                    }
-                                },
-                                Err(e) => {
-                                    app.add_log(format!("❌ Auth Error: {}", e));
-                                }
-                            }
-                            app.is_loading = false;
-                        },
-                        Some(crate::app::AppAction::ReviewProposedActions { name, mut args }) => {
-                            app.add_log("🛡️ Performing silent dry-run for review...".to_string());
-                            
-                            // Force dry-run for the review phase
-                            if let Some(pos) = args.iter().position(|x| x == "--dry-run") {
-                                if pos + 1 < args.len() {
-                                    args[pos + 1] = "true".to_string();
-                                }
-                            } else {
-                                args.push("--dry-run".to_string());
-                                args.push("true".to_string());
-                            }
-
-                            app.is_loading = true;
-                            let tenant_to_use = if app.tenant_id == "Not Connected" || app.tenant_id.is_empty() { "common".to_string() } else { app.tenant_id.clone() };
-                            let auth = AuthManager::new(&tenant_to_use)?;
-                            if let Ok(token) = auth.get_access_token().await {
-                                let result = crate::runner::run_task(&name, &args, &token, |msg| {
-                                    app.add_log(msg);
-                                    let _ = terminal.draw(|f| crate::ui::render(f, &mut app));
-                                });
-                                if let Ok(output) = result {
-                                    app.task_output = Some(output);
-                                }
-                            }
-                            app.is_loading = false;
-                        },
-                        Some(crate::app::AppAction::BackToMenu) => {
-                            app.task_output = None;
-                            app.add_log("🔙 Returned to Menu".to_string());
-                        }
-                        Some(crate::app::AppAction::ExportResults) => {
-                            if let Some(output) = &app.task_output {
-                                let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
-                                let filename = format!("export_results_{}.csv", timestamp);
-                                let mut csv_content = String::new();
-                                if !output.headers.is_empty() {
-                                    csv_content.push_str(&output.headers.join(","));
-                                    csv_content.push('\n');
-                                }
-                                for row in &output.rows {
-                                    let escaped_row: Vec<String> = row.iter().map(|cell| {
-                                        if cell.contains(',') || cell.contains('"') {
-                                            format!("\"{}\"", cell.replace("\"", "\"\""))
-                                        } else {
-                                            cell.clone()
-                                        }
-                                    }).collect();
-                                    csv_content.push_str(&escaped_row.join(","));
-                                    csv_content.push('\n');
-                                }
-
-                                match fs::write(&filename, csv_content) {
-                                    Ok(_) => app.add_log(format!("💾 Exported to {}", filename)),
-                                    Err(e) => app.add_log(format!("❌ Failed to export: {}", e)),
-                                }
-                            } else {
-                                app.add_log("⚠️ No results to export".to_string());
-                            }
-                        }
-                        None => {}
-                    }
-                },
-                Event::Paste(data) => {
-                    app.on_paste(data);
-                },
-                _ => {}
+            if let Event::Key(key) = event::read()? {
+                // Handle key input via AppState::on_key
+                app.on_key(key.code);
             }
         }
 
+        // Tick for animations and countdown updates
         if last_tick.elapsed() >= tick_rate {
             app.on_tick();
             last_tick = Instant::now();
         }
 
+        // Check if should quit
         if app.should_quit {
             return Ok(());
         }

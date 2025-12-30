@@ -1,0 +1,24 @@
+import { TaskHandler, TaskArgs, ValidationResult, TaskRegistry, parseBooleanFlag } from "../registry";
+import { analyzeStorageQuota } from "../../commands/res/storage-quota";
+
+interface StorageQuotaArgs extends TaskArgs {
+  dryRun: boolean;
+}
+
+class StorageQuotaHandler implements TaskHandler {
+  taskId = "res:storage-quota";
+
+  parseArgs(rawArgs: string[]): StorageQuotaArgs {
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+  }
+
+  validate(args: StorageQuotaArgs): ValidationResult {
+    return { valid: true };
+  }
+
+  async execute(args: StorageQuotaArgs): Promise<void> {
+    await analyzeStorageQuota(args.dryRun);
+  }
+}
+
+TaskRegistry.register(new StorageQuotaHandler());

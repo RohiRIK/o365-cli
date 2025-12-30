@@ -19,6 +19,7 @@ use aes_gcm::{
     Aes256Gcm, Nonce
 };
 use sha2::{Sha256, Digest};
+use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 
 // Official "Microsoft Graph PowerShell" Client ID
 const DEFAULT_CLIENT_ID: &str = "14d82eec-204b-4c2f-b7e8-296a70dab67e";
@@ -98,15 +99,134 @@ fn decrypt(ciphertext: &[u8], key: &[u8; 32]) -> Result<Vec<u8>> {
     if ciphertext.len() < 12 {
         return Err(anyhow::anyhow!("Invalid ciphertext length"));
     }
-    
+
     let (nonce_bytes, encrypted_data) = ciphertext.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
     let cipher = Aes256Gcm::new(key.into());
-    
+
     let plaintext = cipher.decrypt(nonce, encrypted_data)
         .map_err(|e| anyhow::anyhow!("Decryption error: {}", e))?;
-    
+
     Ok(plaintext)
+}
+
+/// JWT Claims structure for Microsoft Graph tokens
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(dead_code)] // Will be used in TUI login
+pub struct TokenClaims {
+    /// User's display name
+    pub name: Option<String>,
+    /// User's email (preferred_username)
+    pub preferred_username: Option<String>,
+    /// User Principal Name
+    pub upn: Option<String>,
+    /// Tenant ID
+    pub tid: Option<String>,
+    /// Issued At timestamp
+    pub iat: Option<i64>,
+    /// Expiration timestamp
+    pub exp: Option<i64>,
+    /// Not Before timestamp
+    pub nbf: Option<i64>,
+    /// Scopes (space-separated string)
+    pub scp: Option<String>,
+    /// Roles
+    pub roles: Option<Vec<String>>,
+}
+
+/// Parsed token information
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // Will be used in TUI login
+pub struct ParsedToken {
+    pub claims: TokenClaims,
+    pub user_email: String,
+    pub tenant_id: String,
+    pub scopes: Vec<String>,
+    pub expires_at: DateTime<Utc>,
+}
+
+/// Parse a JWT access token without signature validation
+/// (Microsoft tokens use RS256 and we don't have the public key)
+#[allow(dead_code)] // Will be used in TUI login
+pub fn parse_access_token(token: &str) -> Result<ParsedToken> {
+    // Disable signature validation since we don't have Microsoft's public keys
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.insecure_disable_signature_validation();
+    validation.validate_aud = false;
+    validation.validate_exp = false;
+    validation.validate_nbf = false;
+
+    let token_data = decode::<TokenClaims>(token, &DecodingKey::from_secret(&[]), &validation)
+        .context("Failed to decode JWT token")?;
+
+    let claims = token_data.claims;
+
+    // Extract user email (try multiple fields)
+    let user_email = claims
+        .preferred_username
+        .clone()
+        .or_else(|| claims.upn.clone())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    // Extract tenant ID
+    let tenant_id = claims.tid.clone().unwrap_or_else(|| "Unknown".to_string());
+
+    // Parse scopes (space-separated string)
+    let scopes = claims
+        .scp
+        .clone()
+        .map(|s| s.split_whitespace().map(String::from).collect())
+        .unwrap_or_default();
+
+    // Extract expiration time
+    let expires_at = claims
+        .exp
+        .and_then(|exp| DateTime::from_timestamp(exp, 0))
+        .unwrap_or_else(|| Utc::now() + Duration::hours(1));
+
+    Ok(ParsedToken {
+        claims,
+        user_email,
+        tenant_id,
+        scopes,
+        expires_at,
+    })
+}
+
+/// Calculate time remaining until token expiration
+/// Returns a human-readable string like "23 min 14 sec"
+pub fn calculate_expiry_countdown(expires_at: DateTime<Utc>) -> String {
+    let now = Utc::now();
+    let duration = expires_at.signed_duration_since(now);
+
+    if duration.num_seconds() < 0 {
+        return "Expired".to_string();
+    }
+
+    let total_seconds = duration.num_seconds();
+    let minutes = total_seconds / 60;
+    let seconds = total_seconds % 60;
+
+    if minutes > 60 {
+        let hours = minutes / 60;
+        let remaining_minutes = minutes % 60;
+        format!("{} hr {} min", hours, remaining_minutes)
+    } else {
+        format!("{} min {} sec", minutes, seconds)
+    }
+}
+
+/// Check if token will expire soon (< 5 minutes remaining)
+pub fn is_token_expiring_soon(expires_at: DateTime<Utc>) -> bool {
+    let now = Utc::now();
+    let duration = expires_at.signed_duration_since(now);
+    duration.num_minutes() < 5
+}
+
+/// Check if token is expired
+pub fn is_token_expired(expires_at: DateTime<Utc>) -> bool {
+    let now = Utc::now();
+    expires_at < now
 }
 
 pub struct AuthManager {

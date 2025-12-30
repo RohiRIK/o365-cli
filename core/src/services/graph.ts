@@ -57,17 +57,28 @@ export class GraphService {
 
   /**
    * Generically fetch all items from a collection, following @odata.nextLink automatically.
+   * Supports both string (select fields) and options object syntax.
    */
-  public static async fetchAll<T = any>(endpoint: string, options: { select?: string, filter?: string, expand?: string, top?: number } = {}): Promise<T[]> {
+  public static async fetchAll<T = any>(
+    endpoint: string,
+    selectOrOptions?: string | { select?: string, filter?: string, expand?: string, top?: number }
+  ): Promise<T[]> {
     const client = this.getClient();
     let results: T[] = [];
-    
+
     let request = client.api(endpoint);
-    
-    if (options.select) request = request.select(options.select);
-    if (options.filter) request = request.filter(options.filter);
-    if (options.expand) request = request.expand(options.expand);
-    if (options.top) request = request.top(options.top);
+
+    // Handle both string and object syntax
+    if (typeof selectOrOptions === 'string') {
+      // Legacy string syntax: fetchAll(endpoint, "field1,field2,field3")
+      request = request.select(selectOrOptions);
+    } else if (selectOrOptions && typeof selectOrOptions === 'object') {
+      // Object syntax: fetchAll(endpoint, { select: "fields", filter: "...", ... })
+      if (selectOrOptions.select) request = request.select(selectOrOptions.select);
+      if (selectOrOptions.filter) request = request.filter(selectOrOptions.filter);
+      if (selectOrOptions.expand) request = request.expand(selectOrOptions.expand);
+      if (selectOrOptions.top) request = request.top(selectOrOptions.top);
+    }
 
     let response = await request.get();
     results = results.concat(response.value || []);

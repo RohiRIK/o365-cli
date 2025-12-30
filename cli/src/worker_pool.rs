@@ -6,6 +6,7 @@ use std::io::Write;
 
 /// Configuration for the worker pool
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Scaffolding for Phase 2 module execution
 pub struct WorkerPoolConfig {
     /// Maximum number of concurrent workers
     pub max_workers: usize,
@@ -32,6 +33,7 @@ impl Default for WorkerPoolConfig {
 
 /// Represents a task to be executed by a worker
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Scaffolding for Phase 2 module execution
 pub struct WorkerTask {
     pub task_name: String,
     pub args: Vec<String>,
@@ -39,6 +41,7 @@ pub struct WorkerTask {
 }
 
 /// Worker handle representing a running Bun process
+#[allow(dead_code)] // Scaffolding for Phase 2 module execution
 struct Worker {
     id: usize,
     process: Child,
@@ -46,6 +49,7 @@ struct Worker {
 
 impl Worker {
     /// Spawn a new Bun worker process
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     fn spawn(id: usize, script_path: &std::path::Path) -> Result<Self> {
         let mut command = Command::new("bun");
         command
@@ -63,6 +67,7 @@ impl Worker {
     }
 
     /// Execute a task on this worker
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     fn execute(&mut self, task: &WorkerTask) -> Result<()> {
         // Write token to stdin
         if let Some(ref mut stdin) = self.process.stdin {
@@ -78,6 +83,7 @@ impl Worker {
     }
 
     /// Check if the worker process is still running
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     fn is_alive(&mut self) -> bool {
         match self.process.try_wait() {
             Ok(None) => true,  // Still running
@@ -100,6 +106,7 @@ impl Drop for Worker {
 
 /// Worker pool for parallel task execution
 /// Manages up to N concurrent Bun workers with task queuing
+#[allow(dead_code)] // Scaffolding for Phase 2 module execution
 pub struct WorkerPool {
     config: WorkerPoolConfig,
     workers: Arc<Mutex<Vec<Worker>>>,
@@ -109,11 +116,13 @@ pub struct WorkerPool {
 
 impl WorkerPool {
     /// Create a new worker pool with default configuration
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn new() -> Self {
         Self::with_config(WorkerPoolConfig::default())
     }
 
     /// Create a new worker pool with custom configuration
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn with_config(config: WorkerPoolConfig) -> Self {
         Self {
             config,
@@ -124,6 +133,7 @@ impl WorkerPool {
     }
 
     /// Load configuration from modules.toml
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn from_modules_config() -> Result<Self> {
         use crate::modules::ModuleConfig;
 
@@ -141,6 +151,7 @@ impl WorkerPool {
     /// Submit a task for execution
     /// If workers are available, execute immediately
     /// Otherwise, queue for later execution
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn submit(&self, task: WorkerTask) -> Result<()> {
         let mut workers = self.workers.lock().unwrap();
         let mut queue = self.task_queue.lock().unwrap();
@@ -165,6 +176,7 @@ impl WorkerPool {
 
     /// Process queued tasks by checking for available workers
     /// Should be called periodically to dispatch queued tasks
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn process_queue(&self) -> Result<()> {
         let mut workers = self.workers.lock().unwrap();
         let mut queue = self.task_queue.lock().unwrap();
@@ -197,6 +209,7 @@ impl WorkerPool {
     }
 
     /// Wait for all workers to complete
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn wait_all(&self) -> Result<()> {
         loop {
             let mut workers = self.workers.lock().unwrap();
@@ -225,11 +238,13 @@ impl WorkerPool {
     }
 
     /// Get the number of active workers
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn active_workers(&self) -> usize {
         self.workers.lock().unwrap().len()
     }
 
     /// Get the number of queued tasks
+    #[allow(dead_code)] // Scaffolding for Phase 2 module execution
     pub fn queued_tasks(&self) -> usize {
         self.task_queue.lock().unwrap().len()
     }
@@ -278,7 +293,7 @@ mod tests {
     fn test_task_queuing() {
         let pool = WorkerPool::new();
 
-        let task = WorkerTask {
+        let _task = WorkerTask {
             task_name: "test:task".to_string(),
             args: vec![],
             token: "test-token".to_string(),
