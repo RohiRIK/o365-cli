@@ -10,7 +10,7 @@
     - Sub-task: Implement the Graph call `GET /identity/conditionalAccess/policies`.
 - [x] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
 
-## Phase 2: Visualization & Filtering
+## Phase 2: Visualization & Filtering [checkpoint: 2dbca25]
 - [x] Task: Implement Data Normalization for Display (TDD) (3d5747a)
     - Context: `core/src/commands/sec/ca-audit.ts`.
     - Sub-task: Write tests for converting complex nested Graph objects (Conditions, Grants) into readable string summaries for the table.
@@ -21,7 +21,7 @@
 - [x] Task: CLI UX Refinement (Categories & run dev) (a8c58c7)
     - Sub-task: Restore categorized module selection.
     - Sub-task: Support `run dev` to filter for Beta/Draft modules.
-- [ ] Task: Conductor - User Manual Verification 'Visualization' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Visualization' (Protocol in workflow.md)
 
 ## Phase 3: Best Practice Engine
 - [ ] Task: Implement Baseline Analyzer (TDD)
