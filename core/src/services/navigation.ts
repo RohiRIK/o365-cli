@@ -72,4 +72,12 @@ export class NavigationService {
       width: 60,
     });
   }
+
+  /**
+   * Clears the console and renders the header.
+   */
+  refresh(): void {
+    console.clear();
+    console.log(this.renderHeader());
+  }
 }

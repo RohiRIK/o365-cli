@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect, beforeEach, spyOn } from "bun:test";
 import { NavigationService } from "./navigation";
 
 describe("NavigationService", () => {
@@ -74,6 +74,20 @@ describe("NavigationService", () => {
       expect(header).toBeString();
       expect(header).toContain("O365 CLI");
       expect(header).toContain("Control Center");
+    });
+
+    it("should provide a refresh method", () => {
+      // Stub console methods
+      const clearSpy = spyOn(console, "clear").mockImplementation(() => {});
+      const logSpy = spyOn(console, "log").mockImplementation(() => {});
+      
+      nav.refresh();
+      
+      expect(clearSpy).toHaveBeenCalled();
+      expect(logSpy).toHaveBeenCalled();
+      
+      clearSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 });
