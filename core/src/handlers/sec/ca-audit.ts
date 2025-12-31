@@ -7,7 +7,13 @@ import {
   parseStringFlag,
 } from "../registry";
 import { GraphService } from "../../services/graph";
-import { auditCAPolicies, renderCAPoliciesTable } from "../../commands/sec/ca-audit";
+import { 
+  auditCAPolicies, 
+  renderCAPoliciesTable,
+  summarizeAssignments,
+  summarizeConditions,
+  summarizeGrantControls
+} from "../../commands/sec/ca-audit";
 import { IPC } from "../../utils/ipc";
 
 export interface CaAuditArgs extends TaskArgs {
@@ -74,7 +80,7 @@ class CaAuditHandler implements TaskHandler {
     IPC.progress("Rendering audit table...", 90);
     IPC.table(headers, tableRows);
     
-    // Store raw data for CSV export via lastTable
+    // Store raw data for CSV export without re-rendering to console
     const rawRows = policies.map(p => [
       p.displayName,
       p.state,
@@ -82,9 +88,10 @@ class CaAuditHandler implements TaskHandler {
       JSON.stringify(p.conditions),
       JSON.stringify(p.grantControls)
     ]);
+    IPC.setExportTable(headers, rawRows);
+
     IPC.success({ 
-      message: `Audit complete. Found ${policies.length} policies.`,
-      table: { headers, rows: rawRows } 
+      message: `Audit complete. Found ${policies.length} policies.`
     });
   }
 }

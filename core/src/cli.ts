@@ -505,18 +505,23 @@ export async function setupCLI(program: Command) {
     
   program
     .command("list")
-    .description("List modules")
-    .action(() => {
+    .description("List all available modules")
+    .option("-a, --all", "Show all modules including Beta and Draft", false)
+    .action((options) => {
+        const showAll = options.all;
         const tasks = TaskRegistry.getRegisteredTasks();
-        const categories = getCategoryChoices(tasks);
+        const categories = getCategoryChoices(tasks, showAll);
+        
         categories.forEach(cat => {
-            console.log(chalk.yellow(`\n${cat.name}`));
-            const modules = getModulesInCategory(tasks, cat.value);
+            console.log(chalk.yellow.bold(`\n${cat.name}`));
+            const modules = getModulesInCategory(tasks, cat.value, showAll);
             modules.forEach(m => {
-                const handler = TaskRegistry.getHandler(m.value);
-                const statusColor = handler?.status === "prod" ? chalk.green : (handler?.status === "beta" ? chalk.yellow : chalk.gray);
-                const statusTag = `[${handler?.status?.toUpperCase() || "BETA"}]`;
-                console.log(`  ${chalk.cyan("→")} ${m.value.padEnd(25)} ${statusColor(statusTag)}`);
+                const handler = TaskRegistry.getHandler(m.value)!;
+                const statusColor = handler.status === "prod" ? chalk.green : (handler.status === "beta" ? chalk.yellow : chalk.gray);
+                const statusTag = `[${handler.status.toUpperCase()}]`;
+                
+                console.log(`  ${theme.primary("→")} ${chalk.bold(handler.name)} ${statusColor(statusTag)}`);
+                console.log(`    ${theme.dim(handler.taskId)} › ${theme.muted(handler.description)}`);
             });
         });
         console.log("");

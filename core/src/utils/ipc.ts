@@ -27,6 +27,13 @@ export class IPC {
     this.lastTable = null;
   }
 
+  /**
+   * Internal helper to store table data for CSV export without printing to console
+   */
+  static setExportTable(headers: string[], rows: any[][]) {
+    this.lastTable = { headers, rows };
+  }
+
   // Send progress update
   static progress(message: string, percent?: number) {
     if (this.mode === 'json') {
