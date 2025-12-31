@@ -7,6 +7,8 @@ interface AppPermissionsArgs extends TaskArgs {
 
 class AppPermissionsHandler implements TaskHandler {
   taskId = "sec:app-permissions-audit";
+  name = "App Permissions Audit";
+  description = "Audit high-privilege application permissions";
   type = "audit" as const;
   status = "draft" as const;
 

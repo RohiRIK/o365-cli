@@ -20,6 +20,8 @@ interface WindowsUpdateArgs extends TaskArgs {
  */
 class WindowsUpdateHandler implements TaskHandler {
   taskId = "dev:windows-updates";
+  name = "Windows Update Audit";
+  description = "Verify patch levels across Windows endpoints";
   type = "audit" as const;
   status = "draft" as const;
 

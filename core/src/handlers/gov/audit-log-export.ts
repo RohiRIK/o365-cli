@@ -24,6 +24,8 @@ interface AuditLogExportArgs extends TaskArgs {
  */
 class AuditLogExportHandler implements TaskHandler {
   taskId = "gov:audit-log-export";
+  name = "Audit Log Export";
+  description = "Export unified audit logs for external analysis";
   type = "audit" as const;
   status = "draft" as const;
 

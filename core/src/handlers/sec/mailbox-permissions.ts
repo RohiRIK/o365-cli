@@ -7,6 +7,8 @@ interface MailboxPermissionsArgs extends TaskArgs {
 
 class MailboxPermissionsHandler implements TaskHandler {
   taskId = "sec:mailbox-permissions";
+  name = "Mailbox Permissions Audit";
+  description = "Audit delegate and full access mailbox permissions";
   type = "audit" as const;
   status = "draft" as const;
 

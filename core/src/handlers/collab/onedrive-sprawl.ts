@@ -15,6 +15,8 @@ interface OneDriveSprawlArgs extends TaskArgs {
 
 class OneDriveSprawlHandler implements TaskHandler {
   taskId = "collab:onedrive-sprawl";
+  name = "OneDrive Sprawl Audit";
+  description = "Identify orphaned or excessively shared OneDrives";
   type = "audit" as const;
   status = "draft" as const;
 

@@ -7,6 +7,8 @@ interface ComplianceScorecardArgs extends TaskArgs {
 
 class ComplianceScorecardHandler implements TaskHandler {
   taskId = "rep:compliance-scorecard";
+  name = "Compliance Scorecard";
+  description = "Detailed assessment against regulatory frameworks";
   type = "audit" as const;
   status = "draft" as const;
 

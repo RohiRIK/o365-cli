@@ -8,6 +8,8 @@ interface StaleDevicesArgs extends TaskArgs {
 
 class StaleDevicesHandler implements TaskHandler {
   taskId = "dev:stale-devices";
+  name = "Stale Devices Cleanup";
+  description = "Identify and remove inactive Intune devices";
   type = "action" as const;
   status = "draft" as const;
 

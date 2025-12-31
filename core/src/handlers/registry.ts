@@ -24,6 +24,12 @@ export interface TaskHandler {
   /** Unique task identifier matching modules.toml (e.g., "iam:offboard") */
   taskId: string;
 
+  /** Human-readable name for the task */
+  name: string;
+
+  /** Short description of what the task does */
+  description: string;
+
   /** Task type: 'audit' for read-only reports, 'action' for mutating operations */
   type: "audit" | "action";
 

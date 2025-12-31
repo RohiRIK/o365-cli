@@ -8,6 +8,8 @@ interface PasswordExpiryArgs extends TaskArgs {
 
 class PasswordExpiryHandler implements TaskHandler {
   taskId = "sec:password-expiry-audit";
+  name = "Password Expiry Audit";
+  description = "Audit password ages and expiry configurations";
   type = "audit" as const;
   status = "draft" as const;
 

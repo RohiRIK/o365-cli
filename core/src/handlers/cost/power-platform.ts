@@ -11,6 +11,8 @@ interface PowerPlatformArgs extends TaskArgs {
 
 class PowerPlatformHandler implements TaskHandler {
   taskId = "cost:power-platform";
+  name = "Power Platform Governance";
+  description = "Audit environments and app licensing costs";
   type = "audit" as const;
   status = "draft" as const;
 

@@ -20,6 +20,8 @@ interface LicenseOptimizationArgs extends TaskArgs {
  */
 class LicenseOptimizationHandler implements TaskHandler {
   taskId = "res:license-optimization";
+  name = "License Optimization";
+  description = "Analyze license allocation for cost savings";
   type = "audit" as const;
   status = "beta" as const;
 

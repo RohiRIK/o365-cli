@@ -15,6 +15,8 @@ interface StaleAccountsArgs extends TaskArgs {
 
 class StaleAccountsHandler implements TaskHandler {
   taskId = "iam:stale-accounts";
+  name = "Stale Accounts Audit";
+  description = "Identify inactive user accounts for remediation";
   type = "action" as const;
   status = "draft" as const;
 

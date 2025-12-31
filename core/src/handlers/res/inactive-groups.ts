@@ -8,6 +8,8 @@ interface InactiveGroupsArgs extends TaskArgs {
 
 class InactiveGroupsHandler implements TaskHandler {
   taskId = "res:inactive-groups";
+  name = "Inactive Groups Audit";
+  description = "Identify stale M365 and security groups";
   type = "action" as const;
   status = "draft" as const;
 

@@ -13,6 +13,8 @@ interface SurgicalLockdownArgs extends TaskArgs {
 
 class SurgicalLockdownHandler implements TaskHandler {
   taskId = "sec:surgical-lockdown";
+  name = "Surgical Lockdown";
+  description = "Rapidly isolate compromised accounts and devices";
   type = "action" as const;
   status = "draft" as const;
 

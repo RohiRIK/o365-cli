@@ -7,6 +7,8 @@ interface ExternalSharingArgs extends TaskArgs {
 
 class ExternalSharingHandler implements TaskHandler {
   taskId = "sec:external-sharing";
+  name = "External Sharing Audit";
+  description = "Audit external sharing settings across M365 services";
   type = "audit" as const;
   status = "draft" as const;
 

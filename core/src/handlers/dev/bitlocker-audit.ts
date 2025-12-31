@@ -7,6 +7,8 @@ interface BitLockerAuditArgs extends TaskArgs {
 
 class BitLockerAuditHandler implements TaskHandler {
   taskId = "dev:bitlocker-audit";
+  name = "BitLocker Key Audit";
+  description = "Verify presence of BitLocker recovery keys";
   type = "audit" as const;
   status = "draft" as const;
 

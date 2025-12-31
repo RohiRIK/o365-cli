@@ -1,4 +1,6 @@
 import chalk from "chalk";
+import { theme } from "./theme";
+import { TaskRegistry } from "../handlers/registry";
 
 /**
  * Category metadata for better display names and icons
@@ -40,8 +42,8 @@ export function getCategoryChoices(taskIds: string[], showAll: boolean = true) {
 export function getModulesInCategory(taskIds: string[], category: string, showAll: boolean = true) {
     if (category === "sys") {
         return [
-            { name: `  ${chalk.cyan("→")} sys:settings`, value: "sys:settings", description: "Manage logins and accounts" },
-            { name: `  ${chalk.cyan("→")} sys:status`, value: "sys:status", description: "View detailed session info" }
+            { name: `  ${theme.primary("→")} sys:settings`, value: "sys:settings", description: "Manage logins and accounts" },
+            { name: `  ${theme.primary("→")} sys:status`, value: "sys:status", description: "View detailed session info" }
         ];
     }
     return taskIds
@@ -56,11 +58,44 @@ export function getModulesInCategory(taskIds: string[], category: string, showAl
             const handler = TaskRegistry.getHandler(id);
             const statusTag = showAll ? ` [${handler?.status?.toUpperCase()}]` : "";
             return {
-                name: `  ${chalk.cyan("→")} ${id}${chalk.dim(statusTag)}`,
+                name: `  ${theme.primary("→")} ${handler?.name || id}${theme.dim(statusTag)}`,
                 value: id,
-                description: `Run module ${id}`
+                description: handler?.description || `Run module ${id}`
             };
         });
 }
 
-import { TaskRegistry } from "../handlers/registry";
+/**
+ * Gets all module choices for searchable selection
+ */
+export function getAllModuleChoices(showAll: boolean = true) {
+    const taskIds = TaskRegistry.getRegisteredTasks();
+    const modules = taskIds
+        .filter(id => {
+            if (showAll) return true;
+            const handler = TaskRegistry.getHandler(id);
+            return handler?.status === "prod";
+        })
+        .map(id => {
+            const handler = TaskRegistry.getHandler(id)!;
+            const category = id.split(":")[0];
+            const meta = CATEGORY_MAP[category] || { icon: "📦" };
+            const statusTag = showAll ? ` [${handler.status.toUpperCase()}]` : "";
+            
+            return {
+                name: `${meta.icon} ${handler.name}${theme.dim(statusTag)}`,
+                value: id,
+                description: `${theme.primary(id)} › ${handler.description}`
+            };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    return [
+        ...modules,
+        { 
+            name: `${theme.muted("🔙 Go Back")}`, 
+            value: "exit", 
+            description: "Return to previous menu" 
+        }
+    ];
+}

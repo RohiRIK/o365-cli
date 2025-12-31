@@ -7,6 +7,8 @@ interface StorageQuotaArgs extends TaskArgs {
 
 class StorageQuotaHandler implements TaskHandler {
   taskId = "res:storage-quota";
+  name = "Storage Quota Audit";
+  description = "Analyze storage usage across SPO and OneDrive";
   type = "audit" as const;
   status = "draft" as const;
 

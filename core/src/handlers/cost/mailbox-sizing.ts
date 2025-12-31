@@ -15,6 +15,8 @@ interface MailboxSizingArgs extends TaskArgs {
 
 class MailboxSizingHandler implements TaskHandler {
   taskId = "cost:mailbox-sizing";
+  name = "Mailbox Sizing Audit";
+  description = "Identify oversized or underutilized mailboxes";
   type = "audit" as const;
   status = "draft" as const;
 

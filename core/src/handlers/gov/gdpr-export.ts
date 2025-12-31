@@ -22,6 +22,8 @@ interface GDPRExportArgs extends TaskArgs {
  */
 class GDPRExportHandler implements TaskHandler {
   taskId = "gov:gdpr-export";
+  name = "GDPR Data Export";
+  description = "Consolidate user data for right-to-be-forgotten requests";
   type = "audit" as const;
   status = "draft" as const;
 

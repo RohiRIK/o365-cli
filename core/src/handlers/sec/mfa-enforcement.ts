@@ -20,6 +20,8 @@ interface MFAEnforcementArgs extends TaskArgs {
  */
 class MFAEnforcementHandler implements TaskHandler {
   taskId = "sec:mfa-enforcement";
+  name = "MFA Enforcement Audit";
+  description = "Verify MFA enrollment and enforcement status";
   type = "audit" as const;
   status = "draft" as const;
 

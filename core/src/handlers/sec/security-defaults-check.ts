@@ -7,6 +7,8 @@ interface SecurityDefaultsArgs extends TaskArgs {
 
 class SecurityDefaultsHandler implements TaskHandler {
   taskId = "sec:security-defaults-check";
+  name = "Security Defaults Check";
+  description = "Verify Microsoft Security Defaults configuration";
   type = "audit" as const;
   status = "draft" as const;
 

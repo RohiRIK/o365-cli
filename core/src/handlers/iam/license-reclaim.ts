@@ -13,6 +13,8 @@ interface LicenseReclaimArgs extends TaskArgs {
 
 class LicenseReclaimHandler implements TaskHandler {
   taskId = "iam:license-reclaim";
+  name = "License Reclamation";
+  description = "Identify and reclaim unused M365 licenses";
   type = "action" as const;
   status = "draft" as const;
 

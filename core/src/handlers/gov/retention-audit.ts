@@ -20,6 +20,8 @@ interface RetentionAuditArgs extends TaskArgs {
  */
 class RetentionAuditHandler implements TaskHandler {
   taskId = "gov:retention-audit";
+  name = "Retention Policy Audit";
+  description = "Audit coverage of data retention policies";
   type = "audit" as const;
   status = "draft" as const;
 

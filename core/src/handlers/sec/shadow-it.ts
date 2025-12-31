@@ -20,6 +20,8 @@ interface ShadowITArgs extends TaskArgs {
  */
 class ShadowItHandler implements TaskHandler {
   taskId = "sec:shadow-it";
+  name = "Shadow IT Governance";
+  description = "Detect and remediate risky OAuth applications";
   type = "action" as const;
   status = "prod" as const;
 

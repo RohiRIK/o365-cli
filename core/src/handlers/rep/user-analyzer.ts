@@ -13,6 +13,8 @@ interface UserAnalyzerArgs extends TaskArgs {
 
 class UserAnalyzerHandler implements TaskHandler {
   taskId = "rep:user-analyzer";
+  name = "360 User Analyzer";
+  description = "Deep dive forensic report for specific users";
   type = "audit" as const;
   status = "draft" as const;
 

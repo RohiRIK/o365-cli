@@ -22,6 +22,8 @@ interface GuestCleanupArgs extends TaskArgs {
  */
 class GuestCleanupHandler implements TaskHandler {
   taskId = "iam:guest-cleanup";
+  name = "Guest User Cleanup";
+  description = "Identify and remediate stale guest accounts";
   type = "action" as const;
   status = "beta" as const;
 

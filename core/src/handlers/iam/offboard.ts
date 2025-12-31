@@ -23,6 +23,8 @@ interface OffboardArgs extends TaskArgs {
  */
 class OffboardHandler implements TaskHandler {
   taskId = "iam:offboard";
+  name = "Graceful Offboarding";
+  description = "Standard user termination protocol with license reclaim";
   type = "action" as const;
   status = "prod" as const;
 

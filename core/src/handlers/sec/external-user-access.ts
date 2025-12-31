@@ -7,6 +7,8 @@ interface ExternalUserAccessArgs extends TaskArgs {
 
 class ExternalUserAccessHandler implements TaskHandler {
   taskId = "sec:external-user-access";
+  name = "External User Access Audit";
+  description = "Audit access patterns for external guest users";
   type = "audit" as const;
   status = "draft" as const;
 

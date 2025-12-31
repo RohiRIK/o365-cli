@@ -1,5 +1,6 @@
-import { describe, it, expect, mock } from "bun:test";
-import { getCategoryChoices, getModulesInCategory } from "./utils/menu";
+import { describe, it, expect } from "bun:test";
+import { getCategoryChoices, getModulesInCategory, getAllModuleChoices } from "./utils/menu";
+import { TaskRegistry } from "./handlers/registry";
 
 describe("Menu Helper Logic", () => {
     const mockTasks = [
@@ -25,8 +26,29 @@ describe("Menu Helper Logic", () => {
     });
 
     it("should handle unknown categories gracefully", () => {
-        const customTasks = ["custom:test"];
-        const choices = getCategoryChoices(customTasks);
-        expect(choices[0].name).toBe("⚙️ CUSTOM");
+        const modules = getModulesInCategory(["unknown:task"], "iam");
+        expect(modules).toEqual([]);
+    });
+
+    it("should return searchable choices for all modules", () => {
+        // Ensure at least one task is registered
+        TaskRegistry.register({
+            taskId: "sec:shadow-it",
+            name: "Shadow IT Governance",
+            description: "Detect and remediate risky OAuth applications",
+            type: "action",
+            status: "prod",
+            execute: async () => {},
+            parseArgs: () => ({ dryRun: true }),
+            validate: () => ({ valid: true })
+        });
+
+        const choices = getAllModuleChoices(true);
+        expect(choices.length).toBeGreaterThan(0);
+        expect(choices.some(c => c.value === "exit")).toBeTrue();
+        
+        const shadowIT = choices.find(c => c.value === "sec:shadow-it");
+        expect(shadowIT).toBeDefined();
+        expect(shadowIT?.name).toContain("Shadow IT Governance");
     });
 });

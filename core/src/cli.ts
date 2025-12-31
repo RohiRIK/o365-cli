@@ -6,9 +6,16 @@ import { AuthService } from "./services/auth";
 import { TokenStorage } from "./services/token-storage";
 import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP } from "./utils/menu";
 import { select, input, Separator, confirm } from "@inquirer/prompts";
+import { AuthService } from "./services/auth";
+import { TokenStorage } from "./services/token-storage";
+import { NavigationService } from "./services/navigation";
+import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP, getAllModuleChoices } from "./utils/menu";
+import { select, input, Separator, confirm } from "@inquirer/prompts";
+import search from "@inquirer/search";
 import { jwtDecode } from "jwt-decode";
 import { IPC } from "./utils/ipc";
 import { setupSignalHandlers } from "./utils/process";
+import { theme } from "./utils/theme";
 import * as fs from "fs";
 import path from "path";
 import chalk from "chalk";
@@ -17,6 +24,7 @@ import ora from "ora";
 setupSignalHandlers();
 
 const tokenStorage = new TokenStorage("o365-cli");
+const nav = new NavigationService();
 
 interface DecodedToken {
     name?: string;
@@ -27,14 +35,6 @@ interface DecodedToken {
     iat?: number;
     scp?: string;
 }
-
-// Minimalist theme with no help text
-const CUSTOM_THEME = {
-    helpMode: 'never' as const,
-    style: {
-        message: (text: string) => chalk.bold.cyan(text),
-    }
-};
 
 // Global cache for org name to avoid redundant API calls
 let cachedOrgName: string | null = null;
@@ -64,11 +64,6 @@ async function getSessionDetails(tenantId: string = "common", includeOrg: boolea
     }
 }
 
-function getStatusPrefix(session: any) {
-    if (!session) return chalk.gray("○ Not Authenticated › ");
-    return chalk.gray(`● Logged in as ${session.user} › `);
-}
-
 async function ensureAuthenticated(tenantId: string = "common"): Promise<string> {
     const account = `user@${tenantId}`;
     let token = await tokenStorage.getToken(account);
@@ -90,11 +85,13 @@ async function ensureAuthenticated(tenantId: string = "common"): Promise<string>
 }
 
 async function handleLoginMenu() {
+    nav.push("System Settings");
+    nav.refresh();
+
     const session = await getSessionDetails("common");
-    console.clear();
     
     if (session) {
-        console.log(chalk.cyan.bold("\n👤 Current Session Details:"));
+        console.log(theme.primary.bold("👤 Current Session Details:"));
         console.log(`  ${chalk.bold("Organization:")} ${chalk.yellow(session.orgName || "N/A")}`);
         console.log(`  ${chalk.bold("User:")}         ${session.user}`);
         console.log(`  ${chalk.bold("Email:")}        ${session.email}`);
@@ -106,7 +103,7 @@ async function handleLoginMenu() {
             console.log(`  ${chalk.bold("Expires At:")}    ${color(session.expires.toLocaleString())}`);
             console.log(`  ${chalk.bold("Status:")}        ${color(isExpired ? "Expired" : "Active")}`);
         }
-        console.log(`  ${chalk.bold("Scopes:")}        ${chalk.dim(session.scopes.join(", "))}`);
+        console.log(`  ${chalk.bold("Scopes:")}        ${theme.dim(session.scopes.join(", "))}`);
         console.log("");
 
         const choice = await select({
@@ -117,7 +114,6 @@ async function handleLoginMenu() {
                 { name: "🗑️ Logout (Clear Cache)", value: "logout" },
                 { name: "🔙 Back to Menu", value: "back" }
             ],
-            theme: CUSTOM_THEME
         });
 
         if (choice === "refresh") {
@@ -140,108 +136,76 @@ async function handleLoginMenu() {
                 { name: "🔐 Login to Microsoft 365", value: "login" },
                 { name: "🔙 Back to Menu", value: "back" }
             ],
-            theme: CUSTOM_THEME
         });
         if (start === "login") {
             const tenant = await input({ message: "Enter Tenant ID:", default: "common" });
             await ensureAuthenticated(tenant);
         }
     }
+    nav.pop();
 }
 
-import { select, input, Separator, confirm } from "@inquirer/prompts";
-
 /**
- * Intelligent Module Selector with Drill-Down (Tasks only)
+ * Global Search Module Picker
  */
-async function runModuleSelector(isMainMenu: boolean = false, showAll: boolean = false): Promise<string | "exit"> {
-    const taskIds = TaskRegistry.getRegisteredTasks();
-    const session = await getSessionDetails("common");
-    const prefix = getStatusPrefix(session);
-    
+async function runSearchablePicker(showAll: boolean = false): Promise<string | "exit"> {
+    nav.push("Search Modules");
+    nav.refresh();
+
+    const choices = getAllModuleChoices(showAll);
+
     try {
-        const categories = getCategoryChoices(taskIds, showAll);
-        
-        if (categories.length === 0) {
-            printInfo("\nNo production modules available yet. Run with 'dev' to see draft modules.");
-            await input({ message: "Press Enter to return..." });
-            return "exit";
-        }
-
-        // Step 1: Select Category
-        const category = await select({
-            message: `Select a Task Category ${showAll ? chalk.yellow("[DEV MODE]") : ""}:`,
-            prefix,
-            choices: [
-                ...categories,
-                new Separator(chalk.dim("──────────────────────────────")),
-                { name: "⚙️  System Settings", value: "sys:settings" },
-                { name: isMainMenu ? "🔙 Back to Main Menu" : "⎋  Cancel / Exit", value: "exit" }
-            ],
-            pageSize: 15,
-            theme: CUSTOM_THEME
+        const moduleId = await search({
+            message: "Search for a module (type to filter):",
+            source: async (input) => {
+                if (!input) return choices;
+                
+                const term = input.toLowerCase();
+                return choices.filter(c => 
+                    c.name.toLowerCase().includes(term) || 
+                    c.value.toLowerCase().includes(term) ||
+                    c.description?.toLowerCase().includes(term)
+                );
+            },
+            emptyText: theme.dim("No modules found matching your search term."),
         });
 
-        if (category === "exit") return "exit";
-        if (category === "sys:settings") {
-            await handleLoginMenu();
-            return await runModuleSelector(isMainMenu, showAll);
-        }
-
-        // Step 2: Select Module in Category
-        const moduleId = await select({
-            message: `Modules in ${CATEGORY_MAP[category]?.name || category}:`,
-            prefix,
-            choices: [
-                ...getModulesInCategory(taskIds, category, showAll),
-                new Separator(chalk.dim("──────────────────────────────")),
-                { name: "🔙 Back to Categories", value: "retry" }
-            ],
-            pageSize: 15,
-            theme: CUSTOM_THEME
-        });
-
-        if (moduleId === "retry") return await runModuleSelector(isMainMenu, showAll);
+        nav.pop();
         return moduleId;
     } catch (e: any) {
+        nav.pop();
         return "exit";
     }
 }
 
 async function showInteractiveMenu(showAll: boolean = false) {
-    console.clear();
-    const session = await getSessionDetails("common");
-    const prefix = getStatusPrefix(session);
-    
-    console.log(chalk.cyan.bold("\n-------------------------------------------"));
-    console.log(chalk.cyan.bold(`🚀 O365 CLI - ${showAll ? "Developer Console" : "Production Orchestrator"}`));
-    console.log(chalk.cyan.bold("-------------------------------------------"));
+    nav.clear();
+    nav.refresh();
     
     try {
         const action = await select({
             message: "Control Center:",
-            prefix,
             choices: [
-                new Separator(chalk.yellow("─── TASKS ───")),
-                { name: "⚡ Run a Module", value: "run" },
-                { name: "📋 List Available Modules", value: "list" },
-                new Separator(chalk.yellow("─── SYSTEM ───")),
+                new Separator(theme.primary("─── TASKS ───")),
+                { name: "⚡ Search & Run Module", value: "run" },
+                { name: "📋 List All Modules", value: "list" },
+                new Separator(theme.primary("─── SYSTEM ───")),
                 { name: "⚙️  Settings & Accounts", value: "settings" },
-                new Separator(chalk.dim("──────────────────────────────")),
-                { name: "🚪 Exit", value: "exit" }
+                new Separator(theme.dim("──────────────────────────────")),
+                { name: theme.dim("🚪 Exit"), value: "exit" }
             ],
-            theme: CUSTOM_THEME
         });
 
         switch (action) {
             case "list": {
+                nav.push("List Modules");
+                nav.refresh();
                 const tasks = TaskRegistry.getRegisteredTasks();
-                console.log(chalk.cyan.bold(`\n${showAll ? "All" : "Production"} Modules:`));
                 const categories = getCategoryChoices(tasks, showAll);
                 categories.forEach(cat => {
                     console.log(chalk.yellow(`\n${cat.name}`));
                     getModulesInCategory(tasks, cat.value, showAll).forEach(m => {
-                        console.log(`  ${m.name}`);
+                        console.log(m.name);
                     });
                 });
                 console.log("");
@@ -250,14 +214,13 @@ async function showInteractiveMenu(showAll: boolean = false) {
                 break;
             }
             case "run": {
-                const moduleId = await runModuleSelector(true, showAll);
+                const moduleId = await runSearchablePicker(showAll);
                 if (moduleId !== "exit") {
                     const handler = TaskRegistry.getHandler(moduleId);
                     const args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
                     await runTask(moduleId, args);
                     await input({ message: "\nTask completed. Press Enter to return to menu..." });
                 }
-                // Recursively call to return to main menu
                 await showInteractiveMenu(showAll);
                 break;
             }

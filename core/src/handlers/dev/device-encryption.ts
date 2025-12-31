@@ -7,6 +7,8 @@ interface DeviceEncryptionArgs extends TaskArgs {
 
 class DeviceEncryptionHandler implements TaskHandler {
   taskId = "dev:device-encryption";
+  name = "Device Encryption Audit";
+  description = "Verify BitLocker and FileVault status";
   type = "audit" as const;
   status = "draft" as const;
 

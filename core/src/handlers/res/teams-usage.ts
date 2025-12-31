@@ -8,6 +8,8 @@ interface TeamsUsageArgs extends TaskArgs {
 
 class TeamsUsageHandler implements TaskHandler {
   taskId = "res:teams-usage";
+  name = "Teams Usage Audit";
+  description = "Analyze Teams adoption and activity metrics";
   type = "audit" as const;
   status = "draft" as const;
 

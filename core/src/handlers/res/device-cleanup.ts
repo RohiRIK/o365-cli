@@ -15,6 +15,8 @@ interface DeviceCleanupArgs extends TaskArgs {
 
 class DeviceCleanupHandler implements TaskHandler {
   taskId = "res:device-cleanup";
+  name = "Device Cleanup";
+  description = "Identify and remediate stale Intune devices";
   type = "action" as const;
   status = "draft" as const;
 

@@ -15,6 +15,8 @@ interface UnusedGroupsArgs extends TaskArgs {
 
 class UnusedGroupsHandler implements TaskHandler {
   taskId = "cost:unused-groups";
+  name = "Unused Groups Cleanup";
+  description = "Identify and remove orphaned or empty groups";
   type = "action" as const;
   status = "draft" as const;
 

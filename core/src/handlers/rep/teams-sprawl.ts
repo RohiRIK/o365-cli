@@ -13,6 +13,8 @@ interface TeamsSprawlArgs extends TaskArgs {
 
 class TeamsSprawlHandler implements TaskHandler {
   taskId = "rep:teams-sprawl";
+  name = "Teams Sprawl Report";
+  description = "Comprehensive audit of Teams channel sprawl";
   type = "audit" as const;
   status = "draft" as const;
 

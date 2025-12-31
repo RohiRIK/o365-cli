@@ -7,6 +7,8 @@ interface ExecutiveDashboardArgs extends TaskArgs {
 
 class ExecutiveDashboardHandler implements TaskHandler {
   taskId = "rep:executive-dashboard";
+  name = "Executive Dashboard";
+  description = "High-level overview of tenant health and security";
   type = "audit" as const;
   status = "draft" as const;
 

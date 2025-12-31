@@ -16,6 +16,8 @@ interface OnboardArgs extends TaskArgs {
 
 class OnboardHandler implements TaskHandler {
   taskId = "iam:onboard";
+  name = "User Onboarding";
+  description = "Standardized protocol for new user setup";
   type = "action" as const;
   status = "beta" as const;
 

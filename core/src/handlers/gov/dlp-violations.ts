@@ -22,6 +22,8 @@ interface DLPViolationArgs extends TaskArgs {
  */
 class DLPViolationHandler implements TaskHandler {
   taskId = "gov:dlp-violations";
+  name = "DLP Violations Report";
+  description = "Analyze and report on data loss prevention events";
   type = "audit" as const;
   status = "draft" as const;
 

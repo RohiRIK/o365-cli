@@ -21,6 +21,8 @@ interface IntuneAuditArgs extends TaskArgs {
  */
 class IntuneAuditHandler implements TaskHandler {
   taskId = "dev:intune-audit";
+  name = "Intune Configuration Audit";
+  description = "Audit Intune assignments and configuration profiles";
   type = "audit" as const;
   status = "prod" as const;
 
