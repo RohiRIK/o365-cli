@@ -27,7 +27,7 @@
     - Context: Replace `select` with `@inquirer/search` in `core/src/cli.ts`.
     - Sub-task: Write tests for module search/filter logic.
     - Sub-task: Implement searchable list with human-readable titles and technical ID descriptions.
-- [ ] Task: Implement Zero-Result UI State
+- [x] Task: Implement Zero-Result UI State (2a17cda)
     - Sub-task: Add styled "No results found" feedback for the search interface.
 - [ ] Task: Conductor - User Manual Verification 'Searchable Discovery' (Protocol in workflow.md)
 
