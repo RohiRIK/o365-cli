@@ -16,7 +16,7 @@ To provide the ultimate "Swiss Army Knife" for Microsoft 365 Systems Administrat
 -   **Active Incident Response:** Provides rapid threat containment and identity isolation capabilities.
 
 ## Key Features
--   **Unified TypeScript Architecture:** A high-performance CLI entry point using **Commander.js** and **Inquirer.js** for guided orchestration.
+-   **Unified TypeScript Architecture:** A high-performance CLI entry point using **Commander.js** and **@inquirer/prompts** for modern, guided orchestration.
 -   **Six Strategic Pillars:** Comprehensive modules for IAM, SEC, GOV (Governance), END (Endpoint), RES, and REP.
 -   **Secure Authentication:** Robust OAuth2 PKCE flow with system keychain storage via **keytar**.
 -   **Rich Output:** Professional terminal output with interactive tables and real-time logging.

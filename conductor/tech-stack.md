@@ -3,7 +3,7 @@
 ## Frontend & Orchestration (CLI)
 -   **Language:** TypeScript
 -   **Runtime:** **Bun** for instant startup and native TS support.
--   **CLI Framework:** `commander` for argument parsing and `inquirer` for interactive menus.
+-   **CLI Framework:** `commander` for argument parsing and `@inquirer/prompts` for modular, type-safe interactive menus.
 -   **UI Utilities:** `chalk` for colors, `ora` for spinners, and `cli-table3` for rich table rendering.
 -   **Authentication:** `oauth2` (PKCE flow) with **system keychain** storage via `keytar`.
 
@@ -12,7 +12,7 @@
 -   **Security Architecture:** Identity managed via `@azure/identity`.
 
 ## Legacy & Reference Layers
--   **Rust TUI:** Original high-performance interactive interface (preserved in `legacy/rust-tui/`).
+-   **Rust TUI:** Original high-performance interactive interface (archived in `legacy/archive/rust-tui-deprecated/`).
 -   **PowerShell 7+:** Used for complex Exchange Online operations and legacy compatibility.
 
 ## Architecture Summary

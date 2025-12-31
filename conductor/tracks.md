@@ -4,12 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [x] Track: Enterprise Production Readiness & Guest Lifecycle
-
-*Link: [./conductor/tracks/enterprise_readiness_20251221/](./conductor/tracks/enterprise_readiness_20251221/)*
-
-
-
-## [x] Track: Orchestration Migration (Rust to TS/Bash)
-
-*Link: [./conductor/tracks/orchestration_migration_20251230/](./conductor/tracks/orchestration_migration_20251230/)*
+## [ ] Track: Unified CLI Core & Intune Audit Stabilization
+*Link: [./conductor/tracks/unified_core_stabilization_20251231/](./conductor/tracks/unified_core_stabilization_20251231/)*
