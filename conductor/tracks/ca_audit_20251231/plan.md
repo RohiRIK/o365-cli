@@ -1,7 +1,7 @@
 # Implementation Plan - Conditional Access Audit
 
 ## Phase 1: Core Logic & Data Retrieval
-- [ ] Task: Scaffold CA Audit Module Structure
+- [x] Task: Scaffold CA Audit Module Structure (3acb0a0)
     - Context: Create `core/src/handlers/sec/ca-audit.ts` and register it in `core/src/handlers/registry.ts`.
     - Sub-task: Define the `TaskHandler` interface for `sec:ca-audit`.
 - [ ] Task: Implement CA Policy Fetching (TDD)
