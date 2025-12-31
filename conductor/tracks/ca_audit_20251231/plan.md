@@ -31,7 +31,7 @@
 - [ ] Task: Implement Hybrid Config Loader (TDD)
     - Sub-task: Write tests for loading and merging custom JSON/YAML baselines with defaults.
     - Sub-task: Implement the configuration loader.
-- [ ] Task: Integrate Analysis into CLI Output
+- [~] Task: Integrate Analysis into CLI Output
     - Sub-task: Update the CLI command to run the analyzer when `--analyze` is passed and display gap reports.
 - [ ] Task: Conductor - User Manual Verification 'Best Practice Engine' (Protocol in workflow.md)
 

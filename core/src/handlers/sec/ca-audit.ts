@@ -16,6 +16,9 @@ import {
   flattenPolicyForExport
 } from "../../commands/sec/ca-audit";
 import { IPC } from "../../utils/ipc";
+import { CABaselineAnalyzer } from "../../services/analyzer/ca-baseline";
+import { formatTable } from "../../utils/output";
+import chalk from "chalk";
 
 export interface CaAuditArgs extends TaskArgs {
   analyze: boolean;
@@ -64,37 +67,59 @@ class CaAuditHandler implements TaskHandler {
       return;
     }
 
-    // 1. Resolve names for CSV export with granular progress
+    // 1. Analysis (if requested)
+    let analysisTable = "";
+    if (args.analyze) {
+      IPC.progress("Running Best Practice Analysis...", 20);
+      const analyzer = new CABaselineAnalyzer();
+      const results = analyzer.analyze(policies);
+      
+      const analysisHeaders = ["Check", "Status", "Recommendation"];
+      const analysisRows = results.map(r => {
+        const statusIcon = r.status === "pass" ? chalk.green("PASS ✅") : chalk.red("FAIL ❌");
+        return [
+          chalk.bold(r.name),
+          statusIcon,
+          r.status === "fail" ? chalk.yellow(r.recommendation) : chalk.dim("No action needed")
+        ];
+      });
+      analysisTable = "\n" + chalk.bold("📋 Best Practice Gap Analysis:") + "\n" + formatTable(analysisHeaders, analysisRows);
+    }
+
+    // 2. Resolve names for CSV export
     const flattenedData: any[] = [];
     for (let i = 0; i < policies.length; i++) {
       const p = policies[i];
-      const progress = 10 + Math.floor((i / policies.length) * 80);
+      const progress = 30 + Math.floor((i / policies.length) * 60);
       IPC.progress(`Resolving identities: ${p.displayName || "policy"}...`, progress);
       flattenedData.push(await flattenPolicyForExport(p));
     }
     
-    // 2. Prepare UI Table rows (Compact Summary for CLI)
-    IPC.progress("Preparing audit table...", 80);
+    // 3. Prepare UI Table rows (Compact Summary for CLI)
+    IPC.progress("Preparing audit table...", 95);
     const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
     const tableRows = policies.map(p => {
       return [
         p.displayName || "Untitled",
         p.state,
-        summarizeAssignments(p.conditions?.users), // Compact (synchronous)
-        summarizeConditions(p.conditions),       // Compact (synchronous)
+        summarizeAssignments(p.conditions?.users),
+        summarizeConditions(p.conditions),
         summarizeGrantControls(p.grantControls)
       ];
     });
 
-    // 3. Render Table & Finalize
+    // 4. Render & Finalize
     IPC.progress("Audit complete", 100);
     
-    // Manual clear of the current spinner line to prevent orphaned progress logs
+    // Manual clear of the current spinner line
     process.stdout.write("\r\x1b[K"); 
     
+    if (analysisTable) console.log(analysisTable);
+    
+    console.log("\n" + chalk.bold("📊 Detailed Policy Audit:"));
     IPC.table(headers, tableRows);
     
-    // 4. Store granular flattened data for CSV export (silently)
+    // Store granular flattened data for CSV export (silently)
     const exportHeaders = Object.keys(flattenedData[0] || {});
     const exportRows = flattenedData.map(d => Object.values(d));
     IPC.setExportTable(exportHeaders, exportRows);
@@ -106,3 +131,4 @@ class CaAuditHandler implements TaskHandler {
 }
 
 TaskRegistry.register(new CaAuditHandler());
+
