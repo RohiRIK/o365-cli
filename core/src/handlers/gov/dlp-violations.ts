@@ -22,10 +22,12 @@ interface DLPViolationArgs extends TaskArgs {
  */
 class DLPViolationHandler implements TaskHandler {
   taskId = "gov:dlp-violations";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): DLPViolationArgs {
     const days = parseNumberFlag(rawArgs, "days", false) || 30;
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     return {
       days,

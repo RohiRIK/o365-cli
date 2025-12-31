@@ -15,6 +15,8 @@ interface UnusedGroupsArgs extends TaskArgs {
 
 class UnusedGroupsHandler implements TaskHandler {
   taskId = "cost:unused-groups";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): UnusedGroupsArgs {
     const days = parseNumberFlag(rawArgs, "days", 180);

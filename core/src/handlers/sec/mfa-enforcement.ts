@@ -20,9 +20,11 @@ interface MFAEnforcementArgs extends TaskArgs {
  */
 class MFAEnforcementHandler implements TaskHandler {
   taskId = "sec:mfa-enforcement";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): MFAEnforcementArgs {
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     return {
       dryRun,

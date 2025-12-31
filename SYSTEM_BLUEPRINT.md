@@ -24,28 +24,27 @@ The platform is organized into six core pillars, each addressing a critical doma
 ### 2.6 REP: Reporting
 *Focus: 360-degree forensics and executive-level activity summaries.*
 
-## 3. Core Architecture: The "Brain & Muscle" Hybrid Model
-The platform employs a decoupled, high-performance architecture that balances terminal responsiveness with flexible business logic.
+## 3. Core Architecture: Unified TypeScript Model
+The platform employs a unified, high-performance architecture powered by TypeScript and the Bun runtime, prioritizing developer velocity and execution speed.
 
-### 3.1 The Brain: Rust Orchestrator (`cli/`)
-The Rust layer serves as the secure orchestration engine. Its responsibilities include:
-- **TUI Rendering:** High-performance UI management using `ratatui`.
-- **Authentication & Security:** Managing OAuth2 PKCE flows and AES-encrypted credential storage.
-- **Worker Management:** Spawning, monitoring, and capturing output from child processes.
-- **IPC Protocol Enforcement:** Parsing incoming JSON-line streams and updating the UI state machine.
+### 3.1 The Engine: TypeScript CLI (`core/`)
+The `core` directory contains the entire application logic, serving as both the CLI entry point and the execution engine.
+- **Interactive CLI:** A rich terminal interface built with `@inquirer/prompts` for intuitive navigation and task selection.
+- **Authentication:** Native OAuth2 PKCE implementation handling secure token acquisition and storage via OS Keychain.
+- **Execution:** Direct execution of business logic without the overhead of inter-process communication or external binaries.
 
-### 3.2 The Muscle: TypeScript Workers (`core/`)
-The TypeScript layer, executed via the `Bun` runtime, handles all Microsoft Graph API business logic. Its responsibilities include:
-- **API Interaction:** Complex Graph API queries, pagination, and data transformation.
-- **Stateful Logic:** Evaluating risk scores, detecting configuration drift, and processing bulk updates.
-- **Zero-Trust Networking:** Using the access tokens provided by the "Brain" to interact securely with the M365 tenant.
+### 3.2 The Runtime: Bun 🍞
+The platform is optimized for the Bun runtime, providing:
+- **Instant Startup:** Near-instantaneous CLI boot times compared to Node.js.
+- **Native TypeScript:** Direct execution of `.ts` files, eliminating build steps for development.
+- **High Performance:** Faster HTTP requests and file I/O operations for data-intensive forensic tasks.
 
-### 3.3 The "Nerve" System: JSON-based IPC
-Communication is strictly asynchronous and unidirectional from Muscle to Brain using `stdout`.
-1. **Request:** Brain spawns the Worker with command-line arguments.
-2. **Context:** Brain passes the access token via `stdin` (preventing sensitive data from appearing in process lists).
-3. **Execution:** Worker streams structured JSON updates (Progress, Table Data, Alerts).
-4. **Resolution:** Worker exits with code 0 on success or >0 on failure.
+### 3.3 System Design Pattern
+The system follows a modular "Service-Handler-Command" pattern:
+- **Services:** Singleton classes for cross-cutting concerns (Auth, Graph Client, Token Storage).
+- **Handlers:** Routing logic that maps CLI arguments to specific business functions.
+- **Commands:** Pure business logic functions that interact with the Microsoft Graph API.
+- **Utils:** Shared helpers for output formatting (tables, spinners) and file operations.
 
 ---
 
@@ -61,75 +60,44 @@ To facilitate ideation, modules are tracked through the following stages:
 ## 5. System Integration Standard
 To ensure all modules "work and feel the same," every implementation must adhere to this architectural standard.
 
-### 5.1 The Rust-to-TypeScript IPC Protocol
-Communication follows a strict JSON-line format over `stdin`/`stdout`.
-- **Command Dispatch:** Rust spawns `bun core/src/index.ts <module_name> --args...`
-- **Standard Message Types:**
-    - `{"type": "log", "level": "info", "message": "..."}`: Real-time status in TUI footer.
-    - `{"type": "progress", "data": {"step": "...", "percent": 50}}`: Updates the TUI progress bar.
-    - `{"type": "table", "data": {"headers": [], "rows": [[]]}}`: Renders the main data view.
-    - `{"type": "error", "message": "...", "code": 500}`: Triggers the TUI error modal.
+### 5.1 Command Implementation Pattern
+Every module should export a standalone function that accepts typed arguments and handles its own execution flow.
+- **Input:** Arguments are passed directly or gathered via interactive prompts if missing.
+- **Output:** Use the `IPC` utility (now internal) or standard console output helpers to render tables and progress spinners.
+- **Error Handling:** Exceptions should be caught and formatted into user-friendly error messages, avoiding raw stack traces in the UI.
 
-### 5.2 TUI Framework & UX Guidelines (The "Feel")
+### 5.2 UX Guidelines (The "Feel")
 
-#### 5.2.1 Global Layout Structure
-The interface is divided into three primary functional zones using `ratatui` layouts:
-1. **Navigation Sidebar (Left, 20%):** Persistent menu for switching between strategic pillars (Security, IAM, GOV, END, RES, Settings).
-2. **Main Workspace (Right, 80%):** Dynamic area that switches between:
-    - **Module Menu:** List of available tasks for the current pillar.
-    - **Input Prompt:** Modal overlay for gathering task arguments (e.g., Target UPN).
-    - **Results Table:** Interactive table with live filtering (`/`), sorting, and detail views (`Enter`).
-    - **Review Modal:** Mandatory confirmation gate for live (non-dry-run) actions.
-3. **Log & Status Bar (Bottom, Fixed Height):** Real-time feed of IPC messages and authentication status.
+#### 5.2.1 Interactive Menus
+The CLI uses `inquirer` for all user interactions.
+- **Selection:** Use arrow keys to navigate lists.
+- **Filtering:** Lists should support type-ahead filtering for long sets of options.
+- **Confirmation:** Destructive actions (non-dry-run) must require an explicit "Yes/No" confirmation step.
 
-#### 5.2.2 State Management & Focus System
-The TUI uses a strict focus-based input routing system defined in `app.rs`:
-- **`Focus::Menu`:** Sidebar navigation active. `j/k` switches pillars.
-- **`Focus::Content`:** Main pillar menu active. `j/k` selects modules, `Enter` starts execution.
-- **`Focus::Input`:** Modal prompt active. Captures keyboard strings into `app.input_buffer`.
-- **`Focus::Review`:** Decision gate active. Mandatory manual review before non-dry-run execution.
-- **`Focus::Filter`:** Active during results viewing. Live search (`/`) filters table rows.
-- **`Focus::Logs`:** Bottom pane active. Allows scrolling through session history.
-
-#### 5.2.3 Reusable UI Components
-Every module must use these standardized widgets from `ui.rs`:
-1. **Module List:** Standardized `List` widget with active/inactive border styling based on focus.
-2. **Standard Table:** Multi-column `Table` with auto-scaling widths and custom styling for "Risk" levels.
-3. **Forensic Detail View:** A centered popup that renders key-value pairs from a selected table row.
-4. **Action Summary Overlay:** A high-visibility modal used in `Focus::Review` to list proposed changes.
-5. **Progress Overlay:** A simple status indicator shown during async IPC operations.
-
-#### 5.2.4 TUI Color & Icon Language
-Consistency in visual cues is critical for SecOps speed:
-- **Icons:** 🕵️ (Security), 👋 (IAM), 🧹 (Cleanup), 🧪 (Test), 🔐 (Auth), 🔎 (Forensics).
+#### 5.2.2 Visual Feedback
+- **Spinners:** Use `ora` spinners for all async operations to indicate activity.
+- **Tables:** Use `cli-table3` (via internal helpers) to present structured data.
 - **Colors:**
-    - `Blue` / `Cyan`: Active focus and primary information.
-    - `Yellow`: Warnings, "Concept" modules, and Dry-Run mode.
-    - `Red`: Critical risks, errors, and live destructive actions.
-    - `Green`: Successful operations and compliant statuses.
+    - `Cyan`: Information and headers.
+    - `Green`: Success and safe states.
+    - `Yellow`: Warnings and dry-run indicators.
+    - `Red`: Errors and critical risks.
 
 ### 5.3 Security & Authentication Standard
-The platform prioritizes secure token handling and persistent identity using enterprise-grade encryption.
+The platform prioritizes secure token handling and persistent identity.
 
 #### 5.3.1 OAuth2 PKCE (The "Handshake")
-Authentication is performed using the **Authorization Code Flow with PKCE (Proof Key for Code Exchange)**.
-- **Workflow:** Rust generates a cryptographically random code verifier/challenge.
-- **Callback:** A temporary local loopback server (`http://localhost:port`) captures the authorization code.
-- **Safety:** Prevents code injection attacks and eliminates the need for client secrets in the binary.
+Authentication is performed using the **Authorization Code Flow with PKCE**.
+- **Workflow:** The CLI generates a code verifier and challenge.
+- **Callback:** A local loopback server (`http://localhost:port`) captures the authorization code.
+- **Safety:** Prevents code injection attacks and eliminates the need for client secrets.
 
-#### 4.3.2 Encrypted JSON Storage (The "Vault")
-All sensitive session data is stored in **AES-256-GCM encrypted JSON files** located in `~/.o365-cli/`.
-- **Master Key:** Derived from a machine-specific hardware identifier (UUID/Serial) mixed with a project-specific salt.
-- **Storage Scope:**
-    - `profile.json.enc`: Encrypted user profile data (Name, UPN, Tenant ID).
-    - `tokens.json.enc`: Encrypted OAuth2 tokens (Access, Refresh).
-- **Security Goal:** Protects against unauthorized local access if the raw JSON files are exfiltrated.
+#### 5.3.2 Secure Token Storage
+Tokens are securely stored using OS-native mechanisms (via `keytar` or similar libraries) or encrypted local files, ensuring credentials are protected at rest.
 
-#### 5.3.3 IPC Session Security
-To maintain the "Zero-Trust" principle between processes:
-- **Naked Tokens:** Access tokens are passed to Workers via `stdin` piping, ensuring they never appear in process lists (`ps aux`) or history files.
-- **Short Life:** Workers only hold tokens in memory during execution and never persist them.
-- **Token Rotation:** The "Brain" (Rust) is the sole authority for refreshing tokens; Workers must exit and request a re-run if a token expires during long-running tasks.
+#### 5.3.3 Session Management
+- **Token Rotation:** The CLI automatically checks token expiration and refreshes access tokens using the stored refresh token before every command execution.
+- **Scope Awareness:** The system detects if the current token lacks required scopes and prompts for re-authentication.
 
 ### 5.4 Worker Implementation Pattern
 Each TypeScript worker must extend a base `BaseModule` class to ensure:

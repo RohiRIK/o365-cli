@@ -7,9 +7,11 @@ interface AppPermissionsArgs extends TaskArgs {
 
 class AppPermissionsHandler implements TaskHandler {
   taskId = "sec:app-permissions-audit";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): AppPermissionsArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: AppPermissionsArgs): ValidationResult {

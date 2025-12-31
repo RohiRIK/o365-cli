@@ -20,9 +20,11 @@ interface LicenseOptimizationArgs extends TaskArgs {
  */
 class LicenseOptimizationHandler implements TaskHandler {
   taskId = "res:license-optimization";
+  type = "audit" as const;
+  status = "beta" as const;
 
   parseArgs(rawArgs: string[]): LicenseOptimizationArgs {
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     return {
       dryRun,

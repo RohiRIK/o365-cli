@@ -22,6 +22,8 @@ interface GuestCleanupArgs extends TaskArgs {
  */
 class GuestCleanupHandler implements TaskHandler {
   taskId = "iam:guest-cleanup";
+  type = "action" as const;
+  status = "beta" as const;
 
   parseArgs(rawArgs: string[]): GuestCleanupArgs {
     const days = parseNumberFlag(rawArgs, "days", 90)!;

@@ -7,9 +7,11 @@ interface ExecutiveDashboardArgs extends TaskArgs {
 
 class ExecutiveDashboardHandler implements TaskHandler {
   taskId = "rep:executive-dashboard";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): ExecutiveDashboardArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: ExecutiveDashboardArgs): ValidationResult {

@@ -22,10 +22,12 @@ interface GDPRExportArgs extends TaskArgs {
  */
 class GDPRExportHandler implements TaskHandler {
   taskId = "gov:gdpr-export";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): GDPRExportArgs {
     const user = parseStringFlag(rawArgs, "user", true);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     if (!user) {
       throw new Error("Missing required argument: --user");

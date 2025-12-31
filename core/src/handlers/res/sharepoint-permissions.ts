@@ -7,9 +7,11 @@ interface SharePointPermissionsArgs extends TaskArgs {
 
 class SharePointPermissionsHandler implements TaskHandler {
   taskId = "res:sharepoint-permissions";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): SharePointPermissionsArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: SharePointPermissionsArgs): ValidationResult {

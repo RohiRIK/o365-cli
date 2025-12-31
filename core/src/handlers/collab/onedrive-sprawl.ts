@@ -15,10 +15,12 @@ interface OneDriveSprawlArgs extends TaskArgs {
 
 class OneDriveSprawlHandler implements TaskHandler {
   taskId = "collab:onedrive-sprawl";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): OneDriveSprawlArgs {
     const thresholdGb = parseNumberFlag(rawArgs, "threshold_gb", 500);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
     return { thresholdGb, dryRun };
   }
 

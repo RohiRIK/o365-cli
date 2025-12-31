@@ -15,6 +15,7 @@ describe("GraphService", () => {
     // Mock the client instance
     const mockClient = {
       api: mock((path: string) => ({
+        version: mock().mockReturnThis(),
         select: mock().mockReturnThis(),
         filter: mock().mockReturnThis(),
         expand: mock().mockReturnThis(),

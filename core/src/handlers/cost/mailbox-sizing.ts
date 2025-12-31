@@ -15,10 +15,12 @@ interface MailboxSizingArgs extends TaskArgs {
 
 class MailboxSizingHandler implements TaskHandler {
   taskId = "cost:mailbox-sizing";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): MailboxSizingArgs {
     const thresholdGb = parseNumberFlag(rawArgs, "threshold_gb", 50);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
     return { thresholdGb, dryRun };
   }
 

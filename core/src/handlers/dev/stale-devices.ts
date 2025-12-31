@@ -8,6 +8,8 @@ interface StaleDevicesArgs extends TaskArgs {
 
 class StaleDevicesHandler implements TaskHandler {
   taskId = "dev:stale-devices";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): StaleDevicesArgs {
     return {

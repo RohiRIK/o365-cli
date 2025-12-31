@@ -15,6 +15,8 @@ interface StaleAccountsArgs extends TaskArgs {
 
 class StaleAccountsHandler implements TaskHandler {
   taskId = "iam:stale-accounts";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): StaleAccountsArgs {
     const days = parseNumberFlag(rawArgs, "days", 180);

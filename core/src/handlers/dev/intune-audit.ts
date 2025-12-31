@@ -21,10 +21,12 @@ interface IntuneAuditArgs extends TaskArgs {
  */
 class IntuneAuditHandler implements TaskHandler {
   taskId = "dev:intune-audit";
+  type = "audit" as const;
+  status = "prod" as const;
 
   parseArgs(rawArgs: string[]): IntuneAuditArgs {
     return {
-      dryRun: parseBooleanFlag(rawArgs, "dry-run", true),
+      dryRun: parseBooleanFlag(rawArgs, "dry-run", false),
       export: parseStringFlag(rawArgs, "export", false),
     };
   }

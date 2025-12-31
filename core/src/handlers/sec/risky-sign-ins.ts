@@ -15,10 +15,12 @@ interface RiskySignInsArgs extends TaskArgs {
 
 class RiskySignInsHandler implements TaskHandler {
   taskId = "sec:risky-signins";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): RiskySignInsArgs {
     const days = parseNumberFlag(rawArgs, "days", 7);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
     return { days, dryRun };
   }
 

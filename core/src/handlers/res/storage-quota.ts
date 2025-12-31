@@ -7,9 +7,11 @@ interface StorageQuotaArgs extends TaskArgs {
 
 class StorageQuotaHandler implements TaskHandler {
   taskId = "res:storage-quota";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): StorageQuotaArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: StorageQuotaArgs): ValidationResult {

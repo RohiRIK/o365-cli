@@ -18,8 +18,10 @@ interface ShadowITArgs extends TaskArgs {
  * Shadow IT Governance Task Handler
  * Detect risky OAuth applications with dangerous permissions, unverified publishers, and credential hygiene issues
  */
-class ShadowITHandler implements TaskHandler {
+class ShadowItHandler implements TaskHandler {
   taskId = "sec:shadow-it";
+  type = "action" as const;
+  status = "prod" as const;
 
   parseArgs(rawArgs: string[]): ShadowITArgs {
     const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
@@ -40,4 +42,4 @@ class ShadowITHandler implements TaskHandler {
 }
 
 // Auto-register handler on import
-TaskRegistry.register(new ShadowITHandler());
+TaskRegistry.register(new ShadowItHandler());

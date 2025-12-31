@@ -7,9 +7,11 @@ interface MobileComplianceArgs extends TaskArgs {
 
 class MobileComplianceHandler implements TaskHandler {
   taskId = "dev:mobile-hygiene";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): MobileComplianceArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: MobileComplianceArgs): ValidationResult {

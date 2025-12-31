@@ -10,6 +10,8 @@ interface CalendarPermissionsArgs extends TaskArgs {}
 
 class CalendarPermissionsHandler implements TaskHandler {
   taskId = "collab:calendar-permissions";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): CalendarPermissionsArgs {
     return {};

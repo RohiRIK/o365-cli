@@ -7,9 +7,11 @@ interface ExternalUserAccessArgs extends TaskArgs {
 
 class ExternalUserAccessHandler implements TaskHandler {
   taskId = "sec:external-user-access";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): ExternalUserAccessArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: ExternalUserAccessArgs): ValidationResult {

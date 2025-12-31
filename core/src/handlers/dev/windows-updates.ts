@@ -20,9 +20,11 @@ interface WindowsUpdateArgs extends TaskArgs {
  */
 class WindowsUpdateHandler implements TaskHandler {
   taskId = "dev:windows-updates";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): WindowsUpdateArgs {
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     return {
       dryRun,

@@ -15,6 +15,8 @@ interface DeviceCleanupArgs extends TaskArgs {
 
 class DeviceCleanupHandler implements TaskHandler {
   taskId = "res:device-cleanup";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): DeviceCleanupArgs {
     const days = parseNumberFlag(rawArgs, "days", 90);

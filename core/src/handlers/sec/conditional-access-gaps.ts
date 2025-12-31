@@ -7,9 +7,11 @@ interface ConditionalAccessGapsArgs extends TaskArgs {
 
 class ConditionalAccessGapsHandler implements TaskHandler {
   taskId = "sec:conditional-access";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): ConditionalAccessGapsArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: ConditionalAccessGapsArgs): ValidationResult {

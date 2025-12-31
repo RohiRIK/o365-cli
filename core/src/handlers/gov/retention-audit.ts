@@ -20,9 +20,11 @@ interface RetentionAuditArgs extends TaskArgs {
  */
 class RetentionAuditHandler implements TaskHandler {
   taskId = "gov:retention-audit";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): RetentionAuditArgs {
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     return {
       dryRun,

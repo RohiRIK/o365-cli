@@ -7,9 +7,11 @@ interface MailboxPermissionsArgs extends TaskArgs {
 
 class MailboxPermissionsHandler implements TaskHandler {
   taskId = "sec:mailbox-permissions";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): MailboxPermissionsArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: MailboxPermissionsArgs): ValidationResult {

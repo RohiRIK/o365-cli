@@ -8,11 +8,13 @@ interface TeamsUsageArgs extends TaskArgs {
 
 class TeamsUsageHandler implements TaskHandler {
   taskId = "res:teams-usage";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): TeamsUsageArgs {
     return {
       days: parseNumberFlag(rawArgs, "days", 90),
-      dryRun: parseBooleanFlag(rawArgs, "dry-run", true)
+      dryRun: parseBooleanFlag(rawArgs, "dry-run", false)
     };
   }
 

@@ -3,7 +3,19 @@ import http from "http";
 import open from "open";
 
 const CLIENT_ID = "14d82eec-204b-4c2f-b7e8-296a70dab67e"; // Microsoft Graph PowerShell
-const SCOPES = ["User.Read", "Directory.Read.All", "Organization.Read.All", "offline_access"];
+const SCOPES = [
+  "User.Read", 
+  "Directory.Read.All", 
+  "Organization.Read.All", 
+  "DeviceManagementConfiguration.Read.All",
+  "DeviceManagementApps.Read.All",
+  "DeviceManagementServiceConfig.Read.All",
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementRBAC.Read.All",
+  "Device.Read.All",
+  "DeviceManagementScripts.Read.All",
+  "offline_access"
+];
 const REDIRECT_URI = "http://localhost:8400";
 const PORT = 8400;
 
@@ -27,6 +39,7 @@ export class AuthService {
       redirect_uri: REDIRECT_URI,
       scope: SCOPES.join(" "),
       response_mode: "query",
+      prompt: "select_account",
       state: state,
       code_challenge: challenge,
       code_challenge_method: "S256",

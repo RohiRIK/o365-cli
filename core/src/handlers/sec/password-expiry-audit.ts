@@ -8,11 +8,13 @@ interface PasswordExpiryArgs extends TaskArgs {
 
 class PasswordExpiryHandler implements TaskHandler {
   taskId = "sec:password-expiry-audit";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): PasswordExpiryArgs {
     return {
       days: parseNumberFlag(rawArgs, "days", 30),
-      dryRun: parseBooleanFlag(rawArgs, "dry-run", true)
+      dryRun: parseBooleanFlag(rawArgs, "dry-run", false)
     };
   }
 

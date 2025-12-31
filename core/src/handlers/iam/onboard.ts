@@ -16,6 +16,8 @@ interface OnboardArgs extends TaskArgs {
 
 class OnboardHandler implements TaskHandler {
   taskId = "iam:onboard";
+  type = "action" as const;
+  status = "beta" as const;
 
   parseArgs(rawArgs: string[]): OnboardArgs {
     const firstname = parseStringFlag(rawArgs, "firstname", "");

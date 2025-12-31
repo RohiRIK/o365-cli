@@ -7,9 +7,11 @@ interface SecurityDefaultsArgs extends TaskArgs {
 
 class SecurityDefaultsHandler implements TaskHandler {
   taskId = "sec:security-defaults-check";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): SecurityDefaultsArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: SecurityDefaultsArgs): ValidationResult {

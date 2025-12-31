@@ -24,12 +24,14 @@ interface AuditLogExportArgs extends TaskArgs {
  */
 class AuditLogExportHandler implements TaskHandler {
   taskId = "gov:audit-log-export";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): AuditLogExportArgs {
     const startDate = parseStringFlag(rawArgs, "start-date", true);
     const endDate = parseStringFlag(rawArgs, "end-date", true);
     const operations = parseStringFlag(rawArgs, "operations", false);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
 
     if (!startDate || !endDate) {
       throw new Error("Missing required arguments: --start-date and --end-date");

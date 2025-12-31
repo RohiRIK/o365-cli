@@ -7,9 +7,11 @@ interface DeviceEncryptionArgs extends TaskArgs {
 
 class DeviceEncryptionHandler implements TaskHandler {
   taskId = "dev:device-encryption";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): DeviceEncryptionArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: DeviceEncryptionArgs): ValidationResult {

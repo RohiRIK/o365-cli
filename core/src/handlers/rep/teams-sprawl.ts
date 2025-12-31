@@ -13,6 +13,8 @@ interface TeamsSprawlArgs extends TaskArgs {
 
 class TeamsSprawlHandler implements TaskHandler {
   taskId = "rep:teams-sprawl";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): TeamsSprawlArgs {
     const days = parseNumberFlag(rawArgs, "days", 90);

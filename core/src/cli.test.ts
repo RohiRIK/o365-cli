@@ -22,14 +22,14 @@ describe("CLI Entry Point", () => {
 
   it("should have a version", async () => {
     await setupCLI(program);
-    expect(program.version()).toBe("0.0.1");
+    expect(program.version()).toBe("1.0.0");
   });
 
   it("should have a 'run' command", async () => {
     await setupCLI(program);
     const runCmd = program.commands.find((cmd) => cmd.name() === "run");
     expect(runCmd).toBeDefined();
-    expect(runCmd?.description()).toBe("Run a specific task module");
+    expect(runCmd?.description()).toBe("Run a module (interactive if name is omitted)");
   });
 
   it("should fail when run is called without arguments", async () => {

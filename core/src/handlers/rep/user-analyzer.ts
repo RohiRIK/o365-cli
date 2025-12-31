@@ -13,6 +13,8 @@ interface UserAnalyzerArgs extends TaskArgs {
 
 class UserAnalyzerHandler implements TaskHandler {
   taskId = "rep:user-analyzer";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): UserAnalyzerArgs {
     const user = parseStringFlag(rawArgs, "user", "");

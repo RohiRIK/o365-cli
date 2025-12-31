@@ -15,10 +15,16 @@ export const CATEGORY_MAP: Record<string, { name: string; icon: string }> = {
 };
 
 /**
- * Gets a list of unique categories from registered task IDs
+ * Gets a list of unique categories from registered task IDs, optionally filtered by status
  */
-export function getCategoryChoices(taskIds: string[]) {
-    const prefixes = new Set(taskIds.map(id => id.split(":")[0]));
+export function getCategoryChoices(taskIds: string[], showAll: boolean = true) {
+    const filteredIds = taskIds.filter(id => {
+        if (showAll) return true;
+        const handler = TaskRegistry.getHandler(id);
+        return handler?.status === "prod";
+    });
+
+    const prefixes = new Set(filteredIds.map(id => id.split(":")[0]));
     return Array.from(prefixes).sort().map(prefix => {
         const meta = CATEGORY_MAP[prefix] || { name: prefix.toUpperCase(), icon: "⚙️" };
         return {
@@ -29,9 +35,9 @@ export function getCategoryChoices(taskIds: string[]) {
 }
 
 /**
- * Gets modules filtered by a specific category
+ * Gets modules filtered by a specific category and optionally status
  */
-export function getModulesInCategory(taskIds: string[], category: string) {
+export function getModulesInCategory(taskIds: string[], category: string, showAll: boolean = true) {
     if (category === "sys") {
         return [
             { name: `  ${chalk.cyan("→")} sys:settings`, value: "sys:settings", description: "Manage logins and accounts" },
@@ -40,10 +46,21 @@ export function getModulesInCategory(taskIds: string[], category: string) {
     }
     return taskIds
         .filter(id => id.startsWith(`${category}:`))
+        .filter(id => {
+            if (showAll) return true;
+            const handler = TaskRegistry.getHandler(id);
+            return handler?.status === "prod";
+        })
         .sort()
-        .map(id => ({
-            name: `  ${chalk.cyan("→")} ${id}`,
-            value: id,
-            description: `Run module ${id}`
-        }));
+        .map(id => {
+            const handler = TaskRegistry.getHandler(id);
+            const statusTag = showAll ? ` [${handler?.status?.toUpperCase()}]` : "";
+            return {
+                name: `  ${chalk.cyan("→")} ${id}${chalk.dim(statusTag)}`,
+                value: id,
+                description: `Run module ${id}`
+            };
+        });
 }
+
+import { TaskRegistry } from "../handlers/registry";

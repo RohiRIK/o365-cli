@@ -58,9 +58,9 @@ export class GraphService {
   /**
    * Fetch a single resource
    */
-  public static async get<T = any>(endpoint: string): Promise<T> {
+  public static async get<T = any>(endpoint: string, version: 'v1.0' | 'beta' = 'v1.0'): Promise<T> {
     const client = this.getClient();
-    return await client.api(endpoint).get();
+    return await client.api(endpoint).version(version).get();
   }
 
   /**
@@ -69,19 +69,18 @@ export class GraphService {
    */
   public static async fetchAll<T = any>(
     endpoint: string,
-    selectOrOptions?: string | { select?: string, filter?: string, expand?: string, top?: number }
+    selectOrOptions?: string | { select?: string, filter?: string, expand?: string, top?: number },
+    version: 'v1.0' | 'beta' = 'v1.0'
   ): Promise<T[]> {
     const client = this.getClient();
     let results: T[] = [];
 
-    let request = client.api(endpoint);
+    let request = client.api(endpoint).version(version);
 
     // Handle both string and object syntax
     if (typeof selectOrOptions === 'string') {
-      // Legacy string syntax: fetchAll(endpoint, "field1,field2,field3")
       request = request.select(selectOrOptions);
     } else if (selectOrOptions && typeof selectOrOptions === 'object') {
-      // Object syntax: fetchAll(endpoint, { select: "fields", filter: "...", ... })
       if (selectOrOptions.select) request = request.select(selectOrOptions.select);
       if (selectOrOptions.filter) request = request.filter(selectOrOptions.filter);
       if (selectOrOptions.expand) request = request.expand(selectOrOptions.expand);
@@ -93,7 +92,6 @@ export class GraphService {
 
     // Follow pagination
     while (response["@odata.nextLink"]) {
-      IPC.progress(`Fetching next page of results...`, Math.min(99, results.length / 10)); // Rough progress
       response = await client.api(response["@odata.nextLink"]).get();
       results = results.concat(response.value || []);
     }

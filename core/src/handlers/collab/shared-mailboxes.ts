@@ -10,6 +10,8 @@ interface SharedMailboxesArgs extends TaskArgs {}
 
 class SharedMailboxesHandler implements TaskHandler {
   taskId = "collab:shared-mailboxes";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): SharedMailboxesArgs {
     return {};

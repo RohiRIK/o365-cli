@@ -13,6 +13,8 @@ interface LicenseReclaimArgs extends TaskArgs {
 
 class LicenseReclaimHandler implements TaskHandler {
   taskId = "iam:license-reclaim";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): LicenseReclaimArgs {
     const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);

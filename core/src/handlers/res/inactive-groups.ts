@@ -8,6 +8,8 @@ interface InactiveGroupsArgs extends TaskArgs {
 
 class InactiveGroupsHandler implements TaskHandler {
   taskId = "res:inactive-groups";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): InactiveGroupsArgs {
     return {

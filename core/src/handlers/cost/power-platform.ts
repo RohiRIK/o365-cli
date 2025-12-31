@@ -11,9 +11,11 @@ interface PowerPlatformArgs extends TaskArgs {
 
 class PowerPlatformHandler implements TaskHandler {
   taskId = "cost:power-platform";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): PowerPlatformArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: PowerPlatformArgs): ValidationResult {

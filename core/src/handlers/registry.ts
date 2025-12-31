@@ -24,6 +24,12 @@ export interface TaskHandler {
   /** Unique task identifier matching modules.toml (e.g., "iam:offboard") */
   taskId: string;
 
+  /** Task type: 'audit' for read-only reports, 'action' for mutating operations */
+  type: "audit" | "action";
+
+  /** Readiness status: 'prod', 'beta', or 'draft' */
+  status: "prod" | "beta" | "draft";
+
   /** Execute the task with parsed arguments */
   execute(args: TaskArgs): Promise<void>;
 
@@ -50,6 +56,13 @@ export class TaskRegistry {
       console.warn(`TaskRegistry: Overwriting existing handler for ${handler.taskId}`);
     }
     this.handlers.set(handler.taskId, handler);
+  }
+
+  /**
+   * Get a registered task handler by ID
+   */
+  static getHandler(taskId: string): TaskHandler | undefined {
+    return this.handlers.get(taskId);
   }
 
   /**

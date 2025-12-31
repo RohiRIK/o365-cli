@@ -7,9 +7,11 @@ interface BitLockerAuditArgs extends TaskArgs {
 
 class BitLockerAuditHandler implements TaskHandler {
   taskId = "dev:bitlocker-audit";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): BitLockerAuditArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: BitLockerAuditArgs): ValidationResult {

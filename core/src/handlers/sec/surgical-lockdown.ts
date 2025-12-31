@@ -13,6 +13,8 @@ interface SurgicalLockdownArgs extends TaskArgs {
 
 class SurgicalLockdownHandler implements TaskHandler {
   taskId = "sec:surgical-lockdown";
+  type = "action" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): SurgicalLockdownArgs {
     const user = parseStringFlag(rawArgs, "user", "");

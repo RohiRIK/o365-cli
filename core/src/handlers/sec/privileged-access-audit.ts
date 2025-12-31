@@ -7,9 +7,11 @@ interface PrivilegedAccessArgs extends TaskArgs {
 
 class PrivilegedAccessHandler implements TaskHandler {
   taskId = "sec:privileged-access";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): PrivilegedAccessArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: PrivilegedAccessArgs): ValidationResult {

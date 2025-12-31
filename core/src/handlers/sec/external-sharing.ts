@@ -7,9 +7,11 @@ interface ExternalSharingArgs extends TaskArgs {
 
 class ExternalSharingHandler implements TaskHandler {
   taskId = "sec:external-sharing";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): ExternalSharingArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: ExternalSharingArgs): ValidationResult {

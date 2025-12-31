@@ -7,9 +7,11 @@ interface ComplianceScorecardArgs extends TaskArgs {
 
 class ComplianceScorecardHandler implements TaskHandler {
   taskId = "rep:compliance-scorecard";
+  type = "audit" as const;
+  status = "draft" as const;
 
   parseArgs(rawArgs: string[]): ComplianceScorecardArgs {
-    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", true) };
+    return { dryRun: parseBooleanFlag(rawArgs, "dry-run", false) };
   }
 
   validate(args: ComplianceScorecardArgs): ValidationResult {
