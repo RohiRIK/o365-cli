@@ -1,3 +1,7 @@
+import boxen from "boxen";
+import chalk from "chalk";
+import { theme } from "../utils/theme";
+
 export class NavigationService {
   private stack: string[] = ["Control Center"];
 
@@ -37,5 +41,35 @@ export class NavigationService {
    */
   getCurrentLocation(): string {
     return this.stack[this.stack.length - 1];
+  }
+
+  /**
+   * Renders the breadcrumb path with visual hierarchy.
+   */
+  renderBreadcrumbs(): string {
+    return this.stack
+      .map((loc, index) => {
+        const isLast = index === this.stack.length - 1;
+        return isLast ? theme.primary.bold(loc) : theme.muted(loc);
+      })
+      .join(theme.dim(" › "));
+  }
+
+  /**
+   * Renders a styled header using boxen.
+   */
+  renderHeader(): string {
+    const breadcrumbs = this.renderBreadcrumbs();
+    const title = chalk.bold("O365 CLI");
+    const content = `${title}\n\n${theme.dim("⚡")} ${breadcrumbs}`;
+
+    return boxen(content, {
+      padding: 1,
+      margin: { top: 1, bottom: 1, left: 0, right: 0 },
+      borderStyle: "round",
+      borderColor: "#8b5cf6",
+      dimBorder: true,
+      width: 60,
+    });
   }
 }
