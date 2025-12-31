@@ -88,61 +88,66 @@ async function handleLoginMenu() {
     nav.push("System Settings");
     nav.refresh();
 
-    const session = await getSessionDetails("common");
-    
-    if (session) {
-        console.log(theme.primary.bold("👤 Current Session Details:"));
-        console.log(`  ${chalk.bold("Organization:")} ${chalk.yellow(session.orgName || "N/A")}`);
-        console.log(`  ${chalk.bold("User:")}         ${session.user}`);
-        console.log(`  ${chalk.bold("Email:")}        ${session.email}`);
-        console.log(`  ${chalk.bold("Tenant:")}       ${session.tenant}`);
-        if (session.issuedAt) console.log(`  ${chalk.bold("Issued At:")}     ${session.issuedAt.toLocaleString()}`);
-        if (session.expires) {
-            const isExpired = session.expires < new Date();
-            const color = isExpired ? chalk.red : chalk.green;
-            console.log(`  ${chalk.bold("Expires At:")}    ${color(session.expires.toLocaleString())}`);
-            console.log(`  ${chalk.bold("Status:")}        ${color(isExpired ? "Expired" : "Active")}`);
-        }
-        console.log(`  ${chalk.bold("Scopes:")}        ${theme.dim(session.scopes.join(", "))}`);
-        console.log("");
+    try {
+        const session = await getSessionDetails("common");
+        
+        if (session) {
+            console.log(theme.primary.bold("👤 Current Session Details:"));
+            console.log(`  ${chalk.bold("Organization:")} ${chalk.yellow(session.orgName || "N/A")}`);
+            console.log(`  ${chalk.bold("User:")}         ${session.user}`);
+            console.log(`  ${chalk.bold("Email:")}        ${session.email}`);
+            console.log(`  ${chalk.bold("Tenant:")}       ${session.tenant}`);
+            if (session.issuedAt) console.log(`  ${chalk.bold("Issued At:")}     ${session.issuedAt.toLocaleString()}`);
+            if (session.expires) {
+                const isExpired = session.expires < new Date();
+                const color = isExpired ? chalk.red : chalk.green;
+                console.log(`  ${chalk.bold("Expires At:")}    ${color(session.expires.toLocaleString())}`);
+                console.log(`  ${chalk.bold("Status:")}        ${color(isExpired ? "Expired" : "Active")}`);
+            }
+            console.log(`  ${chalk.bold("Scopes:")}        ${theme.dim(session.scopes.join(", "))}`);
+            console.log("");
 
-        const choice = await select({
-            message: "Account Management:",
-            choices: [
-                { name: "🔄 Refresh Session", value: "refresh" },
-                { name: "🔑 Switch Tenant / New Login", value: "switch" },
-                { name: "🗑️ Logout (Clear Cache)", value: "logout" },
-                { name: "🔙 Back to Menu", value: "back" }
-            ],
-        });
+            const choice = await select({
+                message: "Account Management:",
+                choices: [
+                    { name: "🔄 Refresh Session", value: "refresh" },
+                    { name: "🔑 Switch Tenant / New Login", value: "switch" },
+                    { name: "🗑️ Logout (Clear Cache)", value: "logout" },
+                    { name: "🔙 Back to Menu", value: "back" }
+                ],
+            });
 
-        if (choice === "refresh") {
-            await tokenStorage.deleteToken("user@common");
-            await ensureAuthenticated("common");
-        } else if (choice === "switch") {
-            const tenant = await input({ message: "Enter Tenant ID or domain:", default: "common" });
-            await ensureAuthenticated(tenant);
-        } else if (choice === "logout") {
-            await tokenStorage.deleteToken("user@common");
-            await tokenStorage.deleteToken("user@common:refresh");
-            cachedOrgName = null; // Clear org name cache
-            printSuccess("Logged out successfully.");
+            if (choice === "refresh") {
+                await tokenStorage.deleteToken("user@common");
+                await ensureAuthenticated("common");
+            } else if (choice === "switch") {
+                const tenant = await input({ message: "Enter Tenant ID or domain:", default: "common" });
+                await ensureAuthenticated(tenant);
+            } else if (choice === "logout") {
+                await tokenStorage.deleteToken("user@common");
+                await tokenStorage.deleteToken("user@common:refresh");
+                cachedOrgName = null; // Clear org name cache
+                printSuccess("Logged out successfully.");
+            }
+        } else {
+            printInfo("No active session found.");
+            const start = await select({
+                message: "What would you like to do?",
+                choices: [
+                    { name: "🔐 Login to Microsoft 365", value: "login" },
+                    { name: "🔙 Back to Menu", value: "back" }
+                ],
+            });
+            if (start === "login") {
+                const tenant = await input({ message: "Enter Tenant ID:", default: "common" });
+                await ensureAuthenticated(tenant);
+            }
         }
-    } else {
-        printInfo("No active session found.");
-        const start = await select({
-            message: "What would you like to do?",
-            choices: [
-                { name: "🔐 Login to Microsoft 365", value: "login" },
-                { name: "🔙 Back to Menu", value: "back" }
-            ],
-        });
-        if (start === "login") {
-            const tenant = await input({ message: "Enter Tenant ID:", default: "common" });
-            await ensureAuthenticated(tenant);
-        }
+    } catch (e) {
+        // Ignore cancellation
+    } finally {
+        nav.pop();
     }
-    nav.pop();
 }
 
 /**
@@ -209,7 +214,11 @@ async function showInteractiveMenu(showAll: boolean = false) {
                     });
                 });
                 console.log("");
-                await input({ message: "Press Enter to continue..." });
+                try {
+                    await input({ message: "Press Enter to continue..." });
+                } catch {
+                    // Ignore cancellation
+                }
                 await showInteractiveMenu(showAll);
                 break;
             }
