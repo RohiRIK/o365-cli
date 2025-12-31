@@ -54,6 +54,16 @@ export class IPC {
     }
   }
 
+  // Send a standalone table
+  static table(headers: string[], rows: any[][]) {
+    if (this.mode === 'json') {
+        console.log(JSON.stringify({ type: 'table', version: this.VERSION, headers, rows }));
+    } else {
+        this.lastTable = { headers, rows };
+        console.log("\n" + formatTable(headers, rows));
+    }
+  }
+
   // Send real-time log
   static log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
     if (this.mode === 'json') {

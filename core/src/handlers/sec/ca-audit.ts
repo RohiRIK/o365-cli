@@ -49,26 +49,43 @@ class CaAuditHandler implements TaskHandler {
   }
 
   async execute(args: CaAuditArgs): Promise<void> {
+    IPC.progress("Fetching Conditional Access policies...", 10);
     const policies = await auditCAPolicies(args);
     
-    if (policies.length === 0) {
-      console.log("\nNo policies found matching the criteria.");
+    if (!policies || policies.length === 0) {
+      IPC.log("No Conditional Access policies found matching the criteria.", "warn");
       return;
     }
 
-    const table = renderCAPoliciesTable(policies);
-    console.log("\n" + table);
+    IPC.progress(`Analyzing ${policies.length} policies...`, 50);
     
-    // Store for potential export (IPC protocol)
     const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
-    const rows = policies.map(p => [
+    const tableRows = policies.map(p => {
+      const pData = [
+        p.displayName || "Untitled",
+        p.state,
+        summarizeAssignments(p.conditions?.users),
+        summarizeConditions(p.conditions),
+        summarizeGrantControls(p.grantControls)
+      ];
+      return pData;
+    });
+
+    IPC.progress("Rendering audit table...", 90);
+    IPC.table(headers, tableRows);
+    
+    // Store raw data for CSV export via lastTable
+    const rawRows = policies.map(p => [
       p.displayName,
       p.state,
       JSON.stringify(p.conditions?.users),
       JSON.stringify(p.conditions),
       JSON.stringify(p.grantControls)
     ]);
-    IPC.table(headers, rows);
+    IPC.success({ 
+      message: `Audit complete. Found ${policies.length} policies.`,
+      table: { headers, rows: rawRows } 
+    });
   }
 }
 
