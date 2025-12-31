@@ -8,7 +8,7 @@
     - Context: Create `core/src/services/navigation.ts` and `core/src/utils/theme.ts`.
     - Sub-task: Write unit tests for `NavigationService` (breadcrumb state tracking).
     - Sub-task: Implement `Theme` utility with Violet (#8b5cf6) and Zinc hex codes.
-- [ ] Task: Implement Graceful Shutdown & Cursor Management
+- [x] Task: Implement Graceful Shutdown & Cursor Management (2aa76d0)
     - Context: Update `core/src/cli.ts` or a new process utility.
     - Sub-task: Implement SIGINT (Ctrl+C) interception to restore terminal state and exit cleanly.
 - [ ] Task: Conductor - User Manual Verification 'Core Foundation' (Protocol in workflow.md)
