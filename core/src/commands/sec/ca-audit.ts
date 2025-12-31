@@ -1,3 +1,55 @@
+import { fetchCAPolicies } from "../../handlers/sec/ca-audit";
+import { formatTable } from "../../utils/output";
+import chalk from "chalk";
+
+/**
+ * Main audit logic for CA policies
+ */
+export async function auditCAPolicies(args: { analyze: boolean; state?: string; target?: string }) {
+  const policies = await fetchCAPolicies();
+  
+  let filtered = policies;
+  
+  // Filter by state
+  if (args.state) {
+    filtered = filtered.filter((p: any) => p.state === args.state);
+  }
+  
+  // Filter by target (simplified for now: check if UPN/ID is in included users)
+  if (args.target) {
+    filtered = filtered.filter((p: any) => {
+      const users = p.conditions?.users;
+      return users?.includeUsers?.includes(args.target) || 
+             users?.includeUsers?.includes("All") ||
+             users?.includeGroups?.includes(args.target) ||
+             users?.includeRoles?.includes(args.target);
+    });
+  }
+  
+  return filtered;
+}
+
+/**
+ * Renders the policy list as a table
+ */
+export function renderCAPoliciesTable(policies: any[]): string {
+  const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
+  
+  const rows = policies.map(p => {
+    const stateColor = p.state === "enabled" ? chalk.green : (p.state === "disabled" ? chalk.red : chalk.yellow);
+    
+    return [
+      p.displayName || "Untitled",
+      stateColor(p.state),
+      summarizeAssignments(p.conditions?.users),
+      summarizeConditions(p.conditions),
+      summarizeGrantControls(p.grantControls)
+    ];
+  });
+  
+  return formatTable(headers, rows);
+}
+
 /**
  * Normalizes user assignments for display
  */

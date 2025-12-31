@@ -7,6 +7,8 @@ import {
   parseStringFlag,
 } from "../registry";
 import { GraphService } from "../../services/graph";
+import { auditCAPolicies, renderCAPoliciesTable } from "../../commands/sec/ca-audit";
+import { IPC } from "../../utils/ipc";
 
 export interface CaAuditArgs extends TaskArgs {
   analyze: boolean;
@@ -29,7 +31,8 @@ class CaAuditHandler implements TaskHandler {
 
   parseArgs(rawArgs: string[]): CaAuditArgs {
     return {
-      dryRun: parseBooleanFlag(rawArgs, "dry-run", true),
+      // Audit modules are always read-only, no dry-run flag needed
+      dryRun: true, 
       analyze: parseBooleanFlag(rawArgs, "analyze", false),
       state: parseStringFlag(rawArgs, "state"),
       target: parseStringFlag(rawArgs, "target"),
@@ -46,8 +49,26 @@ class CaAuditHandler implements TaskHandler {
   }
 
   async execute(args: CaAuditArgs): Promise<void> {
-    console.log("Executing CA Audit with args:", args);
-    // Implementation to follow in later tasks
+    const policies = await auditCAPolicies(args);
+    
+    if (policies.length === 0) {
+      console.log("\nNo policies found matching the criteria.");
+      return;
+    }
+
+    const table = renderCAPoliciesTable(policies);
+    console.log("\n" + table);
+    
+    // Store for potential export (IPC protocol)
+    const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
+    const rows = policies.map(p => [
+      p.displayName,
+      p.state,
+      JSON.stringify(p.conditions?.users),
+      JSON.stringify(p.conditions),
+      JSON.stringify(p.grantControls)
+    ]);
+    IPC.table(headers, rows);
   }
 }
 
