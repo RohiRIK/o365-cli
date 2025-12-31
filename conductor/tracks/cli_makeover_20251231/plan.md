@@ -35,6 +35,8 @@
 - [x] Task: Refactor Interactive Menus to Navigation Service (9acfa9f)
     - Context: Migration of `showInteractiveMenu` and `runModuleSelector` in `core/src/cli.ts`.
     - Sub-task: Replace manual header prints and `console.clear()` calls with Service-driven calls.
-- [ ] Task: Final Polish & UX Audit
+- [x] Task: Final Polish & UX Audit (4b052a5)
+    - Sub-task: Verify consistent application of the "Violet & Zinc" theme across all system settings and tasks.
+    - Sub-task: Add "Goodbye" message on exit.
     - Sub-task: Verify consistent application of the "Violet & Zinc" theme across all system settings and tasks.
 - [ ] Task: Conductor - User Manual Verification 'Global Orchestration' (Protocol in workflow.md)
