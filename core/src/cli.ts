@@ -230,10 +230,12 @@ async function showInteractiveMenu(showAll: boolean = false) {
                 break;
             }
             case "exit": {
+                console.log("\n" + theme.primary("👋 Goodbye!"));
                 process.exit(0);
             }
         }
     } catch (e: any) {
+        console.log("\n" + theme.primary("👋 Goodbye!"));
         process.exit(0);
     }
 }
