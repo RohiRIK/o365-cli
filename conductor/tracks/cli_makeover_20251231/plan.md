@@ -40,4 +40,4 @@
     - Sub-task: Add "Goodbye" message on exit.
     - Sub-task: Handle ESC key in submenus to go back instead of crash.
     - Sub-task: Verify consistent application of the "Violet & Zinc" theme across all system settings and tasks.
-- [ ] Task: Conductor - User Manual Verification 'Global Orchestration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Global Orchestration' (Protocol in workflow.md) (b0cfdd8)
