@@ -69,8 +69,26 @@ async function ensureAuthenticated(tenantId: string = "common"): Promise<string>
     const account = `user@${tenantId}`;
     let token = await tokenStorage.getToken(account);
 
-    if (!token) {
-        printInfo(`No active session found. Initializing login...`);
+    let isExpired = false;
+    if (token) {
+        try {
+            const decoded = jwtDecode<DecodedToken>(token);
+            if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+                isExpired = true;
+            }
+        } catch {
+            isExpired = true;
+        }
+    }
+
+    if (!token || isExpired) {
+        if (isExpired) {
+            printInfo("Session expired. Re-authenticating...");
+            await tokenStorage.deleteToken(account);
+        } else {
+            printInfo("No active session found. Initializing login...");
+        }
+        
         const authService = new AuthService(tenantId);
         const { accessToken, refreshToken } = await authService.login();
         
@@ -259,73 +277,77 @@ async function interactiveModulePicker(showAll: boolean = false): Promise<string
 }
 
 async function showInteractiveMenu(showAll: boolean = false) {
-    nav.clear();
-    nav.refresh();
+    let running = true;
     
-    try {
-        const action = await select({
-            message: "Control Center:",
-            choices: [
-                new Separator(theme.primary("─── TASKS ───")),
-                { name: "⚡ Run a Module", value: "run" },
-                { name: "📋 List All Modules", value: "list" },
-                new Separator(theme.primary("─── SYSTEM ───")),
-                { name: "⚙️  Settings & Accounts", value: "settings" },
-                new Separator(theme.dim("──────────────────────────────")),
-                { name: theme.dim("🚪 Exit"), value: "exit" }
-            ],
-        });
+    while (running) {
+        nav.clear();
+        nav.refresh();
+        
+        try {
+            const action = await select({
+                message: "Control Center:",
+                choices: [
+                    new Separator(theme.primary("─── TASKS ───")),
+                    { name: "⚡ Run a Module", value: "run" },
+                    { name: "📋 List All Modules", value: "list" },
+                    new Separator(theme.primary("─── SYSTEM ───")),
+                    { name: "⚙️  Settings & Accounts", value: "settings" },
+                    new Separator(theme.dim("──────────────────────────────")),
+                    { name: theme.dim("🚪 Exit"), value: "exit" }
+                ],
+            });
 
-        switch (action) {
-            case "list": {
-                nav.push("List Modules");
-                nav.refresh();
-                const tasks = TaskRegistry.getRegisteredTasks();
-                const categories = getCategoryChoices(tasks, showAll);
-                categories.forEach(cat => {
-                    console.log(chalk.yellow(`\n${cat.name}`));
-                    getModulesInCategory(tasks, cat.value, showAll).forEach(m => {
-                        console.log(m.name);
+            switch (action) {
+                case "list": {
+                    nav.push("List Modules");
+                    nav.refresh();
+                    const tasks = TaskRegistry.getRegisteredTasks();
+                    const categories = getCategoryChoices(tasks, showAll);
+                    categories.forEach(cat => {
+                        console.log(chalk.yellow.bold(`\n${cat.name}`));
+                        getModulesInCategory(tasks, cat.value, showAll).forEach(m => {
+                            console.log(m.name);
+                        });
                     });
-                });
-                console.log("");
-                try {
-                    await input({ message: "Press Enter to continue..." });
-                } catch {
-                    // Ignore cancellation
-                }
-                await showInteractiveMenu(showAll);
-                break;
-            }
-            case "run": {
-                const moduleId = await interactiveModulePicker(showAll);
-                if (moduleId !== "exit") {
-                    const handler = TaskRegistry.getHandler(moduleId);
-                    const args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
-                    await runTask(moduleId, args);
+                    console.log("");
                     try {
-                        await input({ message: "\nTask completed. Press Enter to return to menu..." });
+                        await input({ message: "Press Enter to continue..." });
                     } catch {
-                        // Ignore cancellation
+                        // Ignore ESC/Cancel
                     }
+                    break;
                 }
-                await showInteractiveMenu(showAll);
-                break;
+                case "run": {
+                    const moduleId = await interactiveModulePicker(showAll);
+                    if (moduleId !== "exit") {
+                        const handler = TaskRegistry.getHandler(moduleId);
+                        const args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
+                        await runTask(moduleId, args);
+                        try {
+                            await input({ message: "\nTask completed. Press Enter to return to menu..." });
+                        } catch {
+                            // Ignore ESC/Cancel
+                        }
+                    }
+                    break;
+                }
+                case "settings": {
+                    await handleLoginMenu();
+                    break;
+                }
+                case "exit": {
+                    running = false;
+                    break;
+                }
             }
-            case "settings": {
-                await handleLoginMenu();
-                await showInteractiveMenu(showAll);
-                break;
-            }
-            case "exit": {
-                console.log("\n" + theme.primary("👋 Goodbye!"));
-                process.exit(0);
-            }
+        } catch (e: any) {
+            // Treat ESC or Error as Exit from main menu
+            running = false;
         }
-    } catch (e: any) {
-        console.log("\n" + theme.primary("👋 Goodbye!"));
-        process.exit(0);
     }
+
+    console.log("\n" + theme.primary("👋 Goodbye!"));
+    // No process.exit() - allow natural return and terminal restoration
 }
 
 async function showStatus() {

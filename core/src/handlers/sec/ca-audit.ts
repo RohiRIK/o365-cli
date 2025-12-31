@@ -73,18 +73,18 @@ class CaAuditHandler implements TaskHandler {
       flattenedData.push(await flattenPolicyForExport(p));
     }
     
-    // 2. Prepare UI Table rows
+    // 2. Prepare UI Table rows (Compact Summary for CLI)
     IPC.progress("Preparing audit table...", 80);
     const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
-    const tableRows = await Promise.all(policies.map(async p => {
+    const tableRows = policies.map(p => {
       return [
         p.displayName || "Untitled",
         p.state,
-        await summarizeAssignments(p.conditions?.users, 2), // Resolved names
-        await summarizeConditions(p.conditions, 2),       // Resolved names
+        summarizeAssignments(p.conditions?.users), // Compact (synchronous)
+        summarizeConditions(p.conditions),       // Compact (synchronous)
         summarizeGrantControls(p.grantControls)
       ];
-    }));
+    });
 
     // 3. Render Table & Finalize
     IPC.progress("Audit complete", 100);

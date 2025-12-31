@@ -13,65 +13,83 @@ const nameCache = new Map<string, string>([
   ["Office365", "Office 365"],
   ["MicrosoftAdminPortals", "Microsoft Admin Portals"],
   ["00000003-0000-0000-c000-000000000000", "Microsoft Graph"],
-  ["00000003-0000-0ff1-ce00-000000000000", "Office 365 SharePoint Online"],
-  ["00000002-0000-0000-c000-000000000000", "Microsoft Azure AD"],
-  ["4498dc2d-29eb-4f58-bd02-075b9a8626f8", "Microsoft Azure Management"],
-  ["797f4846-ba00-4fd7-ba43-dac1f8f63013", "Microsoft Azure Service Management"]
+  ["00000003-0000-0ff1-ce00-000000000000", "SharePoint Online"],
+  ["00000002-0000-0000-c000-000000000000", "Azure AD"],
+  ["4498dc2d-29eb-4f58-bd02-075b9a8626f8", "Azure Management"],
+  ["797f4846-ba00-4fd7-ba43-dac1f8f63013", "Azure Service Management"],
+  ["c30fbda1-e3f9-4ff6-a1f1-38899dd23b43", "Azure Portal"],
+  ["d4ebce55-015a-49b5-a083-c84d1797ae8c", "Microsoft Teams"],
+  // Common Directory Roles
+  ["62e90394-69f5-4237-9190-012177145e10", "Global Administrator"],
+  ["fe930be0-5e62-47db-91af-98c3a49a38b1", "User Administrator"],
+  ["b0f527b0-502a-4545-93e3-65d014f465ec", "Security Administrator"]
 ]);
 
 /**
  * Resolves a list of IDs to their human-readable names/UPNs
- * @param limit Optional limit for display (useful for CLI tables)
  */
-async function resolveIds(ids: string[], limit: number = 999): Promise<string> {
+async function resolveIds(ids: string[]): Promise<string> {
   if (!ids || ids.length === 0) return "None";
   
-  const displayIds = ids.slice(0, limit);
-  const resolved = await Promise.all(displayIds.map(async id => {
+  const resolved = await Promise.all(ids.map(async id => {
     if (nameCache.has(id)) return nameCache.get(id)!;
     
     // Attempt resolution via Graph
     try {
       if (id.length > 20) { // Likely a GUID or Template ID
-        // Try user
+        // 1. Try User
         try {
           const u = await GraphService.get(`/users/${id}?$select=userPrincipalName`);
           if (u?.userPrincipalName) {
             nameCache.set(id, u.userPrincipalName);
             return u.userPrincipalName;
           }
-        } catch {} // Ignore errors, fall through to next attempt
+        } catch {} // Ignore errors, try next
 
-        // Try group
+        // 2. Try Application/ServicePrincipal (check by appId first, then id)
+        try {
+          const sps = await GraphService.get(`/servicePrincipals?$filter=appId eq '${id}' or id eq '${id}'&$select=displayName`);
+          if (sps?.value?.length > 0) {
+            const name = sps.value[0].displayName;
+            nameCache.set(id, name);
+            return name;
+          }
+        } catch {} // Ignore errors, try next
+
+        // 3. Try Group
         try {
           const g = await GraphService.get(`/groups/${id}?$select=displayName`);
           if (g?.displayName) {
             nameCache.set(id, g.displayName);
             return g.displayName;
           }
-        } catch {} // Ignore errors
+        } catch {} // Ignore errors, try next
 
-        // Try directory role
+        // 4. Try Named Location
+        try {
+          const loc = await GraphService.get(`/identity/conditionalAccess/namedLocations/${id}?$select=displayName`);
+          if (loc?.displayName) {
+            nameCache.set(id, loc.displayName);
+            return loc.displayName;
+          }
+        } catch {} // Ignore errors, try next
+
+        // 5. Try Directory Role
         try {
           const r = await GraphService.get(`/directoryRoles/${id}?$select=displayName`);
           if (r?.displayName) {
             nameCache.set(id, r.displayName);
             return r.displayName;
           }
-        } catch {} // Ignore errors
+        } catch {} // Ignore errors, try next
       }
-      return id; // Return original ID if resolution fails
-    } catch (e) {
-      console.error(`Error resolving ID ${id}:`, e);
-      return id; // Return original ID on unexpected error
+      return id; // Return original ID if no resolution found
+    } catch { // Catch any unexpected errors during Graph calls
+      return id;
     }
   }));
 
-  let result = resolved.join("; ");
-  if (ids.length > limit) {
-    result += ` (+${ids.length - limit} more)`;
-  }
-  return result;
+  return resolved.join("; ");
 }
 
 /**
@@ -83,20 +101,24 @@ function summarizeSessionControls(session: any): string {
 
   if (session.signInFrequency) {
     const freq = session.signInFrequency;
-    parts.push(`Freq: ${freq.value} ${freq.type}`);
+    if (freq.value && freq.type) {
+        parts.push(`Sign-in Freq: ${freq.value} ${freq.type}`);
+    }
   }
   
   if (session.persistentBrowser?.mode === "always") {
-    parts.push("Persistent Browser");
+    parts.push("Persistent Session: Enabled");
   }
   
   if (session.applicationEnforcedRestrictions) {
-    parts.push("App Enforced Restrictions");
+    parts.push("App Restrictions: Enforced");
   }
   
   const casType = session.cloudAppSecurity?.cloudAppSecurityType;
   if (casType && casType !== "none") {
-    parts.push(`MCAS: ${casType}`);
+    const casLabel = casType === "monitorOnly" ? "Monitor Only" :
+                     casType === "mcasConfigured" ? "Enforce Policies" : casType;
+    parts.push(`Defender for Cloud Apps: ${casLabel}`);
   }
   
   if (session.signInContextClassReferences?.length) {
@@ -119,7 +141,7 @@ export async function auditCAPolicies(args: { analyze: boolean; state?: string; 
     filtered = filtered.filter((p: any) => p.state === args.state);
   }
   
-  // Filter by target (simplified for now: check if UPN/ID is in included users)
+  // Filter by target
   if (args.target) {
     filtered = filtered.filter((p: any) => {
       const users = p.conditions?.users;
@@ -134,28 +156,28 @@ export async function auditCAPolicies(args: { analyze: boolean; state?: string; 
 }
 
 /**
- * Renders the policy list as a table
+ * Renders the policy list as a table (Compact Summary for CLI)
  */
-export async function renderCAPoliciesTable(policies: any[]): Promise<string> {
+export function renderCAPoliciesTable(policies: any[]): string {
   const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
   
-  const rows = await Promise.all(policies.map(async p => {
+  const rows = policies.map(p => {
     const stateColor = p.state === "enabled" ? chalk.green : (p.state === "disabled" ? chalk.red : chalk.yellow);
     
     return [
       p.displayName || "Untitled",
       stateColor(p.state),
-      await summarizeAssignments(p.conditions?.users, 2), // Show 2 names in CLI
-      await summarizeConditions(p.conditions, 2),
+      summarizeAssignments(p.conditions?.users),
+      summarizeConditions(p.conditions),
       summarizeGrantControls(p.grantControls)
     ];
-  }));
+  });
   
   return formatTable(headers, rows);
 }
 
 /**
- * Flattens a policy object into a granular record for CSV export
+ * Flattens a policy object into a granular record for CSV export (Detailed Names)
  */
 export async function flattenPolicyForExport(p: any): Promise<Record<string, string>> {
   const users = p.conditions?.users || {};
@@ -166,19 +188,19 @@ export async function flattenPolicyForExport(p: any): Promise<Record<string, str
     "Policy Name": p.displayName || "Untitled",
     "State": p.state || "unknown",
     "ID": p.id || "",
-    "Included Users": await resolveIds(users.includeUsers),
-    "Excluded Users": await resolveIds(users.excludeUsers),
-    "Included Groups": await resolveIds(users.includeGroups),
-    "Excluded Groups": await resolveIds(users.excludeGroups),
-    "Included Roles": await resolveIds(users.includeRoles),
-    "Excluded Roles": await resolveIds(users.excludeRoles),
-    "Included Apps": await resolveIds(cond.applications?.includeApplications),
-    "Excluded Apps": await resolveIds(cond.applications?.excludeApplications),
+    "Included Users": await resolveIds(users.includeUsers || []),
+    "Excluded Users": await resolveIds(users.excludeUsers || []),
+    "Included Groups": await resolveIds(users.includeGroups || []),
+    "Excluded Groups": await resolveIds(users.excludeGroups || []),
+    "Included Roles": await resolveIds(users.includeRoles || []),
+    "Excluded Roles": await resolveIds(users.excludeRoles || []),
+    "Included Apps": await resolveIds(cond.applications?.includeApplications || []),
+    "Excluded Apps": await resolveIds(cond.applications?.excludeApplications || []),
     "Platforms (Inc)": (cond.platforms?.includePlatforms || []).join("; "),
     "Platforms (Exc)": (cond.platforms?.excludePlatforms || []).join("; "),
     "Client Apps": (cond.clientAppTypes || []).join("; "),
-    "Locations (Inc)": (cond.locations?.includeLocations || []).join("; "),
-    "Locations (Exc)": (cond.locations?.excludeLocations || []).join("; "),
+    "Locations (Inc)": await resolveIds(cond.locations?.includeLocations || []),
+    "Locations (Exc)": await resolveIds(cond.locations?.excludeLocations || []),
     "Grant Controls": (grants.builtInControls || []).join("; "),
     "Grant Operator": grants.operator || "OR",
     "Session Controls": summarizeSessionControls(p.sessionControls)
@@ -186,30 +208,24 @@ export async function flattenPolicyForExport(p: any): Promise<Record<string, str
 }
 
 /**
- * Normalizes user assignments for display
+ * Normalizes user assignments for display (CLI Compact Summary)
  */
-export async function summarizeAssignments(users: any, limit: number = 999): Promise<string> {
+export function summarizeAssignments(users: any): string {
   if (!users) return "None";
   
   const parts: string[] = [];
   
   if (users.includeUsers?.length) {
-    if (users.includeUsers.includes("All")) {
-        parts.push("Users: [All]");
-    } else {
-        const names = await resolveIds(users.includeUsers, limit);
-        parts.push(`Users: ${names}`);
-    }
+    const included = users.includeUsers.includes("All") ? "[All]" : users.includeUsers.length;
+    parts.push(`Users: ${included}`);
   }
   
   if (users.includeGroups?.length) {
-    const names = await resolveIds(users.includeGroups, limit);
-    parts.push(`Groups: ${names}`);
+    parts.push(`Groups: ${users.includeGroups.length}`);
   }
   
   if (users.includeRoles?.length) {
-    const names = await resolveIds(users.includeRoles, limit);
-    parts.push(`Roles: ${names}`);
+    parts.push(`Roles: ${users.includeRoles.length}`);
   }
   
   const excludeCount = (users.excludeUsers?.length || 0) + 
@@ -224,9 +240,9 @@ export async function summarizeAssignments(users: any, limit: number = 999): Pro
 }
 
 /**
- * Normalizes policy conditions for display
+ * Normalizes policy conditions for display (CLI Compact Summary)
  */
-export async function summarizeConditions(conditions: any, limit: number = 999): Promise<string> {
+export function summarizeConditions(conditions: any): string {
   if (!conditions) return "None";
   
   const parts: string[] = [];
@@ -242,19 +258,13 @@ export async function summarizeConditions(conditions: any, limit: number = 999):
     }
   }
   
-  // Target Apps
-  if (conditions.applications?.includeApplications?.length) {
-      const names = await resolveIds(conditions.applications.includeApplications, limit);
-      parts.push(`Apps: ${names}`);
-  }
-
   // Client Apps
   if (conditions.clientAppTypes?.length) {
     const apps = conditions.clientAppTypes.map((a: string) => {
       if (a === "mobileAppsAndDesktopClients") return "mobile";
       return a;
     }).join(", ");
-    parts.push(`Clients: ${apps}`);
+    parts.push(`Apps: ${apps}`);
   }
   
   // Locations

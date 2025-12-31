@@ -24,7 +24,7 @@
 - [x] Task: Conductor - User Manual Verification 'Visualization' (Protocol in workflow.md)
 
 ## Phase 3: Best Practice Engine
-- [ ] Task: Implement Baseline Analyzer (TDD)
+- [~] Task: Implement Baseline Analyzer (TDD)
     - Context: `core/src/services/analyzer/ca-baseline.ts` (new service).
     - Sub-task: Write tests for the analyzer engine (passing vs failing policies).
     - Sub-task: Implement the hardcoded Microsoft Best Practice checks (MFA for Admins, Legacy Auth Block).
