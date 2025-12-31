@@ -4,7 +4,7 @@
 - [x] Task: Scaffold CA Audit Module Structure (3acb0a0)
     - Context: Create `core/src/handlers/sec/ca-audit.ts` and register it in `core/src/handlers/registry.ts`.
     - Sub-task: Define the `TaskHandler` interface for `sec:ca-audit`.
-- [ ] Task: Implement CA Policy Fetching (TDD)
+- [x] Task: Implement CA Policy Fetching (TDD) (d389152)
     - Context: `core/src/services/graph.ts` (if needed) or within the handler.
     - Sub-task: Write tests for fetching and type-guarding CA policy objects from Graph API.
     - Sub-task: Implement the Graph call `GET /identity/conditionalAccess/policies`.
