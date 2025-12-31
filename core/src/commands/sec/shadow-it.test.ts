@@ -3,12 +3,21 @@ import { analyzeShadowIT } from "./shadow-it";
 import { GraphService } from "../../services/graph";
 import { IPC } from "../../utils/ipc";
 
+// Mock GraphService
+mock.module("../../services/graph", () => {
+  return {
+    GraphService: {
+      getClient: mock(() => ({})),
+      fetchAll: mock(() => Promise.resolve([])),
+    },
+  };
+});
+
 describe("Shadow IT Forensic Enrichment", () => {
   beforeEach(() => {
     // Reset mocks
-    mock.restore();
-    (GraphService as any).instance = null;
-    (GraphService as any).token = "test-token";
+    (GraphService.getClient as any).mockClear();
+    (GraphService.fetchAll as any).mockClear();
     
     // Spy on IPC
     IPC.progress = mock();
@@ -51,21 +60,13 @@ describe("Shadow IT Forensic Enrichment", () => {
       }))
     };
     
-    (GraphService as any).instance = mockClient;
+    (GraphService.getClient as any).mockReturnValue(mockClient);
 
     await analyzeShadowIT(true);
 
     // Verify IPC.success was called
     expect(IPC.success).toHaveBeenCalled();
     const payload = (IPC.success as any).mock.calls[0][0];
-    
-    // RED PHASE: We expect these fields to be in the "RiskyGrant" data (even if implicitly in the table for now)
-    // Actually, let's verify if the logic fetches them.
-    // For now, I'll just check if the test fails to compile or run as expected if I were to check internal state.
-    // But since RiskyGrant is internal, I'll check if the headers/rows in the table (which is the output) 
-    // eventually get updated.
-    
-    // For the "Red Phase", I'll assert on something that DEFINITELY isn't there yet.
     expect(payload.table.headers).toContain("App ID");
   });
 
@@ -105,18 +106,11 @@ describe("Shadow IT Forensic Enrichment", () => {
       }))
     };
     
-    (GraphService as any).instance = mockClient;
+    (GraphService.getClient as any).mockReturnValue(mockClient);
 
     await analyzeShadowIT(true);
 
     const payload = (IPC.success as any).mock.calls[0][0];
-    
-    // We'll check if the recommendation or internal logic (if exposed) mentions the source.
-    // For now, let's verify if the risk score is appropriately high.
-    // Directory.ReadWrite.All adds 15 points. Stale cred (>365 days) adds 5 points.
-    // Publisher unverified adds 15 points. Third party adds 10 points.
-    // Total should be significantly high.
-    
     expect(payload.table.rows[0][0]).toContain("🔴"); // Critical risk emoji
   });
 });

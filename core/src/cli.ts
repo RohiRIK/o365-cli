@@ -4,10 +4,6 @@ import { TaskRegistry } from "./handlers/registry";
 import { printError, printInfo, printSuccess } from "./utils/output";
 import { AuthService } from "./services/auth";
 import { TokenStorage } from "./services/token-storage";
-import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP } from "./utils/menu";
-import { select, input, Separator, confirm } from "@inquirer/prompts";
-import { AuthService } from "./services/auth";
-import { TokenStorage } from "./services/token-storage";
 import { NavigationService } from "./services/navigation";
 import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP, getAllModuleChoices } from "./utils/menu";
 import { select, input, Separator, confirm } from "@inquirer/prompts";
@@ -35,6 +31,11 @@ interface DecodedToken {
     iat?: number;
     scp?: string;
 }
+
+// Minimalist theme for sub-prompts
+const CUSTOM_THEME = {
+    helpMode: 'never' as const
+};
 
 // Global cache for org name to avoid redundant API calls
 let cachedOrgName: string | null = null;
@@ -154,14 +155,14 @@ async function handleLoginMenu() {
  * Global Search Module Picker
  */
 async function runSearchablePicker(showAll: boolean = false): Promise<string | "exit"> {
-    nav.push("Search Modules");
+    nav.push("Search");
     nav.refresh();
 
     const choices = getAllModuleChoices(showAll);
 
     try {
         const moduleId = await search({
-            message: "Search for a module (type to filter):",
+            message: "Search modules (type to filter):",
             source: async (input) => {
                 if (!input) return choices;
                 
@@ -183,6 +184,80 @@ async function runSearchablePicker(showAll: boolean = false): Promise<string | "
     }
 }
 
+/**
+ * Interactive Categorized Module Picker
+ */
+async function runCategorizedPicker(showAll: boolean = false): Promise<string | "exit"> {
+    nav.push("Categories");
+    nav.refresh();
+
+    const taskIds = TaskRegistry.getRegisteredTasks();
+    const categories = getCategoryChoices(taskIds, showAll);
+
+    try {
+        const category = await select({
+            message: "Select a Task Category:",
+            choices: [
+                ...categories,
+                { name: theme.muted("🔙 Back"), value: "exit" }
+            ],
+        });
+
+        if (category === "exit") {
+            nav.pop();
+            return "exit";
+        }
+
+        const categoryMeta = CATEGORY_MAP[category] || { name: category.toUpperCase() };
+        nav.push(categoryMeta.name);
+        nav.refresh();
+
+        const moduleId = await select({
+            message: `Modules in ${categoryMeta.name}`,
+            choices: [
+                ...getModulesInCategory(taskIds, category, showAll),
+                { name: theme.muted("🔙 Back to Categories"), value: "exit" }
+            ],
+        });
+
+        if (moduleId === "exit") {
+            nav.pop(); // Pop category name
+            nav.pop(); // Pop "Categories"
+            return await runCategorizedPicker(showAll);
+        }
+
+        nav.pop(); // Pop category name
+        nav.pop(); // Pop "Categories"
+        return moduleId;
+    } catch {
+        nav.pop();
+        nav.pop();
+        return "exit";
+    }
+}
+
+/**
+ * Unified Module Selector
+ */
+async function interactiveModulePicker(showAll: boolean = false): Promise<string | "exit"> {
+    try {
+        const mode = await select({
+            message: `Module Selection ${showAll ? theme.dim("(Developer Mode)") : ""}`,
+            choices: [
+                { name: "⚡ Quick Search", value: "search" },
+                { name: "📂 Browse Categories", value: "browse" },
+                { name: theme.dim("⎋  Cancel"), value: "exit" }
+            ],
+        });
+
+        if (mode === "exit") return "exit";
+        if (mode === "search") return await runSearchablePicker(showAll);
+        return await runCategorizedPicker(showAll);
+    } catch {
+        return "exit";
+    }
+}
+
 async function showInteractiveMenu(showAll: boolean = false) {
     nav.clear();
     nav.refresh();
@@ -192,7 +267,7 @@ async function showInteractiveMenu(showAll: boolean = false) {
             message: "Control Center:",
             choices: [
                 new Separator(theme.primary("─── TASKS ───")),
-                { name: "⚡ Search & Run Module", value: "run" },
+                { name: "⚡ Run a Module", value: "run" },
                 { name: "📋 List All Modules", value: "list" },
                 new Separator(theme.primary("─── SYSTEM ───")),
                 { name: "⚙️  Settings & Accounts", value: "settings" },
@@ -223,12 +298,16 @@ async function showInteractiveMenu(showAll: boolean = false) {
                 break;
             }
             case "run": {
-                const moduleId = await runSearchablePicker(showAll);
+                const moduleId = await interactiveModulePicker(showAll);
                 if (moduleId !== "exit") {
                     const handler = TaskRegistry.getHandler(moduleId);
                     const args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
                     await runTask(moduleId, args);
-                    await input({ message: "\nTask completed. Press Enter to return to menu..." });
+                    try {
+                        await input({ message: "\nTask completed. Press Enter to return to menu..." });
+                    } catch {
+                        // Ignore cancellation
+                    }
                 }
                 await showInteractiveMenu(showAll);
                 break;
@@ -379,8 +458,14 @@ export async function setupCLI(program: Command) {
     .command("run [moduleName] [args...]")
     .description("Run a module (interactive if name is omitted)")
     .action(async (moduleName, args) => {
+      let showAll = false;
+      if (moduleName === "dev") {
+          showAll = true;
+          moduleName = undefined;
+      }
+
       if (!moduleName) {
-          const id = await runSearchablePicker(false);
+          const id = await interactiveModulePicker(showAll);
           if (id === "exit") return;
           moduleName = id;
       }
