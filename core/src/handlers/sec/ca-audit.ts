@@ -74,17 +74,17 @@ class CaAuditHandler implements TaskHandler {
     }
     
     // 2. Prepare UI Table rows
-    IPC.progress("Finalizing audit table...", 95);
+    IPC.progress("Preparing audit table...", 80);
     const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
-    const tableRows = policies.map(p => {
+    const tableRows = await Promise.all(policies.map(async p => {
       return [
         p.displayName || "Untitled",
         p.state,
-        summarizeAssignments(p.conditions?.users),
-        summarizeConditions(p.conditions),
+        await summarizeAssignments(p.conditions?.users, 2), // Resolved names
+        await summarizeConditions(p.conditions, 2),       // Resolved names
         summarizeGrantControls(p.grantControls)
       ];
-    });
+    }));
 
     // 3. Render Table & Finalize
     IPC.progress("Audit complete", 100);

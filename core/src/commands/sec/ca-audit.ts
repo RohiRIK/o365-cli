@@ -21,11 +21,13 @@ const nameCache = new Map<string, string>([
 
 /**
  * Resolves a list of IDs to their human-readable names/UPNs
+ * @param limit Optional limit for display (useful for CLI tables)
  */
-async function resolveIds(ids: string[]): Promise<string> {
+async function resolveIds(ids: string[], limit: number = 999): Promise<string> {
   if (!ids || ids.length === 0) return "None";
   
-  const resolved = await Promise.all(ids.map(async id => {
+  const displayIds = ids.slice(0, limit);
+  const resolved = await Promise.all(displayIds.map(async id => {
     if (nameCache.has(id)) return nameCache.get(id)!;
     
     // Attempt resolution via Graph
@@ -65,7 +67,11 @@ async function resolveIds(ids: string[]): Promise<string> {
     }
   }));
 
-  return resolved.join("; ");
+  let result = resolved.join("; ");
+  if (ids.length > limit) {
+    result += ` (+${ids.length - limit} more)`;
+  }
+  return result;
 }
 
 /**
@@ -130,20 +136,20 @@ export async function auditCAPolicies(args: { analyze: boolean; state?: string; 
 /**
  * Renders the policy list as a table
  */
-export function renderCAPoliciesTable(policies: any[]): string {
+export async function renderCAPoliciesTable(policies: any[]): Promise<string> {
   const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
   
-  const rows = policies.map(p => {
+  const rows = await Promise.all(policies.map(async p => {
     const stateColor = p.state === "enabled" ? chalk.green : (p.state === "disabled" ? chalk.red : chalk.yellow);
     
     return [
       p.displayName || "Untitled",
       stateColor(p.state),
-      summarizeAssignments(p.conditions?.users),
-      summarizeConditions(p.conditions),
+      await summarizeAssignments(p.conditions?.users, 2), // Show 2 names in CLI
+      await summarizeConditions(p.conditions, 2),
       summarizeGrantControls(p.grantControls)
     ];
-  });
+  }));
   
   return formatTable(headers, rows);
 }
@@ -182,22 +188,28 @@ export async function flattenPolicyForExport(p: any): Promise<Record<string, str
 /**
  * Normalizes user assignments for display
  */
-export function summarizeAssignments(users: any): string {
+export async function summarizeAssignments(users: any, limit: number = 999): Promise<string> {
   if (!users) return "None";
   
   const parts: string[] = [];
   
   if (users.includeUsers?.length) {
-    const included = users.includeUsers.includes("All") ? "[All]" : users.includeUsers.length;
-    parts.push(`Users: ${included}`);
+    if (users.includeUsers.includes("All")) {
+        parts.push("Users: [All]");
+    } else {
+        const names = await resolveIds(users.includeUsers, limit);
+        parts.push(`Users: ${names}`);
+    }
   }
   
   if (users.includeGroups?.length) {
-    parts.push(`Groups: ${users.includeGroups.length}`);
+    const names = await resolveIds(users.includeGroups, limit);
+    parts.push(`Groups: ${names}`);
   }
   
   if (users.includeRoles?.length) {
-    parts.push(`Roles: ${users.includeRoles.length}`);
+    const names = await resolveIds(users.includeRoles, limit);
+    parts.push(`Roles: ${names}`);
   }
   
   const excludeCount = (users.excludeUsers?.length || 0) + 
@@ -214,7 +226,7 @@ export function summarizeAssignments(users: any): string {
 /**
  * Normalizes policy conditions for display
  */
-export function summarizeConditions(conditions: any): string {
+export async function summarizeConditions(conditions: any, limit: number = 999): Promise<string> {
   if (!conditions) return "None";
   
   const parts: string[] = [];
@@ -230,13 +242,19 @@ export function summarizeConditions(conditions: any): string {
     }
   }
   
+  // Target Apps
+  if (conditions.applications?.includeApplications?.length) {
+      const names = await resolveIds(conditions.applications.includeApplications, limit);
+      parts.push(`Apps: ${names}`);
+  }
+
   // Client Apps
   if (conditions.clientAppTypes?.length) {
     const apps = conditions.clientAppTypes.map((a: string) => {
       if (a === "mobileAppsAndDesktopClients") return "mobile";
       return a;
     }).join(", ");
-    parts.push(`Apps: ${apps}`);
+    parts.push(`Clients: ${apps}`);
   }
   
   // Locations

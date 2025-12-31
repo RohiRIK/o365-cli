@@ -57,26 +57,26 @@ describe("CA Audit Module", () => {
   });
 
   describe("Data Normalization", () => {
-    it("should summarize user assignments correctly", () => {
+    it("should summarize user assignments correctly", async () => {
       const users = {
         includeUsers: ["All"],
         excludeUsers: ["user-id-1"],
         includeGroups: ["group-id-1"],
       };
-      const summary = summarizeAssignments(users);
+      const summary = await summarizeAssignments(users);
       expect(summary).toContain("Users: [All]");
-      expect(summary).toContain("Groups: 1");
+      expect(summary).toContain("Groups: group-id-1");
       expect(summary).toContain("Exclude: 1");
     });
 
-    it("should summarize conditions correctly", () => {
+    it("should summarize conditions correctly", async () => {
       const conditions = {
         platforms: { includePlatforms: ["all"], excludePlatforms: ["android"] },
         clientAppTypes: ["browser", "mobileAppsAndDesktopClients"],
       };
-      const summary = summarizeConditions(conditions);
+      const summary = await summarizeConditions(conditions);
       expect(summary).toContain("Platforms: All (Exc: android)");
-      expect(summary).toContain("Apps: browser, mobile");
+      expect(summary).toContain("Clients: browser, mobile");
     });
 
     it("should summarize grant controls correctly", () => {
