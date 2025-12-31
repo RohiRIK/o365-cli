@@ -32,7 +32,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Searchable Discovery' (Protocol in workflow.md)
 
 ## Phase 4: Global Orchestration Integration
-- [ ] Task: Refactor Interactive Menus to Navigation Service
+- [x] Task: Refactor Interactive Menus to Navigation Service (9acfa9f)
     - Context: Migration of `showInteractiveMenu` and `runModuleSelector` in `core/src/cli.ts`.
     - Sub-task: Replace manual header prints and `console.clear()` calls with Service-driven calls.
 - [ ] Task: Final Polish & UX Audit
