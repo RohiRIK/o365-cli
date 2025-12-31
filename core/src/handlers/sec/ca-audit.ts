@@ -64,29 +64,39 @@ class CaAuditHandler implements TaskHandler {
       return;
     }
 
-    IPC.progress(`Analyzing ${policies.length} policies...`, 50);
+    // 1. Resolve names for CSV export with granular progress
+    const flattenedData: any[] = [];
+    for (let i = 0; i < policies.length; i++) {
+      const p = policies[i];
+      const progress = 10 + Math.floor((i / policies.length) * 80);
+      IPC.progress(`Resolving identities: ${p.displayName || "policy"}...`, progress);
+      flattenedData.push(await flattenPolicyForExport(p));
+    }
     
+    // 2. Prepare UI Table rows
+    IPC.progress("Finalizing audit table...", 95);
     const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
     const tableRows = policies.map(p => {
-      const pData = [
+      return [
         p.displayName || "Untitled",
         p.state,
         summarizeAssignments(p.conditions?.users),
         summarizeConditions(p.conditions),
         summarizeGrantControls(p.grantControls)
       ];
-      return pData;
     });
 
-    IPC.progress("Rendering audit table...", 90);
+    // 3. Render Table & Finalize
+    IPC.progress("Audit complete", 100);
+    
+    // Manual clear of the current spinner line to prevent orphaned progress logs
+    process.stdout.write("\r\x1b[K"); 
+    
     IPC.table(headers, tableRows);
     
-    // Store granular flattened data for CSV export (Async resolution)
-    IPC.progress("Resolving names for CSV export...", 95);
-    const flattenedData = await Promise.all(policies.map(async p => await flattenPolicyForExport(p)));
+    // 4. Store granular flattened data for CSV export (silently)
     const exportHeaders = Object.keys(flattenedData[0] || {});
     const exportRows = flattenedData.map(d => Object.values(d));
-    
     IPC.setExportTable(exportHeaders, exportRows);
 
     IPC.success({ 

@@ -9,7 +9,14 @@ import chalk from "chalk";
 const nameCache = new Map<string, string>([
   ["All", "All Users"],
   ["None", "None"],
-  ["AllPrincipals", "All Users (Tenant-Wide)"]
+  ["AllPrincipals", "All Users (Tenant-Wide)"],
+  ["Office365", "Office 365"],
+  ["MicrosoftAdminPortals", "Microsoft Admin Portals"],
+  ["00000003-0000-0000-c000-000000000000", "Microsoft Graph"],
+  ["00000003-0000-0ff1-ce00-000000000000", "Office 365 SharePoint Online"],
+  ["00000002-0000-0000-c000-000000000000", "Microsoft Azure AD"],
+  ["4498dc2d-29eb-4f58-bd02-075b9a8626f8", "Microsoft Azure Management"],
+  ["797f4846-ba00-4fd7-ba43-dac1f8f63013", "Microsoft Azure Service Management"]
 ]);
 
 /**
@@ -59,6 +66,38 @@ async function resolveIds(ids: string[]): Promise<string> {
   }));
 
   return resolved.join("; ");
+}
+
+/**
+ * Summarizes session controls into a readable string
+ */
+function summarizeSessionControls(session: any): string {
+  if (!session) return "None";
+  const parts: string[] = [];
+
+  if (session.signInFrequency) {
+    const freq = session.signInFrequency;
+    parts.push(`Freq: ${freq.value} ${freq.type}`);
+  }
+  
+  if (session.persistentBrowser?.mode === "always") {
+    parts.push("Persistent Browser");
+  }
+  
+  if (session.applicationEnforcedRestrictions) {
+    parts.push("App Enforced Restrictions");
+  }
+  
+  const casType = session.cloudAppSecurity?.cloudAppSecurityType;
+  if (casType && casType !== "none") {
+    parts.push(`MCAS: ${casType}`);
+  }
+  
+  if (session.signInContextClassReferences?.length) {
+    parts.push(`Auth Context: ${session.signInContextClassReferences.join(", ")}`);
+  }
+
+  return parts.join("; ") || "None";
 }
 
 /**
@@ -127,8 +166,8 @@ export async function flattenPolicyForExport(p: any): Promise<Record<string, str
     "Excluded Groups": await resolveIds(users.excludeGroups),
     "Included Roles": await resolveIds(users.includeRoles),
     "Excluded Roles": await resolveIds(users.excludeRoles),
-    "Included Apps": (cond.applications?.includeApplications || []).join("; "),
-    "Excluded Apps": (cond.applications?.excludeApplications || []).join("; "),
+    "Included Apps": await resolveIds(cond.applications?.includeApplications),
+    "Excluded Apps": await resolveIds(cond.applications?.excludeApplications),
     "Platforms (Inc)": (cond.platforms?.includePlatforms || []).join("; "),
     "Platforms (Exc)": (cond.platforms?.excludePlatforms || []).join("; "),
     "Client Apps": (cond.clientAppTypes || []).join("; "),
@@ -136,7 +175,7 @@ export async function flattenPolicyForExport(p: any): Promise<Record<string, str
     "Locations (Exc)": (cond.locations?.excludeLocations || []).join("; "),
     "Grant Controls": (grants.builtInControls || []).join("; "),
     "Grant Operator": grants.operator || "OR",
-    "Session Controls": p.sessionControls ? JSON.stringify(p.sessionControls) : "None"
+    "Session Controls": summarizeSessionControls(p.sessionControls)
   };
 }
 
