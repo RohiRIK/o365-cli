@@ -1,14 +1,14 @@
 # Implementation Plan - Conditional Access Audit
 
-## Phase 1: Core Logic & Data Retrieval
+## Phase 1: Core Logic & Data Retrieval [checkpoint: 9e381ae]
 - [x] Task: Scaffold CA Audit Module Structure (3acb0a0)
-    - Context: Create `core/src/handlers/sec/ca-audit.ts` and register it in `core/src/handlers/registry.ts`.
+    - Context: `core/src/handlers/sec/ca-audit.ts` and register it in `core/src/handlers/registry.ts`.
     - Sub-task: Define the `TaskHandler` interface for `sec:ca-audit`.
 - [x] Task: Implement CA Policy Fetching (TDD) (d389152)
     - Context: `core/src/services/graph.ts` (if needed) or within the handler.
     - Sub-task: Write tests for fetching and type-guarding CA policy objects from Graph API.
     - Sub-task: Implement the Graph call `GET /identity/conditionalAccess/policies`.
-- [ ] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
 
 ## Phase 2: Visualization & Filtering
 - [ ] Task: Implement Data Normalization for Display (TDD)
