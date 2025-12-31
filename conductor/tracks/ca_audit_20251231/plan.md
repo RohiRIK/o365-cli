@@ -15,7 +15,7 @@
     - Context: `core/src/commands/sec/ca-audit.ts`.
     - Sub-task: Write tests for converting complex nested Graph objects (Conditions, Grants) into readable string summaries for the table.
     - Sub-task: Implement the normalization helpers.
-- [ ] Task: Implement Table Rendering & Filtering (TDD)
+- [x] Task: Implement Table Rendering & Filtering (TDD) (d7cf532)
     - Sub-task: Write tests for filtering logic (by State, by Target User - mock logic).
     - Sub-task: Implement the table display using `cli-table3` and filtering flag logic.
 - [ ] Task: Conductor - User Manual Verification 'Visualization' (Protocol in workflow.md)
