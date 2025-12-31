@@ -23,7 +23,7 @@
 - [x] Task: Conductor - User Manual Verification 'Dynamic UI Components' (Protocol in workflow.md)
 
 ## Phase 3: Searchable Discovery
-- [~] Task: Implement Autocomplete Module Picker
+- [x] Task: Implement Autocomplete Module Picker (2a17cda)
     - Context: Replace `select` with `@inquirer/search` in `core/src/cli.ts`.
     - Sub-task: Write tests for module search/filter logic.
     - Sub-task: Implement searchable list with human-readable titles and technical ID descriptions.
