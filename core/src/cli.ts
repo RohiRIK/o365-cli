@@ -369,7 +369,7 @@ export async function setupCLI(program: Command) {
     .description("Run a module (interactive if name is omitted)")
     .action(async (moduleName, args) => {
       if (!moduleName) {
-          const id = await runModuleSelector(false, false);
+          const id = await runSearchablePicker(false);
           if (id === "exit") return;
           moduleName = id;
       }
