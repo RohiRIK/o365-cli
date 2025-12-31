@@ -14,7 +14,7 @@
 - [x] Task: Conductor - User Manual Verification 'Core Foundation' (Protocol in workflow.md)
 
 ## Phase 2: Dynamic UI Components
-- [ ] Task: Implement Styled Boxen Header & Breadcrumbs
+- [x] Task: Implement Styled Boxen Header & Breadcrumbs (88948ee)
     - Context: `core/src/services/navigation.ts`.
     - Sub-task: Write tests for breadcrumb visual hierarchy logic (muted history vs highlighted current).
     - Sub-task: Implement header rendering using `boxen` and the Navigation Service state.
