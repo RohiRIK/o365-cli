@@ -8,10 +8,13 @@ import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP } from "./utils/
 import { select, input, Separator, confirm } from "@inquirer/prompts";
 import { jwtDecode } from "jwt-decode";
 import { IPC } from "./utils/ipc";
+import { setupSignalHandlers } from "./utils/process";
 import * as fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import ora from "ora";
+
+setupSignalHandlers();
 
 const tokenStorage = new TokenStorage("o365-cli");
 
@@ -103,6 +106,7 @@ async function handleLoginMenu() {
             console.log(`  ${chalk.bold("Expires At:")}    ${color(session.expires.toLocaleString())}`);
             console.log(`  ${chalk.bold("Status:")}        ${color(isExpired ? "Expired" : "Active")}`);
         }
+        console.log(`  ${chalk.bold("Scopes:")}        ${chalk.dim(session.scopes.join(", "))}`);
         console.log("");
 
         const choice = await select({
@@ -150,18 +154,26 @@ import { select, input, Separator, confirm } from "@inquirer/prompts";
 /**
  * Intelligent Module Selector with Drill-Down (Tasks only)
  */
-async function runModuleSelector(isMainMenu: boolean = false): Promise<string | "exit"> {
+async function runModuleSelector(isMainMenu: boolean = false, showAll: boolean = false): Promise<string | "exit"> {
     const taskIds = TaskRegistry.getRegisteredTasks();
     const session = await getSessionDetails("common");
     const prefix = getStatusPrefix(session);
     
     try {
+        const categories = getCategoryChoices(taskIds, showAll);
+        
+        if (categories.length === 0) {
+            printInfo("\nNo production modules available yet. Run with 'dev' to see draft modules.");
+            await input({ message: "Press Enter to return..." });
+            return "exit";
+        }
+
         // Step 1: Select Category
         const category = await select({
-            message: "Select a Task Category:",
+            message: `Select a Task Category ${showAll ? chalk.yellow("[DEV MODE]") : ""}:`,
             prefix,
             choices: [
-                ...getCategoryChoices(taskIds),
+                ...categories,
                 new Separator(chalk.dim("──────────────────────────────")),
                 { name: "⚙️  System Settings", value: "sys:settings" },
                 { name: isMainMenu ? "🔙 Back to Main Menu" : "⎋  Cancel / Exit", value: "exit" }
@@ -173,7 +185,7 @@ async function runModuleSelector(isMainMenu: boolean = false): Promise<string | 
         if (category === "exit") return "exit";
         if (category === "sys:settings") {
             await handleLoginMenu();
-            return await runModuleSelector(isMainMenu);
+            return await runModuleSelector(isMainMenu, showAll);
         }
 
         // Step 2: Select Module in Category
@@ -181,7 +193,7 @@ async function runModuleSelector(isMainMenu: boolean = false): Promise<string | 
             message: `Modules in ${CATEGORY_MAP[category]?.name || category}:`,
             prefix,
             choices: [
-                ...getModulesInCategory(taskIds, category),
+                ...getModulesInCategory(taskIds, category, showAll),
                 new Separator(chalk.dim("──────────────────────────────")),
                 { name: "🔙 Back to Categories", value: "retry" }
             ],
@@ -189,20 +201,20 @@ async function runModuleSelector(isMainMenu: boolean = false): Promise<string | 
             theme: CUSTOM_THEME
         });
 
-        if (moduleId === "retry") return await runModuleSelector(isMainMenu);
+        if (moduleId === "retry") return await runModuleSelector(isMainMenu, showAll);
         return moduleId;
     } catch (e: any) {
         return "exit";
     }
 }
 
-async function showInteractiveMenu() {
+async function showInteractiveMenu(showAll: boolean = false) {
     console.clear();
     const session = await getSessionDetails("common");
     const prefix = getStatusPrefix(session);
     
     console.log(chalk.cyan.bold("\n-------------------------------------------"));
-    console.log(chalk.cyan.bold("🚀 O365 CLI - Orchestration Menu"));
+    console.log(chalk.cyan.bold(`🚀 O365 CLI - ${showAll ? "Developer Console" : "Production Orchestrator"}`));
     console.log(chalk.cyan.bold("-------------------------------------------"));
     
     try {
@@ -212,7 +224,7 @@ async function showInteractiveMenu() {
             choices: [
                 new Separator(chalk.yellow("─── TASKS ───")),
                 { name: "⚡ Run a Module", value: "run" },
-                { name: "📋 List All Modules", value: "list" },
+                { name: "📋 List Available Modules", value: "list" },
                 new Separator(chalk.yellow("─── SYSTEM ───")),
                 { name: "⚙️  Settings & Accounts", value: "settings" },
                 new Separator(chalk.dim("──────────────────────────────")),
@@ -224,29 +236,34 @@ async function showInteractiveMenu() {
         switch (action) {
             case "list": {
                 const tasks = TaskRegistry.getRegisteredTasks();
-                console.log(chalk.cyan.bold("\nAvailable Modules:"));
-                const categories = getCategoryChoices(tasks);
+                console.log(chalk.cyan.bold(`\n${showAll ? "All" : "Production"} Modules:`));
+                const categories = getCategoryChoices(tasks, showAll);
                 categories.forEach(cat => {
                     console.log(chalk.yellow(`\n${cat.name}`));
-                    getModulesInCategory(tasks, cat.value).forEach(m => console.log(m.name));
+                    getModulesInCategory(tasks, cat.value, showAll).forEach(m => {
+                        console.log(`  ${m.name}`);
+                    });
                 });
                 console.log("");
                 await input({ message: "Press Enter to continue..." });
-                await showInteractiveMenu();
+                await showInteractiveMenu(showAll);
                 break;
             }
             case "run": {
-                const moduleId = await runModuleSelector(true);
+                const moduleId = await runModuleSelector(true, showAll);
                 if (moduleId !== "exit") {
-                    await runTask(moduleId, ["--dry-run", "true"]);
+                    const handler = TaskRegistry.getHandler(moduleId);
+                    const args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
+                    await runTask(moduleId, args);
                     await input({ message: "\nTask completed. Press Enter to return to menu..." });
                 }
-                await showInteractiveMenu();
+                // Recursively call to return to main menu
+                await showInteractiveMenu(showAll);
                 break;
             }
             case "settings": {
                 await handleLoginMenu();
-                await showInteractiveMenu();
+                await showInteractiveMenu(showAll);
                 break;
             }
             case "exit": {
@@ -270,28 +287,34 @@ async function showStatus() {
             console.log(`  - Expires At: ${color(session.expires.toLocaleString())}`);
             console.log(`  - Status:     ${color(isExpired ? "Expired" : "Active")}`);
         }
+        console.log(`  - Scopes:     ${chalk.dim(session.scopes.join(", "))}`);
     } else {
         printInfo("No active sessions found. Run 'login' to connect.");
     }
 }
 
-async function getOrganizationName(): Promise<string> {
-    if (cachedOrgName) return cachedOrgName;
+async function getOrganizationName(forFilename: boolean = false): Promise<string> {
+    if (cachedOrgName && !forFilename) return cachedOrgName;
     
-    const session = await getSessionDetails("common", false); // Get session without recursing
+    const session = await getSessionDetails("common", false); 
     if (!session?.tenant) return "o365";
 
+    let name = "o365";
     try {
         const org = await GraphService.get(`/organization/${session.tenant}`);
         if (org?.displayName) {
-            cachedOrgName = org.displayName;
-            return cachedOrgName!;
+            name = org.displayName;
+            cachedOrgName = name;
         }
     } catch {
         const domain = session.email?.split('@')[1]?.split('.')[0];
-        if (domain) return domain.toUpperCase();
+        if (domain) name = domain.toUpperCase();
     }
-    return "o365";
+
+    if (forFilename) {
+        return name.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '-').toLowerCase();
+    }
+    return name;
 }
 
 async function runTask(moduleName: string, args: string[]) {
@@ -321,8 +344,8 @@ async function runTask(moduleName: string, args: string[]) {
             // Post-Task Export Logic
             const lastTable = IPC.getLastTable();
             if (lastTable) {
-                // Fetch real org name for filename
-                const orgName = await getOrganizationName();
+                // Fetch real org name for filename (sanitized and lowercase)
+                const orgSlug = await getOrganizationName(true);
                 
                 const shouldExport = await confirm({
                     message: "Would you like to export these results to a CSV file?",
@@ -332,10 +355,18 @@ async function runTask(moduleName: string, args: string[]) {
 
                 if (shouldExport) {
                     const cleanModuleName = moduleName.replace(':', '_');
-                    const defaultFilename = `${orgName}_${cleanModuleName}_results.csv`;
+                    const orgSlug = await getOrganizationName(true);
+                    const defaultFilename = `${orgSlug}_${cleanModuleName}_results.csv`;
                     
+                    // Ensure output directory exists
+                    const outputDir = path.resolve(process.cwd(), "output");
+                    if (!fs.existsSync(outputDir)) {
+                        fs.mkdirSync(outputDir, { recursive: true });
+                    }
+
                     const filename = await input({ message: "Enter filename:", default: defaultFilename });
-                    const fullPath = path.resolve(process.cwd(), filename);
+                    const fullPath = path.resolve(outputDir, filename);
+                    
                     const csv = [
                         lastTable.headers.join(","),
                         ...lastTable.rows.map(row => row.map(cell => `"${cell}"`).join(","))
@@ -375,11 +406,18 @@ export async function setupCLI(program: Command) {
     .description("Run a module (interactive if name is omitted)")
     .action(async (moduleName, args) => {
       if (!moduleName) {
-          const id = await runModuleSelector(false);
+          const id = await runModuleSelector(false, false);
           if (id === "exit") return;
           moduleName = id;
       }
       await runTask(moduleName, args);
+    });
+
+  program
+    .command("dev")
+    .description("Launch interactive menu in Developer Mode (shows all modules)")
+    .action(async () => {
+        await showInteractiveMenu(true);
     });
 
   program
@@ -414,7 +452,13 @@ export async function setupCLI(program: Command) {
         const categories = getCategoryChoices(tasks);
         categories.forEach(cat => {
             console.log(chalk.yellow(`\n${cat.name}`));
-            getModulesInCategory(tasks, cat.value).forEach(m => console.log(m.name));
+            const modules = getModulesInCategory(tasks, cat.value);
+            modules.forEach(m => {
+                const handler = TaskRegistry.getHandler(m.value);
+                const statusColor = handler?.status === "prod" ? chalk.green : (handler?.status === "beta" ? chalk.yellow : chalk.gray);
+                const statusTag = `[${handler?.status?.toUpperCase() || "BETA"}]`;
+                console.log(`  ${chalk.cyan("→")} ${m.value.padEnd(25)} ${statusColor(statusTag)}`);
+            });
         });
         console.log("");
     });
