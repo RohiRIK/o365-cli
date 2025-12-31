@@ -18,6 +18,9 @@
 - [x] Task: Implement Table Rendering & Filtering (TDD) (d7cf532)
     - Sub-task: Write tests for filtering logic (by State, by Target User - mock logic).
     - Sub-task: Implement the table display using `cli-table3` and filtering flag logic.
+- [x] Task: CLI UX Refinement (Categories & run dev) (a8c58c7)
+    - Sub-task: Restore categorized module selection.
+    - Sub-task: Support `run dev` to filter for Beta/Draft modules.
 - [ ] Task: Conductor - User Manual Verification 'Visualization' (Protocol in workflow.md)
 
 ## Phase 3: Best Practice Engine
