@@ -11,7 +11,7 @@
 - [x] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
 
 ## Phase 2: Visualization & Filtering
-- [ ] Task: Implement Data Normalization for Display (TDD)
+- [x] Task: Implement Data Normalization for Display (TDD) (3d5747a)
     - Context: `core/src/commands/sec/ca-audit.ts`.
     - Sub-task: Write tests for converting complex nested Graph objects (Conditions, Grants) into readable string summaries for the table.
     - Sub-task: Implement the normalization helpers.
