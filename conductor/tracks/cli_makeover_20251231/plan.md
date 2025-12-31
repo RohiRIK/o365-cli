@@ -18,7 +18,7 @@
     - Context: `core/src/services/navigation.ts`.
     - Sub-task: Write tests for breadcrumb visual hierarchy logic (muted history vs highlighted current).
     - Sub-task: Implement header rendering using `boxen` and the Navigation Service state.
-- [ ] Task: Implement Screen Management Logic
+- [x] Task: Implement Screen Management Logic (dc79305)
     - Sub-task: Integrate mandatory console clearing into the Navigation transition lifecycle.
 - [ ] Task: Conductor - User Manual Verification 'Dynamic UI Components' (Protocol in workflow.md)
 
