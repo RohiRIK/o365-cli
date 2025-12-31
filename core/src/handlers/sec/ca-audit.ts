@@ -6,6 +6,7 @@ import {
   parseBooleanFlag,
   parseStringFlag,
 } from "../registry";
+import { GraphService } from "../../services/graph";
 
 export interface CaAuditArgs extends TaskArgs {
   analyze: boolean;
@@ -13,6 +14,10 @@ export interface CaAuditArgs extends TaskArgs {
   target?: string;
   exportPath?: string;
   configPath?: string;
+}
+
+export async function fetchCAPolicies() {
+  return await GraphService.fetchAll("/identity/conditionalAccess/policies");
 }
 
 class CaAuditHandler implements TaskHandler {
