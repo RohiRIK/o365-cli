@@ -1,6 +1,65 @@
 import { fetchCAPolicies } from "../../handlers/sec/ca-audit";
 import { formatTable } from "../../utils/output";
+import { GraphService } from "../../services/graph";
 import chalk from "chalk";
+
+/**
+ * Cache for ID-to-Name resolution
+ */
+const nameCache = new Map<string, string>([
+  ["All", "All Users"],
+  ["None", "None"],
+  ["AllPrincipals", "All Users (Tenant-Wide)"]
+]);
+
+/**
+ * Resolves a list of IDs to their human-readable names/UPNs
+ */
+async function resolveIds(ids: string[]): Promise<string> {
+  if (!ids || ids.length === 0) return "None";
+  
+  const resolved = await Promise.all(ids.map(async id => {
+    if (nameCache.has(id)) return nameCache.get(id)!;
+    
+    // Attempt resolution via Graph
+    try {
+      if (id.length > 20) { // Likely a GUID or Template ID
+        // Try user
+        try {
+          const u = await GraphService.get(`/users/${id}?$select=userPrincipalName`);
+          if (u?.userPrincipalName) {
+            nameCache.set(id, u.userPrincipalName);
+            return u.userPrincipalName;
+          }
+        } catch {} // Ignore errors, fall through to next attempt
+
+        // Try group
+        try {
+          const g = await GraphService.get(`/groups/${id}?$select=displayName`);
+          if (g?.displayName) {
+            nameCache.set(id, g.displayName);
+            return g.displayName;
+          }
+        } catch {} // Ignore errors
+
+        // Try directory role
+        try {
+          const r = await GraphService.get(`/directoryRoles/${id}?$select=displayName`);
+          if (r?.displayName) {
+            nameCache.set(id, r.displayName);
+            return r.displayName;
+          }
+        } catch {} // Ignore errors
+      }
+      return id; // Return original ID if resolution fails
+    } catch (e) {
+      console.error(`Error resolving ID ${id}:`, e);
+      return id; // Return original ID on unexpected error
+    }
+  }));
+
+  return resolved.join("; ");
+}
 
 /**
  * Main audit logic for CA policies
@@ -48,6 +107,37 @@ export function renderCAPoliciesTable(policies: any[]): string {
   });
   
   return formatTable(headers, rows);
+}
+
+/**
+ * Flattens a policy object into a granular record for CSV export
+ */
+export async function flattenPolicyForExport(p: any): Promise<Record<string, string>> {
+  const users = p.conditions?.users || {};
+  const cond = p.conditions || {};
+  const grants = p.grantControls || {};
+
+  return {
+    "Policy Name": p.displayName || "Untitled",
+    "State": p.state || "unknown",
+    "ID": p.id || "",
+    "Included Users": await resolveIds(users.includeUsers),
+    "Excluded Users": await resolveIds(users.excludeUsers),
+    "Included Groups": await resolveIds(users.includeGroups),
+    "Excluded Groups": await resolveIds(users.excludeGroups),
+    "Included Roles": await resolveIds(users.includeRoles),
+    "Excluded Roles": await resolveIds(users.excludeRoles),
+    "Included Apps": (cond.applications?.includeApplications || []).join("; "),
+    "Excluded Apps": (cond.applications?.excludeApplications || []).join("; "),
+    "Platforms (Inc)": (cond.platforms?.includePlatforms || []).join("; "),
+    "Platforms (Exc)": (cond.platforms?.excludePlatforms || []).join("; "),
+    "Client Apps": (cond.clientAppTypes || []).join("; "),
+    "Locations (Inc)": (cond.locations?.includeLocations || []).join("; "),
+    "Locations (Exc)": (cond.locations?.excludeLocations || []).join("; "),
+    "Grant Controls": (grants.builtInControls || []).join("; "),
+    "Grant Operator": grants.operator || "OR",
+    "Session Controls": p.sessionControls ? JSON.stringify(p.sessionControls) : "None"
+  };
 }
 
 /**

@@ -12,7 +12,8 @@ import {
   renderCAPoliciesTable,
   summarizeAssignments,
   summarizeConditions,
-  summarizeGrantControls
+  summarizeGrantControls,
+  flattenPolicyForExport
 } from "../../commands/sec/ca-audit";
 import { IPC } from "../../utils/ipc";
 
@@ -80,15 +81,13 @@ class CaAuditHandler implements TaskHandler {
     IPC.progress("Rendering audit table...", 90);
     IPC.table(headers, tableRows);
     
-    // Store raw data for CSV export without re-rendering to console
-    const rawRows = policies.map(p => [
-      p.displayName,
-      p.state,
-      JSON.stringify(p.conditions?.users),
-      JSON.stringify(p.conditions),
-      JSON.stringify(p.grantControls)
-    ]);
-    IPC.setExportTable(headers, rawRows);
+    // Store granular flattened data for CSV export (Async resolution)
+    IPC.progress("Resolving names for CSV export...", 95);
+    const flattenedData = await Promise.all(policies.map(async p => await flattenPolicyForExport(p)));
+    const exportHeaders = Object.keys(flattenedData[0] || {});
+    const exportRows = flattenedData.map(d => Object.values(d));
+    
+    IPC.setExportTable(exportHeaders, exportRows);
 
     IPC.success({ 
       message: `Audit complete. Found ${policies.length} policies.`
