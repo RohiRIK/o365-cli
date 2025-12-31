@@ -4,7 +4,7 @@
 - [x] Task: Install New Dependencies (745b2fc)
     - Context: `package.json`.
     - Sub-task: Install `boxen`, `@inquirer/search`, and `@inquirer/type` to support the new UI and search functionality.
-- [ ] Task: Initialize Navigation Service & Design System
+- [x] Task: Initialize Navigation Service & Design System (29bb331)
     - Context: Create `core/src/services/navigation.ts` and `core/src/utils/theme.ts`.
     - Sub-task: Write unit tests for `NavigationService` (breadcrumb state tracking).
     - Sub-task: Implement `Theme` utility with Violet (#8b5cf6) and Zinc hex codes.
