@@ -6,8 +6,7 @@ import { AuthService } from "./services/auth";
 import { TokenStorage } from "./services/token-storage";
 import { NavigationService } from "./services/navigation";
 import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP, getAllModuleChoices } from "./utils/menu";
-import { select, input, Separator, confirm } from "@inquirer/prompts";
-import search from "@inquirer/search";
+import { select, input, Separator, confirm, search, enableGlobalCancellation } from "./utils/prompts";
 import { jwtDecode } from "jwt-decode";
 import { IPC } from "./utils/ipc";
 import { setupSignalHandlers } from "./utils/process";
@@ -19,42 +18,10 @@ import ora from "ora";
 import * as readline from "readline";
 
 setupSignalHandlers();
+enableGlobalCancellation();
 
 const tokenStorage = new TokenStorage("o365-cli");
 const nav = new NavigationService();
-
-/**
- * Custom error to signal a 'Quit' or 'Back' request via hotkey
- */
-class NavigationHotkeyError extends Error {
-    constructor() {
-        super("Navigation hotkey triggered");
-    }
-}
-
-/**
- * Setup a global listener for the 'q' key to support quick exit/back
- * This simulates an Escape key press when 'q' is detected.
- */
-function enableNavigationHotkeys() {
-    if (process.stdin.isTTY) {
-        readline.emitKeypressEvents(process.stdin);
-        if (process.stdin.setRawMode) {
-            process.stdin.setRawMode(true);
-        }
-        
-        process.stdin.on("keypress", (str, key) => {
-            // If 'q' is pressed (and not while typing in an input field)
-            if (key.name === "q" && !key.ctrl && !key.meta) {
-                // Simulate Escape key sequence (\u001b)
-                // This triggers the 'cancel' behavior in @inquirer/prompts
-                process.stdin.emit("keypress", "\u001b", { name: "escape", full: "escape" });
-            }
-        });
-    }
-}
-
-enableNavigationHotkeys();
 
 interface DecodedToken {
     name?: string;
@@ -73,6 +40,35 @@ const CUSTOM_THEME = {
 
 // Global cache for org name to avoid redundant API calls
 let cachedOrgName: string | null = null;
+
+/**
+ * Formats scopes into an elegant, grouped display
+ */
+function renderScopes(scopes: string[], indent: number = 4): string {
+    if (!scopes || scopes.length === 0) return chalk.dim("None");
+
+    const sorted = [...scopes].sort();
+    const groups: Record<string, string[]> = {};
+
+    sorted.forEach(s => {
+        const parts = s.split('.');
+        const prefix = parts.length > 1 ? parts[0] : 'Base';
+        const suffix = parts.slice(1).join('.') || 'Access';
+        
+        if (!groups[prefix]) groups[prefix] = [];
+        groups[prefix].push(suffix);
+    });
+
+    const lines: string[] = [];
+    const prefixes = Object.keys(groups).sort();
+    
+    prefixes.forEach(prefix => {
+        const suffixes = groups[prefix].join(", ");
+        lines.push(`${" ".repeat(indent)}${chalk.cyan(prefix.padEnd(12))} ${theme.dim("→")} ${theme.muted(suffixes)}`);
+    });
+
+    return lines.join("\n");
+}
 
 async function getSessionDetails(tenantId: string = "common", includeOrg: boolean = true) {
     const token = await tokenStorage.getToken(`user@${tenantId}`);
@@ -157,7 +153,8 @@ async function handleLoginMenu() {
                 console.log(`  ${chalk.bold("Expires At:")}    ${color(session.expires.toLocaleString())}`);
                 console.log(`  ${chalk.bold("Status:")}        ${color(isExpired ? "Expired" : "Active")}`);
             }
-            console.log(`  ${chalk.bold("Scopes:")}        ${theme.dim(session.scopes.join(", "))}`);
+            console.log(`  ${chalk.bold("Scopes:")}`);
+            console.log(renderScopes(session.scopes));
             console.log("");
 
             const choice = await select({
@@ -355,7 +352,34 @@ async function showInteractiveMenu(showAll: boolean = false) {
                     const moduleId = await interactiveModulePicker(showAll);
                     if (moduleId !== "exit") {
                         const handler = TaskRegistry.getHandler(moduleId);
-                        const args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
+                        let args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
+
+                        // Special handling for CA Roadmap - ask for report options
+                        if (moduleId === "rep:ca-roadmap") {
+                            try {
+                                const showDetailed = await confirm({
+                                    message: "Show detailed per-policy alignment analysis?",
+                                    default: false,
+                                    theme: CUSTOM_THEME
+                                });
+
+                                const showMaturity = await confirm({
+                                    message: "Include CA maturity score in roadmap?",
+                                    default: true,
+                                    theme: CUSTOM_THEME
+                                });
+
+                                if (showDetailed) {
+                                    args.push("--detailed", "true");
+                                }
+                                if (!showMaturity) {
+                                    args.push("--no-maturity", "true");
+                                }
+                            } catch {
+                                // User cancelled options, proceed with defaults
+                            }
+                        }
+
                         await runTask(moduleId, args);
                         try {
                             await input({ message: "\nTask completed. Press Enter to return to menu..." });
@@ -396,7 +420,8 @@ async function showStatus() {
             console.log(`  - Expires At: ${color(session.expires.toLocaleString())}`);
             console.log(`  - Status:     ${color(isExpired ? "Expired" : "Active")}`);
         }
-        console.log(`  - Scopes:     ${chalk.dim(session.scopes.join(", "))}`);
+        console.log(`  - Scopes:`);
+        console.log(renderScopes(session.scopes, 6));
     } else {
         printInfo("No active sessions found. Run 'login' to connect.");
     }

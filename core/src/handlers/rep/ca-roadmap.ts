@@ -15,12 +15,14 @@ import boxen from "boxen";
 
 export interface CaRoadmapArgs extends TaskArgs {
   exportPath?: string;
+  detailed?: boolean; // Show per-policy alignment details
+  noMaturity?: boolean; // Skip maturity score in roadmap
 }
 
 class CaRoadmapHandler implements TaskHandler {
   taskId = "rep:ca-roadmap";
   name = "360° CA Strategy & Roadmap";
-  description = "Generate a prioritized security roadmap based on CA best practices";
+  description = "Generate a prioritized security roadmap with maturity scoring and policy alignment analysis";
   type = "audit" as const;
   status = "beta" as const;
 
@@ -28,6 +30,8 @@ class CaRoadmapHandler implements TaskHandler {
     return {
       dryRun: true, // Always read-only
       exportPath: parseStringFlag(rawArgs, "export"),
+      detailed: parseBooleanFlag(rawArgs, "detailed"),
+      noMaturity: parseBooleanFlag(rawArgs, "no-maturity"),
     };
   }
 
@@ -46,11 +50,11 @@ class CaRoadmapHandler implements TaskHandler {
       return;
     }
 
-    // 1. Run Analysis
+    // 1. Run Enhanced Analysis (with alignment and conflict detection)
     IPC.progress("Strategizing Zero Trust architecture alignment...", 40);
     const analyzer = new CABaselineAnalyzer();
-    const results = analyzer.analyze(policies);
-    const roadmap = analyzer.getRoadmap(results);
+    const results = analyzer.analyze(policies, { includeConflicts: true });
+    const roadmap = analyzer.getRoadmap(results, { includeMaturity: !args.noMaturity });
 
     // 2. Prepare Analysis Table
     const headers = ["Check", "Status", "Recommendation"];
@@ -87,12 +91,19 @@ class CaRoadmapHandler implements TaskHandler {
         console.log("\n" + chalk.bold("📋 Best Practice Gap Analysis:"));
         IPC.table(headers, tableRows);
         
-        console.log("\n" + boxen(roadmap, { 
-            padding: 1, 
-            borderColor: "yellow", 
-            title: "📍 CA Implementation Roadmap", 
-            borderStyle: "round" 
+        console.log("\n" + boxen(roadmap, {
+            padding: 1,
+            borderColor: "yellow",
+            title: "📍 CA Implementation Roadmap",
+            borderStyle: "round"
         }));
+
+        // 3a. Optional: Detailed Policy Alignment Report
+        if (args.detailed) {
+            console.log("\n" + chalk.bold("📋 Detailed Policy Alignment Report:"));
+            const detailedReport = analyzer.getDetailedPolicyReport(results);
+            console.log(detailedReport);
+        }
     
         // 4. Store for CSV export (silently)
         const exportHeaders = ["ID", "Check Name", "Description", "Status", "Recommendation"];
@@ -100,8 +111,12 @@ class CaRoadmapHandler implements TaskHandler {
         IPC.setExportTable(exportHeaders, exportRows);
     
         IPC.progress("Report complete", 100);
-        IPC.success({ 
-          message: `Strategic roadmap generated based on ${policies.length} analyzed policies.`,
+
+        // Get maturity score for success message
+        const maturityScore = analyzer.getMaturityScore(results);
+
+        IPC.success({
+          message: `Strategic roadmap generated based on ${policies.length} analyzed policies. Overall maturity: ${maturityScore.overall}% (${maturityScore.breakdown.passed} passed, ${maturityScore.breakdown.partial} partial, ${maturityScore.breakdown.failed} failed).`,
           roadmap: roadmap // Include roadmap text for export
         });
       }

@@ -14,6 +14,7 @@ const SCOPES = [
   "DeviceManagementRBAC.Read.All",
   "Device.Read.All",
   "DeviceManagementScripts.Read.All",
+  "Policy.Read.All",
   "offline_access"
 ];
 const REDIRECT_URI = "http://localhost:8400";

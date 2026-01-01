@@ -1,0 +1,34 @@
+🚀 CONDITIONAL ACCESS STRATEGIC ROADMAP (High-Fidelity Framework)
+This roadmap evaluates your posture against the standardized Microsoft baseline.
+
+📍 PHASE 1: THE SECURE FOUNDATION
+   Focus: Protecting admins, blocking legacy auth, and securing registration.
+  • [CAP001] Block Legacy Authentication: Create a policy blocking 'Exchange ActiveSync' and 'Other clients' for all users.
+  • [CAU008] Require Phishing-Resistant MFA for Admins: Require 'Authentication Strength' (FIDO2/Passkey) for all administrator roles.
+  • [CAU012] MFA for Security Info Registration: Target 'Register security information' action and require MFA.
+  • [CAU019] Require MFA for Service/Workload Identities: Create a policy requiring MFA or certificate auth for service principals.
+  • [CAU020] Block Anonymous/Tor IP Addresses: Create a policy blocking access from anonymous IP addresses and Tor exit nodes.
+  • [CAU024] Require MFA for Password Reset: Configure SSPR to require multiple methods (MFA equivalent) for password reset.
+  • [CAU017] Limit Admin Sign-in Frequency: Set 'Sign-in Frequency' to 4 hours for all administrative roles.
+  • [CAU018] Disable Browser Persistence for Admins: Set 'Persistent Browser Session' to 'Never' for administrators.
+  • [CAU023] Block Admin Access from Unmanaged Devices: Create a policy blocking admin portal access unless device is compliant or domain-joined.
+
+📍 PHASE 2: ATTACK SURFACE REDUCTION
+   Focus: External users and automated risk-based protection.
+  • [CAU025] Require Modern Authentication Clients: Create a policy allowing only modern authentication clients (mobile apps, browsers).
+  • [CAU015] Block High-Risk Sign-ins: Create a policy to 'Block' access when 'Sign-in Risk' is High.
+  • [CAU006] Require MFA for Medium/High-Risk Sign-ins: Require MFA when 'Sign-in Risk' is Medium or High.
+  • [CAU016] Block High-Risk Users: Create a policy to 'Block' access when 'User Risk' is High.
+  • [CAU007] Password Reset for High-Risk Users: Require 'Password Change' and MFA for High User Risk.
+  • [CAU021] Geofencing - Block Untrusted Countries: Create a Named Location with allowed countries and block access from all others.
+  • [CAD006] Session Timeout for Sensitive Apps: Set sign-in frequency to 1-4 hours for HR, finance, and admin applications.
+  • [CAU022] Terms of Use Acceptance: Create Terms of Use in Entra and enforce via Conditional Access policy.
+  • [CAU001] Require MFA for All Guests: Create a policy targeting 'All Guest and External Users' requiring MFA.
+
+📍 PHASE 3: ZERO TRUST MATURITY
+   Focus: Device trust and application protection (Intune integration).
+  • [CAD001] Require Compliant/Hybrid Devices for O365: Require 'Compliant Device' or 'Hybrid Joined' for Office 365 apps.
+  • [CAD002] Require App Protection (MAM) for Mobile: Require 'Approved Client App' and 'App Protection Policy' for iOS/Android.
+  • [CAD004] Require Compliant Device for SharePoint/OneDrive: Create a dedicated policy requiring compliant devices for SharePoint and OneDrive access.
+  • [CAD005] Token Protection for Desktop Apps: Enable token protection for Windows devices accessing Office desktop apps.
+  • [CAD007] Block Download on Unmanaged Devices (SharePoint/OneDrive): Enable application-enforced restrictions for SharePoint on unmanaged devices.
