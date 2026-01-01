@@ -9,6 +9,7 @@ export class IPC {
   private static readonly VERSION = "1.0";
   private static mode: 'json' | 'pretty' = 'json';
   private static lastTable: { headers: string[], rows: any[][] } | null = null;
+  private static lastResult: any | null = null;
   private static progressCallback: ((message: string, percent?: number) => void) | null = null;
 
   static setMode(mode: 'json' | 'pretty') {
@@ -23,8 +24,13 @@ export class IPC {
     return this.lastTable;
   }
 
+  static getLastResult() {
+    return this.lastResult;
+  }
+
   static clearLastTable() {
     this.lastTable = null;
+    this.lastResult = null;
   }
 
   /**
@@ -50,6 +56,7 @@ export class IPC {
 
   // Send final success result
   static success(data: any) {
+    this.lastResult = data;
     if (this.mode === 'json') {
         console.log(JSON.stringify({ type: 'success', version: this.VERSION, data }));
     } else {

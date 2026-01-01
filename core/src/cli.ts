@@ -16,11 +16,45 @@ import * as fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import ora from "ora";
+import * as readline from "readline";
 
 setupSignalHandlers();
 
 const tokenStorage = new TokenStorage("o365-cli");
 const nav = new NavigationService();
+
+/**
+ * Custom error to signal a 'Quit' or 'Back' request via hotkey
+ */
+class NavigationHotkeyError extends Error {
+    constructor() {
+        super("Navigation hotkey triggered");
+    }
+}
+
+/**
+ * Setup a global listener for the 'q' key to support quick exit/back
+ * This simulates an Escape key press when 'q' is detected.
+ */
+function enableNavigationHotkeys() {
+    if (process.stdin.isTTY) {
+        readline.emitKeypressEvents(process.stdin);
+        if (process.stdin.setRawMode) {
+            process.stdin.setRawMode(true);
+        }
+        
+        process.stdin.on("keypress", (str, key) => {
+            // If 'q' is pressed (and not while typing in an input field)
+            if (key.name === "q" && !key.ctrl && !key.meta) {
+                // Simulate Escape key sequence (\u001b)
+                // This triggers the 'cancel' behavior in @inquirer/prompts
+                process.stdin.emit("keypress", "\u001b", { name: "escape", full: "escape" });
+            }
+        });
+    }
+}
+
+enableNavigationHotkeys();
 
 interface DecodedToken {
     name?: string;
@@ -132,7 +166,7 @@ async function handleLoginMenu() {
                     { name: "🔄 Refresh Session", value: "refresh" },
                     { name: "🔑 Switch Tenant / New Login", value: "switch" },
                     { name: "🗑️ Logout (Clear Cache)", value: "logout" },
-                    { name: "🔙 Back to Menu", value: "back" }
+                    { name: theme.muted("🔙 Back to Menu (q)"), value: "back" }
                 ],
             });
 
@@ -217,7 +251,7 @@ async function runCategorizedPicker(showAll: boolean = false): Promise<string | 
             message: "Select a Task Category:",
             choices: [
                 ...categories,
-                { name: theme.muted("🔙 Back"), value: "exit" }
+                { name: theme.muted("🔙 Back (q)"), value: "exit" }
             ],
         });
 
@@ -260,11 +294,11 @@ async function runCategorizedPicker(showAll: boolean = false): Promise<string | 
 async function interactiveModulePicker(showAll: boolean = false): Promise<string | "exit"> {
     try {
         const mode = await select({
-            message: `Module Selection ${showAll ? theme.dim("(Developer Mode)") : ""}`,
+            message: `Module Selection ${showAll ? theme.dim("(Developer Mode)") : ""}:`,
             choices: [
                 { name: "⚡ Quick Search", value: "search" },
                 { name: "📂 Browse Categories", value: "browse" },
-                { name: theme.dim("⎋  Cancel"), value: "exit" }
+                { name: theme.dim("⎋  Cancel (q)"), value: "exit" }
             ],
         });
 
@@ -293,7 +327,7 @@ async function showInteractiveMenu(showAll: boolean = false) {
                     new Separator(theme.primary("─── SYSTEM ───")),
                     { name: "⚙️  Settings & Accounts", value: "settings" },
                     new Separator(theme.dim("──────────────────────────────")),
-                    { name: theme.dim("🚪 Exit"), value: "exit" }
+                    { name: theme.dim("🚪 Exit (q)"), value: "exit" }
                 ],
             });
 
@@ -418,8 +452,9 @@ async function runTask(moduleName: string, args: string[]) {
 
             // Post-Task Export Logic
             const lastTable = IPC.getLastTable();
+            const lastResult = IPC.getLastResult();
+
             if (lastTable) {
-                // Fetch real org name for filename (sanitized and lowercase)
                 const orgSlug = await getOrganizationName(true);
                 
                 const shouldExport = await confirm({
@@ -430,14 +465,10 @@ async function runTask(moduleName: string, args: string[]) {
 
                 if (shouldExport) {
                     const cleanModuleName = moduleName.replace(':', '_');
-                    const orgSlug = await getOrganizationName(true);
                     const defaultFilename = `${orgSlug}_${cleanModuleName}_results.csv`;
                     
-                    // Ensure output directory exists
                     const outputDir = path.resolve(process.cwd(), "output");
-                    if (!fs.existsSync(outputDir)) {
-                        fs.mkdirSync(outputDir, { recursive: true });
-                    }
+                    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
                     const filename = await input({ message: "Enter filename:", default: defaultFilename });
                     const fullPath = path.resolve(outputDir, filename);
@@ -449,6 +480,29 @@ async function runTask(moduleName: string, args: string[]) {
                     
                     fs.writeFileSync(fullPath, csv);
                     printSuccess(`Results exported to ${chalk.yellow(fullPath)}`);
+                }
+            }
+
+            // Specific check for Roadmap export
+            if (lastResult?.roadmap) {
+                const shouldExportRoadmap = await confirm({
+                    message: "Would you like to export the CA Implementation Roadmap to a text file?",
+                    default: false,
+                    theme: CUSTOM_THEME
+                });
+
+                if (shouldExportRoadmap) {
+                    const orgSlug = await getOrganizationName(true);
+                    const defaultFilename = `${orgSlug}_ca_roadmap.txt`;
+                    
+                    const outputDir = path.resolve(process.cwd(), "output");
+                    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+                    const filename = await input({ message: "Enter roadmap filename:", default: defaultFilename });
+                    const fullPath = path.resolve(outputDir, filename);
+                    
+                    fs.writeFileSync(fullPath, lastResult.roadmap);
+                    printSuccess(`Roadmap exported to ${chalk.yellow(fullPath)}`);
                 }
             }
         } catch (error: any) {

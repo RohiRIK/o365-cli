@@ -1,44 +1,56 @@
-# Implementation Plan - Conditional Access Audit
+# Implementation Plan - Conditional Access Governance Suite
 
 ## Phase 1: Core Logic & Data Retrieval [checkpoint: 9e381ae]
 - [x] Task: Scaffold CA Audit Module Structure (3acb0a0)
-    - Context: `core/src/handlers/sec/ca-audit.ts` and register it in `core/src/handlers/registry.ts`.
-    - Sub-task: Define the `TaskHandler` interface for `sec:ca-audit`.
 - [x] Task: Implement CA Policy Fetching (TDD) (d389152)
-    - Context: `core/src/services/graph.ts` (if needed) or within the handler.
-    - Sub-task: Write tests for fetching and type-guarding CA policy objects from Graph API.
-    - Sub-task: Implement the Graph call `GET /identity/conditionalAccess/policies`.
 - [x] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
 
 ## Phase 2: Visualization & Filtering [checkpoint: 2dbca25]
 - [x] Task: Implement Data Normalization for Display (TDD) (3d5747a)
-    - Context: `core/src/commands/sec/ca-audit.ts`.
-    - Sub-task: Write tests for converting complex nested Graph objects (Conditions, Grants) into readable string summaries for the table.
-    - Sub-task: Implement the normalization helpers.
 - [x] Task: Implement Table Rendering & Filtering (TDD) (d7cf532)
-    - Sub-task: Write tests for filtering logic (by State, by Target User - mock logic).
-    - Sub-task: Implement the table display using `cli-table3` and filtering flag logic.
 - [x] Task: CLI UX Refinement (Categories & run dev) (a8c58c7)
-    - Sub-task: Restore categorized module selection.
-    - Sub-task: Support `run dev` to filter for Beta/Draft modules.
 - [x] Task: Conductor - User Manual Verification 'Visualization' (Protocol in workflow.md)
 
-## Phase 3: Best Practice Engine
+## Phase 3: Best Practice Engine [checkpoint: d17a24f]
 - [x] Task: Implement Baseline Analyzer (TDD) (d70f8bf)
-    - Context: `core/src/services/analyzer/ca-baseline.ts` (new service).
-    - Sub-task: Write tests for the analyzer engine (passing vs failing policies).
-    - Sub-task: Implement the hardcoded Microsoft Best Practice checks (MFA for Admins, Legacy Auth Block).
-- [ ] Task: Implement Hybrid Config Loader (TDD)
-    - Sub-task: Write tests for loading and merging custom JSON/YAML baselines with defaults.
-    - Sub-task: Implement the configuration loader.
 - [x] Task: Integrate Analysis into CLI Output (5ba2c58)
-    - Sub-task: Update the CLI command to run the analyzer when `--analyze` is passed and display gap reports.
-- [ ] Task: Conductor - User Manual Verification 'Best Practice Engine' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Best Practice Engine' (Protocol in workflow.md)
 
-## Phase 4: Export & Integration
-- [ ] Task: Implement Export Functionality
-    - Sub-task: Implement CSV/JSON export logic for the full dataset.
-- [ ] Task: Final Polish & Registration
-    - Sub-task: Ensure help text and argument parsing matches the spec.
-    - Sub-task: Verify "Violet & Zinc" theme consistency.
-- [ ] Task: Conductor - User Manual Verification 'Final Release' (Protocol in workflow.md)
+## Phase 4: Strategic Roadmap Module [checkpoint: 032f9c4]
+- [x] Task: Create Strategic Roadmap Module (`rep:ca-roadmap`)
+    - Context: Create `core/src/handlers/rep/ca-roadmap.ts`.
+    - Sub-task: Port the `CABaselineAnalyzer` integration to the new module.
+    - Sub-task: Refactor `sec:ca-audit` to remove analysis logic (moving it to the separate module).
+- [x] Task: Implement Multi-Module Data Export
+    - Sub-task: Ensure both modules correctly support the CSV export of their respective datasets.
+- [x] Task: Final UX Polish & Registry Cleanup
+    - Sub-task: Ensure both modules have high-quality names and descriptions in the `list` output.
+- [x] Task: Conductor - User Manual Verification 'Strategic Roadmap' (Protocol in workflow.md)
+
+## Phase 5: High-Fidelity Analysis Engine
+
+- [x] Task: Implement Effective App Coverage Logic (5b3a114)
+
+    - Context: `core/src/services/analyzer/ca-baseline.ts`.
+
+    - Sub-task: Update checks to detect if "All Apps" covers specific requirements (e.g., Admin Portals).
+
+- [x] Task: Implement "Partial Match" (Warning) State (5b3a114)
+
+    - Sub-task: Add a "warn" status for policies that meet criteria but are in "Report-Only" mode.
+
+- [ ] Task: Advanced MAM & Device Detection
+
+    - Sub-task: Refine MAM detection to handle "All Platforms" with mobile-specific grant controls.
+
+- [ ] Task: Grant Control "Effective Logic" (OR/AND)
+
+    - Sub-task: Implement logic to parse `grantControls.operator` for complex control groups.
+
+- [ ] Task: Strategic Roadmap "Reasoning" Engine
+
+    - Sub-task: For each FAIL, provide a detailed "Why it matters" and "Implementation Steps" based on Microsoft research.
+
+- [ ] Task: Conductor - User Manual Verification 'High-Fidelity Engine' (Protocol in workflow.md)
+
+

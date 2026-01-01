@@ -7,8 +7,8 @@ import {
   parseStringFlag,
 } from "../registry";
 import { GraphService } from "../../services/graph";
-import { 
-  auditCAPolicies, 
+import {
+  auditCAPolicies,
   renderCAPoliciesTable,
   summarizeAssignments,
   summarizeConditions,
@@ -16,16 +16,12 @@ import {
   flattenPolicyForExport
 } from "../../commands/sec/ca-audit";
 import { IPC } from "../../utils/ipc";
-import { CABaselineAnalyzer } from "../../services/analyzer/ca-baseline";
-import { formatTable } from "../../utils/output";
 import chalk from "chalk";
 
 export interface CaAuditArgs extends TaskArgs {
-  analyze: boolean;
   state?: string;
   target?: string;
   exportPath?: string;
-  configPath?: string;
 }
 
 export async function fetchCAPolicies() {
@@ -35,19 +31,17 @@ export async function fetchCAPolicies() {
 class CaAuditHandler implements TaskHandler {
   taskId = "sec:ca-audit";
   name = "Conditional Access Audit";
-  description = "Audit and analyze Conditional Access policies";
+  description = "Detailed technical audit of every Conditional Access policy";
   type = "audit" as const;
-  status = "beta" as const;
+  status = "prod" as const;
 
   parseArgs(rawArgs: string[]): CaAuditArgs {
     return {
       // Audit modules are always read-only, no dry-run flag needed
-      dryRun: true, 
-      analyze: parseBooleanFlag(rawArgs, "analyze", false),
+      dryRun: true,
       state: parseStringFlag(rawArgs, "state"),
       target: parseStringFlag(rawArgs, "target"),
       exportPath: parseStringFlag(rawArgs, "export"),
-      configPath: parseStringFlag(rawArgs, "config"),
     };
   }
 
@@ -58,46 +52,45 @@ class CaAuditHandler implements TaskHandler {
     return { valid: true };
   }
 
-  async execute(args: CaAuditArgs): Promise<void> {
-    IPC.progress("Fetching Conditional Access policies...", 10);
-    const policies = await auditCAPolicies(args);
-    
-    if (!policies || policies.length === 0) {
-      IPC.log("No Conditional Access policies found matching the criteria.", "warn");
-      return;
-    }
+      async execute(args: CaAuditArgs): Promise<void> {
 
-    // 1. Analysis (if requested)
-    let analysisTable = "";
-    if (args.analyze) {
-      IPC.progress("Running Best Practice Analysis...", 20);
-      const analyzer = new CABaselineAnalyzer();
-      const results = analyzer.analyze(policies);
-      
-      const analysisHeaders = ["Check", "Status", "Recommendation"];
-      const analysisRows = results.map(r => {
-        const statusIcon = r.status === "pass" ? chalk.green("PASS ✅") : chalk.red("FAIL ❌");
-        return [
-          chalk.bold(r.name),
-          statusIcon,
-          r.status === "fail" ? chalk.yellow(r.recommendation) : chalk.dim("No action needed")
-        ];
-      });
-      analysisTable = "\n" + chalk.bold("📋 Best Practice Gap Analysis:") + "\n" + formatTable(analysisHeaders, analysisRows);
-    }
+        IPC.progress("Fetching Conditional Access policies...", 10);
 
-    // 2. Resolve names for CSV export
-    const flattenedData: any[] = [];
-    for (let i = 0; i < policies.length; i++) {
-      const p = policies[i];
-      const progress = 30 + Math.floor((i / policies.length) * 60);
-      IPC.progress(`Resolving identities: ${p.displayName || "policy"}...`, progress);
-      flattenedData.push(await flattenPolicyForExport(p));
-    }
+        const policies = await auditCAPolicies({ analyze: false, ...args });
+
+        
+
+        if (!policies || policies.length === 0) {
+
+          IPC.log("No Conditional Access policies found matching the criteria.", "warn");
+
+          return;
+
+        }
+
     
-    // 3. Prepare UI Table rows (Compact Summary for CLI)
-    IPC.progress("Preparing audit table...", 95);
-    const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
+
+        // 1. Resolve names for CSV export with granular progress
+
+        const flattenedData: any[] = [];
+
+        for (let i = 0; i < policies.length; i++) {
+
+          const p = policies[i];
+
+          const progress = 10 + Math.floor((i / policies.length) * 80);
+
+          IPC.progress(`Resolving identities: ${p.displayName || "policy"}...`, progress);
+
+          flattenedData.push(await flattenPolicyForExport(p));
+
+        }
+
+        
+
+        // 2. Prepare UI Table rows (Compact Summary for CLI)
+
+        IPC.progress("Preparing audit table...", 95);    const headers = ["Policy Name", "State", "Assignments", "Conditions", "Grant Controls"];
     const tableRows = policies.map(p => {
       return [
         p.displayName || "Untitled",
@@ -108,27 +101,24 @@ class CaAuditHandler implements TaskHandler {
       ];
     });
 
-    // 4. Render & Finalize
+    // 3. Render Table & Finalize
     IPC.progress("Audit complete", 100);
-    
-    // Manual clear of the current spinner line
+
+    // Manual clear of the current spinner line to prevent orphaned progress logs
     process.stdout.write("\r\x1b[K"); 
-    
-    if (analysisTable) console.log(analysisTable);
-    
-    console.log("\n" + chalk.bold("📊 Detailed Policy Audit:"));
+
+    console.log("\n" + chalk.bold("📊 Detailed Conditional Access Audit:"));
     IPC.table(headers, tableRows);
-    
-    // Store granular flattened data for CSV export (silently)
+
+    // 4. Store granular flattened data for CSV export (silently)
     const exportHeaders = Object.keys(flattenedData[0] || {});
     const exportRows = flattenedData.map(d => Object.values(d));
     IPC.setExportTable(exportHeaders, exportRows);
 
-    IPC.success({ 
-      message: `Audit complete. Found ${policies.length} policies.`
+    IPC.success({
+      message: `Technical audit complete. Found ${policies.length} policies.`
     });
   }
 }
 
 TaskRegistry.register(new CaAuditHandler());
-
