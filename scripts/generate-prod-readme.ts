@@ -32,18 +32,24 @@ async function generateProductionReadme() {
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-production-green.svg)]()
+[![GitHub](https://img.shields.io/badge/GitHub-RohiRIK%2Fo365--cli-blue?logo=github)](https://github.com/RohiRIK/o365-cli)
 
 ## 🚀 Overview
 
 O365 CLI is a high-performance TypeScript-based command-line interface for Microsoft 365 administration. This production branch contains only battle-tested, production-ready modules.
 
+**Built by:** [Rohi Rikman](https://github.com/RohiRIK)
+**Repository:** [github.com/RohiRIK/o365-cli](https://github.com/RohiRIK/o365-cli)
+
 ## ✨ Features
 
-- **Interactive CLI** - User-friendly prompts and navigation
+- **Interactive CLI** - User-friendly prompts and navigation with @inquirer/prompts
 - **Microsoft Graph Integration** - Seamless OAuth2 PKCE authentication
 - **Production-Ready Modules** - ${modules.length} stable modules across ${Object.keys(byCategory).length} categories
 - **Export Support** - CSV and text file exports
 - **Dry-Run Mode** - Preview changes before execution
+- **Type-Safe** - Built with TypeScript for reliability
+- **Fast Runtime** - Powered by Bun for exceptional performance
 
 ## 📦 Installation
 
@@ -56,12 +62,12 @@ O365 CLI is a high-performance TypeScript-based command-line interface for Micro
 ### Quick Start
 
 \`\`\`bash
-# Clone the repository
-git clone https://github.com/YOUR_ORG/o365-cli.git
+# Clone the repository (prod branch)
+git clone -b prod https://github.com/RohiRIK/o365-cli.git
 cd o365-cli
 
 # Install dependencies
-bun install
+cd core && bun install
 
 # Run interactive CLI
 bun run cli
@@ -139,10 +145,10 @@ bun run cli list
 
 This is the production release branch. For development and contributions:
 
-1. Fork the main development repository
-2. Create a feature branch
-3. Submit a pull request to the main branch
-4. Once approved and tested, it will be synced to this production branch
+1. Fork the repository: [github.com/RohiRIK/o365-cli](https://github.com/RohiRIK/o365-cli)
+2. Create a feature branch from \`dev\`
+3. Submit a pull request to the \`dev\` branch
+4. Once approved and tested, it will be automatically synced to this production branch
 
 ## 📄 License
 
@@ -151,20 +157,22 @@ MIT License - see [LICENSE](LICENSE) file for details
 ## 🔒 Security
 
 - All sensitive data is excluded from this branch
-- OAuth tokens stored securely in OS keyring
+- OAuth tokens stored securely in OS keyring (macOS Keychain, Windows Credential Manager, Linux Secret Service)
 - No credentials or secrets in repository
-- Report security issues to: [security@yourorg.com](mailto:security@yourorg.com)
+- **Report security issues**: [GitHub Security Advisories](https://github.com/RohiRIK/o365-cli/security/advisories/new)
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/YOUR_ORG/o365-cli/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/YOUR_ORG/o365-cli/discussions)
+- **Issues**: [GitHub Issues](https://github.com/RohiRIK/o365-cli/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/RohiRIK/o365-cli/discussions)
+- **Wiki**: [Documentation](https://github.com/RohiRIK/o365-cli/wiki)
 
 ---
 
 **Last Updated**: ${new Date().toISOString().split('T')[0]}
 **Production Modules**: ${modules.length}
-**Version**: Automatically synced from main branch
+**Auto-synced from**: \`dev\` branch
+**Maintainer**: [Rohi Rikman](https://github.com/RohiRIK)
 `;
 
   fs.writeFileSync('README.md', readme);
@@ -174,7 +182,13 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 async function scanProductionModules(): Promise<ModuleInfo[]> {
   const modules: ModuleInfo[] = [];
-  const files = await glob('core/src/handlers/**/*.ts', {
+
+  // Determine handlers directory based on current working directory
+  const handlersPattern = fs.existsSync('core/src/handlers')
+    ? 'core/src/handlers/**/*.ts'  // Running from repo root
+    : 'src/handlers/**/*.ts';       // Running from core/ directory
+
+  const files = await glob(handlersPattern, {
     ignore: ['**/*.test.ts', '**/*.spec.ts', '**/registry.ts']
   });
 

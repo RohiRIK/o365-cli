@@ -9,10 +9,14 @@ import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
 
-const HANDLERS_DIR = 'core/src/handlers';
+// Determine handlers directory based on current working directory
+const HANDLERS_DIR = fs.existsSync('core/src/handlers')
+  ? 'core/src/handlers'  // Running from repo root
+  : 'src/handlers';       // Running from core/ directory
 
 async function filterProdModules() {
   console.log('🔍 Scanning for modules...\n');
+  console.log(`📂 Handlers directory: ${HANDLERS_DIR}\n`);
 
   // Find all handler files
   const files = await glob(`${HANDLERS_DIR}/**/*.ts`, {
