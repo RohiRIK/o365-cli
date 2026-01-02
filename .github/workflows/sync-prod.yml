@@ -2,11 +2,7 @@ name: Sync Production Modules to Prod Branch
 
 on:
   push:
-    branches: [dev]  # Trigger only from dev branch
-    paths:
-      - 'core/src/handlers/**'
-      - 'core/src/services/**'
-      - 'core/src/utils/**'
+    branches: [dev]  # Trigger on any push to dev branch
   workflow_dispatch: # Allow manual trigger
 
 jobs:
