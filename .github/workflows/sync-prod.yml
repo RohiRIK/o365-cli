@@ -22,6 +22,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
+        working-directory: ./core
         run: bun install
 
       - name: Configure Git
@@ -43,34 +44,35 @@ jobs:
 
       - name: Copy base structure
         run: |
-          # Checkout main to get files
-          git checkout main -- .gitignore
-          git checkout main -- package.json
-          git checkout main -- bun.lockb
-          git checkout main -- tsconfig.json
-          git checkout main -- core/
+          # Checkout dev to get files (not main)
+          git checkout dev -- .gitignore
+          git checkout dev -- core/
+          git checkout dev -- scripts/
 
-          echo "Base structure copied from main"
+          echo "Base structure copied from dev"
 
       - name: Filter to prod modules only
+        working-directory: ./core
         run: |
-          bun run scripts/filter-prod-modules.ts
+          bun run ../scripts/filter-prod-modules.ts
           echo "Filtered to production modules only"
 
       - name: Sanitize configs
+        working-directory: ./core
         run: |
-          bun run scripts/sanitize-configs.ts
+          bun run ../scripts/sanitize-configs.ts
           echo "Sanitized sensitive files"
 
       - name: Generate production README
+        working-directory: ./core
         run: |
-          bun run scripts/generate-prod-readme.ts
+          bun run ../scripts/generate-prod-readme.ts
           echo "Generated production README"
 
       - name: Commit and push prod branch
         run: |
           git add .
-          git commit -m "chore: sync prod modules from main@$(git rev-parse --short main)" || echo "No changes to commit"
+          git commit -m "chore: sync prod modules from dev@$(git rev-parse --short dev)" || echo "No changes to commit"
           git push origin prod --force
 
           echo "✅ Production branch updated successfully"
@@ -80,7 +82,7 @@ jobs:
           echo "### 🎯 Production Sync Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`prod\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Source:** \`main@$(git rev-parse --short main)\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Source:** \`dev@$(git rev-parse --short dev)\`" >> $GITHUB_STEP_SUMMARY
           echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Production modules have been synchronized." >> $GITHUB_STEP_SUMMARY
