@@ -6,7 +6,7 @@ This guide walks you through setting up automatic production module syncing to a
 
 ## 📋 What This Does
 
-When you push to `main`:
+When you push to `dev`:
 1. ✅ GitHub Action automatically runs
 2. ✅ Creates clean `prod` branch
 3. ✅ Copies **only** modules with `status = "prod"`
@@ -31,7 +31,7 @@ cd "/Users/rohirikman/Library/CloudStorage/GoogleDrive-rohi5054@gmail.com/My Dri
 ```
 
 **This will:**
-- Delete all branches except `main`
+- Delete all branches except `dev`
 - Create fresh `prod` branch
 - Push to remote
 
@@ -99,12 +99,12 @@ git branch -D test-sync
 
 ### Step 5: Trigger First Sync
 
-Commit and push to main:
+Commit and push to dev:
 
 ```bash
 git add .
 git commit -m "chore: setup production sync automation"
-git push origin main
+git push origin dev
 ```
 
 **Watch the Action:**
@@ -140,10 +140,10 @@ git checkout main
 
 After setup, the workflow is automatic:
 
-### 1. Work in Main Branch
+### 1. Work in Dev Branch
 
 ```bash
-git checkout main
+git checkout dev
 
 # Make changes
 # Add new modules or update existing ones
@@ -161,7 +161,7 @@ status = "prod" as const;
 ```bash
 git add .
 git commit -m "feat: add new production module"
-git push origin main
+git push origin dev
 ```
 
 ### 4. Action Runs Automatically
@@ -182,10 +182,10 @@ GitHub Action will:
 Create a dedicated public repository:
 
 ```bash
-# Create new repo on GitHub: yourorg/o365-cli-public
+# Create new repo on GitHub: RohiRIK/o365-cli-public
 
 # Add as remote
-git remote add public https://github.com/yourorg/o365-cli-public.git
+git remote add public https://github.com/RohiRIK/o365-cli-public.git
 
 # Push prod branch to public repo
 git push public prod:main --force
@@ -198,7 +198,7 @@ git push public prod:main --force
 
 If using GitHub Teams/Enterprise:
 
-1. Keep `main` private
+1. Keep `dev` private
 2. Make only `prod` branch public
 3. Set `prod` as default branch for public view
 
@@ -223,14 +223,14 @@ If you need to force a sync:
 1. Go to GitHub → **Actions**
 2. Select "Sync Production Modules to Prod Branch"
 3. Click **Run workflow**
-4. Select `main` branch
+4. Select `dev` branch
 5. Click **Run workflow**
 
 ### View Prod Branch Diff
 
 ```bash
-# See what's different between main and prod
-git diff main..prod
+# See what's different between dev and prod
+git diff dev..prod
 ```
 
 ---

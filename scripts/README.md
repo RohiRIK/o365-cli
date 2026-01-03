@@ -5,7 +5,7 @@ This directory contains automation scripts for managing production module syncin
 ## 📋 Scripts Overview
 
 ### 1. **cleanup-branches.sh**
-Cleans up all branches except `main` and creates a fresh `prod` branch.
+Cleans up all branches except `dev` and creates a fresh `prod` branch.
 
 **Usage:**
 ```bash
@@ -14,8 +14,8 @@ chmod +x scripts/cleanup-branches.sh
 ```
 
 **What it does:**
-- ✅ Deletes all local branches except `main`
-- ✅ Deletes all remote branches except `main`
+- ✅ Deletes all local branches except `dev`
+- ✅ Deletes all remote branches except `dev`
 - ✅ Creates a fresh `prod` orphan branch
 - ✅ Pushes clean `prod` branch to remote
 
@@ -83,7 +83,7 @@ chmod +x scripts/cleanup-branches.sh
 ```
 
 This will:
-1. Delete all branches except `main`
+1. Delete all branches except `dev`
 2. Create fresh `prod` branch
 3. Push to remote
 
@@ -101,7 +101,7 @@ For stable, production-ready modules only.
 The GitHub Action is already configured in `.github/workflows/sync-prod.yml`.
 
 It will automatically run when:
-- You push to `main` branch
+- You push to `dev` branch
 - Changes are made to `core/src/handlers/`, `core/src/services/`, or `core/src/utils/`
 
 ### Step 4: Trigger First Sync
@@ -111,8 +111,8 @@ It will automatically run when:
 git add .
 git commit -m "feat: mark modules as production ready"
 
-# Push to main (this triggers the action)
-git push origin main
+# Push to dev (this triggers the action)
+git push origin dev
 ```
 
 The GitHub Action will:
@@ -140,7 +140,7 @@ You can manually trigger the workflow:
 1. Go to **Actions** tab
 2. Select "Sync Production Modules to Prod Branch"
 3. Click **Run workflow**
-4. Select `main` branch
+4. Select `dev` branch
 5. Click **Run workflow**
 
 ---
@@ -154,14 +154,14 @@ Before pushing, you can test scripts locally:
 git checkout -b test-filter
 bun run scripts/filter-prod-modules.ts
 git status # See what would be removed
-git checkout main
+git checkout dev
 git branch -D test-filter
 
 # Test sanitization
 git checkout -b test-sanitize
 bun run scripts/sanitize-configs.ts
 ls -la # See what files remain
-git checkout main
+git checkout dev
 git branch -D test-sanitize
 
 # Test README generation
@@ -176,7 +176,7 @@ git checkout README.md # Restore original
 
 Once set up, the `prod` branch will:
 
-- ✅ Auto-update on every push to `main`
+- ✅ Auto-update on every push to `dev`
 - ✅ Contain only production modules
 - ✅ Have clean, public-facing README
 - ✅ Be free of secrets and internal docs
@@ -189,15 +189,15 @@ If you want to make only the `prod` branch public:
 1. Go to repository **Settings**
 2. Under **Branches**, set default branch to `prod`
 3. Make repository public
-4. Main branch remains private (if using GitHub Teams/Enterprise)
+4. Dev branch remains private (if using GitHub Teams/Enterprise)
 
 OR create a separate public repository:
 
 ```bash
-# Create new public repo on GitHub: yourorg/o365-cli-public
+# Create new public repo on GitHub: RohiRIK/o365-cli-public
 
 # Add as remote
-git remote add public https://github.com/yourorg/o365-cli-public.git
+git remote add public https://github.com/RohiRIK/o365-cli-public.git
 
 # Push prod branch
 git push public prod:main
@@ -232,7 +232,7 @@ Ensure GitHub Actions has write permissions:
 ### Prod branch not updating
 
 1. Check GitHub Actions logs
-2. Ensure you pushed to `main` branch
+2. Ensure you pushed to `dev` branch
 3. Ensure changes were in `core/src/handlers/`
 4. Try manual workflow trigger
 

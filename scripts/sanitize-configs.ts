@@ -44,6 +44,11 @@ const SENSITIVE_PATTERNS = [
   'logs/**',
   'core/output/**',
 
+  // Dependencies (CRITICAL - must exclude from prod)
+  'node_modules/**',
+  'core/node_modules/**',
+  '**/node_modules',
+
   // Git artifacts
   '.git',
   '.github/ISSUE_TEMPLATE/**',
@@ -56,6 +61,17 @@ const SENSITIVE_PATTERNS = [
 
 async function sanitizeConfigs() {
   console.log('🧹 Sanitizing configuration files...\n');
+
+  // CRITICAL: Delete node_modules directories FIRST (before git operations)
+  const nodeModulesDirs = ['node_modules', 'core/node_modules'];
+
+  for (const dir of nodeModulesDirs) {
+    if (fs.existsSync(dir)) {
+      console.log(`🗑️  Removing: ${dir}`);
+      fs.rmSync(dir, { recursive: true, force: true });
+      console.log(`✅ Deleted: ${dir}`);
+    }
+  }
 
   let removedCount = 0;
 
@@ -148,8 +164,15 @@ dist/
 build/
 `;
 
+  // Create .gitignore in root
   fs.writeFileSync('.gitignore', gitignore);
   console.log('✅ Created: .gitignore');
+
+  // Also create .gitignore in core/ directory
+  if (fs.existsSync('core')) {
+    fs.writeFileSync('core/.gitignore', gitignore);
+    console.log('✅ Created: core/.gitignore');
+  }
 }
 
 // Run sanitization
