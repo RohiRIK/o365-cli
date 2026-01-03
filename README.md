@@ -182,6 +182,46 @@ All modules support `--dry-run` mode for safe previewing of changes.
 
 ---
 
+## 🤖 Automated Production Sync
+
+This repository uses **GitHub Actions** to automatically sync production modules from `dev` to `prod` branch.
+
+### How It Works
+
+1. **Development** happens in the `dev` branch (all modules, docs, internal files)
+2. **Mark modules as production** by setting `status = "prod"` in handler files
+3. **Push to dev** - GitHub Action automatically triggers
+4. **Auto-sync to prod** - Only production modules are synced to `prod` branch
+
+### What Gets Synced
+
+**✅ Included in prod:**
+- Production modules only (`status = "prod"`)
+- Core TypeScript source code
+- Automation scripts
+- Auto-generated README with module documentation
+
+**❌ Excluded from prod:**
+- Development/beta modules (`status = "beta"` or `status = "draft"`)
+- Internal documentation (`conductor/`, research docs)
+- Sensitive files (secrets, credentials)
+- Development artifacts (`node_modules/`, logs)
+
+### Production Branch Stats
+
+- **4 production modules** across 3 categories
+- **130 tracked files** (clean & minimal)
+- **138 passing tests** (100% coverage for prod modules)
+- **Auto-generated README** with installation guide
+
+### Workflow Status
+
+View the automation status at: [GitHub Actions](https://github.com/RohiRIK/o365-cli/actions/workflows/sync-prod.yml)
+
+**Latest sync:** Automatically triggered on every push to `dev`
+
+---
+
 **Want to contribute?** See `CONTRIBUTING.md` or open an issue to discuss new modules!
 
 ---
