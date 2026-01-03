@@ -21,15 +21,25 @@ We treat infrastructure as code and governance as a continuous process, not a on
 
 ## 🛠️ Technical Architecture
 
-This project uses a **Unified TypeScript Architecture** optimized for speed and developer experience:
+**100% TypeScript** - Built with Bun runtime for maximum performance.
 
-1.  **The Engine (TypeScript + Bun 🍞):**
-    *   Handles Orchestration, Authentication (OAuth2 PKCE), and Business Logic.
-    *   *Why?* Bun provides incredibly fast startup times and native support for TypeScript. The Microsoft Graph JS SDK is mature and reliable.
-2.  **Secure Storage:**
-    *   Tokens and configurations are stored securely using the **OS Keychain** via `keytar`.
-3.  **Legacy Reference:**
-    *   Original PowerShell and Rust implementations are preserved in `legacy/` for architectural reference.
+**Core Components:**
+1. **TypeScript Engine** (`core/`)
+   - CLI interface with `@inquirer/prompts`
+   - OAuth2 PKCE authentication
+   - Microsoft Graph API integration
+   - Modular handler-based architecture
+
+2. **Bun Runtime** 🍞
+   - Near-instant startup times
+   - Native TypeScript execution (no build step!)
+   - High-performance HTTP and file I/O
+
+3. **Secure Storage**
+   - OS Keychain integration via `keytar`
+   - Never stores credentials in plaintext
+
+**Note:** Legacy Rust and PowerShell implementations exist in archives for reference only.
 
 ---
 
@@ -58,15 +68,121 @@ bun src/cli.ts run sec:shadow-it --dry-run true
 
 ---
 
-## 🧩 Module Ecosystem
+## 🎯 Production Modules
 
-The platform supports a wide range of modules across Security, IAM, and Resource Management.
+The platform currently has **4 production-ready modules** across Security, IAM, and Device Management categories.
 
-| Category | Modules |
-| :--- | :--- |
-| **Security** | Shadow IT, MFA Enforcement, Risky Sign-ins, External Sharing |
-| **IAM** | Graceful Offboarding, Guest User Cleanup, License Reclaim |
-| **Resources** | Stale Device Cleanup, License Optimization, Teams Usage |
+### Security (SEC)
+
+#### `sec:ca-audit` - Conditional Access Audit
+Detailed technical audit of every Conditional Access policy in your tenant.
+
+**Features:**
+- Policy-by-policy analysis
+- Assignment summaries
+- Condition breakdown
+- Grant control inspection
+- Export to JSON
+
+**Usage:**
+```bash
+bun src/cli.ts run sec:ca-audit
+bun src/cli.ts run sec:ca-audit --export output/ca-policies.json
+```
+
+#### `sec:shadow-it` - Shadow IT Governance
+Detect and remediate risky OAuth applications with dangerous permissions.
+
+**Features:**
+- Identify unverified publishers
+- Flag dangerous Graph API permissions
+- Detect credential expiry issues
+- Auto-remediation with dry-run mode
+
+**Usage:**
+```bash
+bun src/cli.ts run sec:shadow-it --dry-run true
+bun src/cli.ts run sec:shadow-it --dry-run false  # Live remediation
+```
+
+### Identity & Access Management (IAM)
+
+#### `iam:offboard` - Graceful User Offboarding
+Standard user termination protocol with license reclamation and mailbox conversion.
+
+**Features:**
+- Block sign-in
+- Revoke all sessions
+- Convert mailbox to shared
+- Remove from all groups
+- Reclaim licenses
+- Device retirement (wipe/retire/none)
+
+**Usage:**
+```bash
+bun src/cli.ts run iam:offboard --user user@domain.com --dry-run true
+bun src/cli.ts run iam:offboard --user user@domain.com --device-action wipe --dry-run false
+```
+
+### Device Management (DEV)
+
+#### `dev:intune-audit` - Intune Configuration Audit
+Comprehensive audit of Intune assignments and configuration profiles.
+
+**Features:**
+- Configuration profile analysis
+- Assignment mapping
+- Compliance policy review
+- Export to JSON
+
+**Usage:**
+```bash
+bun src/cli.ts run dev:intune-audit
+bun src/cli.ts run dev:intune-audit --export output/intune-config.json
+```
+
+---
+
+## 📍 Module Status Legend
+
+- **🟢 Production** - Fully tested, production-ready (4 modules)
+- **🟡 Beta** - Functional but under active development (15+ modules)
+- **🔴 Draft** - Experimental or incomplete
+
+All modules support `--dry-run` mode for safe previewing of changes.
+
+---
+
+## 🗺️ Roadmap
+
+### Q1 2026 - Security & Compliance Expansion
+- [ ] `sec:mfa-enforcement` - MFA gap analysis and enforcement
+- [ ] `sec:risky-sign-ins` - Identity Protection risk detection
+- [ ] `sec:external-sharing` - External sharing audit across SharePoint/OneDrive
+- [ ] `gov:audit-log-export` - Unified audit log forensics
+- [ ] `gov:retention-audit` - Data retention policy compliance
+
+### Q2 2026 - IAM & Resource Management
+- [ ] `iam:guest-cleanup` - Automated guest user lifecycle management (move to prod)
+- [ ] `iam:stale-accounts` - Inactive user detection and cleanup
+- [ ] `res:license-optimization` - License usage analytics and recommendations
+- [ ] `res:device-cleanup` - Stale device identification and removal
+- [ ] `res:teams-usage` - Teams sprawl analysis
+
+### Q3 2026 - Reporting & Analytics
+- [ ] `rep:executive-dashboard` - Executive-level activity summaries
+- [ ] `rep:compliance-scorecard` - Security posture scoring
+- [ ] `rep:user-analyzer` - Per-user risk and activity profiling
+
+### Future Considerations
+- **TUI Dashboard** - Interactive terminal dashboard (Rust-based, maybe)
+- **Webhook Integration** - Real-time alerts via webhook
+- **Policy Templates** - Pre-built compliance templates (CIS, NIST, etc.)
+- **CI/CD Integration** - GitHub Actions for continuous compliance
+
+---
+
+**Want to contribute?** See `CONTRIBUTING.md` or open an issue to discuss new modules!
 
 ---
 

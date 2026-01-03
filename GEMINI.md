@@ -4,23 +4,16 @@ A **TypeScript** platform for enterprise-grade Microsoft 365 administration. Thi
 
 ## 🚀 Architecture
 
+**100% TypeScript** - Built with Bun runtime for maximum performance.
+
 -   **TypeScript CLI (`core/src/cli.ts`)**: The primary entry point, providing interactive menus, authentication, and command execution.
 -   **TypeScript Workers (`core/`)**: Microsoft Graph API business logic, powered by Bun runtime.
--   **Legacy Scripts (`legacy/`)**: Original PowerShell reference implementations for porting.
+-   **Legacy Reference (`legacy/`)**: Original PowerShell scripts archived for reference only (not actively maintained).
 
 ## 📦 Prerequisites
 
-### For TypeScript CLI
 *   **Bun Runtime:** `brew install oven-sh/bun/bun` (macOS) or see [bun.sh](https://bun.sh)
 *   **Permissions:** Global Administrator, User Administrator, or specific delegated permissions
-
-### For Legacy PowerShell Scripts
-*   **PowerShell:** 5.1 or 7+ (Core)
-*   **Modules:**
-    ```powershell
-    Install-Module Microsoft.Graph -Scope CurrentUser
-    Install-Module ExchangeOnlineManagement -Scope CurrentUser
-    ```
 
 ## 🎯 Quick Start
 
@@ -43,16 +36,21 @@ All sessions are logged to `logs/o365-cli_YYYYMMDD_HHMMSS.log` with:
 - Debug-level detail with RFC3339 timestamps
 - No overwriting - each run creates a new file
 
-## 📋 Available Modules
+## 📋 Production Modules
 
-| Module | Status | Description | Key Features |
-| :--- | :---: | :--- | :--- |
-| **Shadow IT Governance** (`sec:shadow-it`) | ✅ **Enhanced** | Detects and remediates risky OAuth apps | 🚨 **NEW:** Permission severity classification (CRITICAL/HIGH/MEDIUM/LOW)<br>• Actionable recommendations<br>• Dual-scan (delegated + app permissions)<br>• Microsoft service principal filtering<br>• Last sign-in tracking<br>• Risk scoring (0-100)<br>• Publisher verification |
-| **Graceful Offboarding** (`iam:offboard`) | 🚧 In Progress | Standard user termination protocol | • Block sign-in<br>• Convert to shared mailbox<br>• Hide from GAL<br>• Grant manager access<br>• Reclaim licenses |
-| **Guest Cleanup** | 📅 Planned | Stale guest user lifecycle | • Orphan detection<br>• Asset handover<br>• Webhook notifications |
-| **Stale Device Cleanup** | 📅 Planned | Remove inactive devices | • TrustType awareness<br>• Hybrid join protection |
-| **License Optimization** | 📅 Planned | Identify unused licenses | • Cost analysis<br>• Reclaim suggestions |
-| **360° User Analyzer** | 📅 Planned | Comprehensive user reports | • Activity forensics<br>• Device inventory<br>• Group membership |
+The platform currently has **4 production-ready modules**:
+
+| Module | Category | Description |
+| :--- | :--- | :--- |
+| **`sec:ca-audit`** | Security | Conditional Access policy audit with export |
+| **`sec:shadow-it`** | Security | Risky OAuth app detection & remediation |
+| **`iam:offboard`** | Identity | User termination with license reclaim |
+| **`dev:intune-audit`** | Devices | Intune configuration audit |
+
+**🟡 Beta Modules** (15+ available) - Functional but under active development
+**🔴 Draft Modules** - Experimental, not production-ready
+
+See `README.md` for detailed module documentation and usage examples.
 
 ## 🔐 Security & Authentication
 
@@ -118,9 +116,10 @@ grep "shadow-it" logs/o365-cli_*.log
 
 ## 📚 Documentation
 
-- **Developer Instructions**: `.github/copilot-instructions.md` - Architecture, IPC protocol, extending the platform
-- **Module Research**: `docs/SHADOW_IT_RESEARCH.md` - Permission model, risk scoring algorithm
-- **Legacy Context**: Each `legacy/` folder contains a `GEMINI.md` with specific operational logic
+- **Main README**: `README.md` - Architecture, production modules, roadmap
+- **AI Instructions**: `CLAUDE.md` - For Claude Code AI agent
+- **Developer Guide**: `CLAUDE.md` - Architecture, extending the platform
+- **Legacy Reference**: Each `legacy/` folder contains archived PowerShell implementations
 
 ## 🤝 Contributing
 
