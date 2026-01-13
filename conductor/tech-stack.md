@@ -1,19 +1,17 @@
 # Technology Stack: o365-cli
 
-## Frontend & Orchestration (CLI)
--   **Language:** TypeScript
--   **Runtime:** **Bun** for instant startup and native TS support.
--   **CLI Framework:** `commander` for argument parsing and `@inquirer/prompts` for modular, type-safe interactive menus.
--   **UI Utilities:** `chalk` for colors, `ora` for spinners, and `cli-table3` for rich table rendering.
--   **Authentication:** `oauth2` (PKCE flow) with **system keychain** storage via `keytar`.
+## Primary Stack (TypeScript/Bun)
+-   **Language:** **TypeScript** is the mandatory language for all core orchestration, API logic, and complex CLI features.
+-   **Runtime:** **Bun** is the standard runtime and package manager. It provides high performance, native TypeScript support, and a unified development experience.
+-   **CLI Framework:** `commander` for command structure and `@inquirer/prompts` for interactive user journeys.
+-   **Authentication:** OAuth2 PKCE flow with secure local token storage.
 
-## Core Logic (Graph Integration)
--   **API Integration:** `@microsoft/microsoft-graph-client` for Entra ID and M365 governance.
--   **Security Architecture:** Identity managed via `@azure/identity`.
+## Secondary Stack (PowerShell)
+-   **Language:** **PowerShell 7+** is a supported secondary option for specialized administration tasks, Exchange Online operations, or when rapid scripting is preferred by the team.
+-   -   **Requirement:** PowerShell scripts must adhere to the project's directory structure (e.g., residing in relevant module folders) and should be designed to be called by the TypeScript orchestrator if they perform core functions.
 
-## Legacy & Reference Layers
--   **Rust TUI:** Original high-performance interactive interface (archived in `legacy/archive/rust-tui-deprecated/`).
--   **PowerShell 7+:** Used for complex Exchange Online operations and legacy compatibility.
+## Legacy Reference Layers
+-   **Legacy PowerShell:** Archived modules in `legacy/` serve as the reference implementation for modern TypeScript ports.
 
 ## Architecture Summary
--   **Unified Model:** A single TypeScript engine handles authentication, user interaction, and Graph API orchestration. Modules are dynamically discovered and executed within the Bun runtime for maximum performance.
+-   **Unified Engine:** A single TypeScript/Bun entry point (`core/src/cli.ts`) serves as the primary gateway for all administrative actions, regardless of whether the underlying logic is implemented in TypeScript or triggered as a PowerShell subprocess.
