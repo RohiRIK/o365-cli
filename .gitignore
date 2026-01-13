@@ -1,0 +1,68 @@
+# OS specific
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# PowerShell output/logging
+*.log
+*.transcripts
+
+# Reports and Data Exports
+*.csv
+*.html
+*.xml
+*.json
+# But keep essential config files
+!package.json
+!tsconfig.json
+!Cargo.toml
+!conductor/context.json
+
+# Project specific temporary or output folders
+.gemini-clipboard/
+.gemini/
+cli/target/
+core/node_modules/
+core/bun.lock
+
+
+# Certificates
+*.pfx
+*.pem
+*.crt
+*.key
+
+# Environment/Configuration files
+.env
+env.ps1
+config.json
+*.config # Broad, but can catch config files holding secrets
+
+# Secrets & Authentication
+*.secrets
+secrets.json
+credentials.json
+.o365_cli_token
+.o365_cli_profile.json
+.token_cache
+
+# Build Artifacts
+dist/
+build/
+out/
+bin/
+obj/
+*.dll
+*.exe
+*.lib
+*.o         
+
+# Logs
+logs/
+*.log   

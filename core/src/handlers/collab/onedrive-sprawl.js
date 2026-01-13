@@ -1,0 +1,27 @@
+import { TaskRegistry, parseBooleanFlag, parseNumberFlag, } from "../registry";
+import { analyzeOneDriveSprawl } from "../../commands/collab/onedrive-sprawl";
+class OneDriveSprawlHandler {
+    taskId = "collab:onedrive-sprawl";
+    name = "OneDrive Sprawl Audit";
+    description = "Identify orphaned or excessively shared OneDrives";
+    type = "audit";
+    status = "draft";
+    parseArgs(rawArgs) {
+        const thresholdGb = parseNumberFlag(rawArgs, "threshold_gb", 500);
+        const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
+        return { thresholdGb, dryRun };
+    }
+    validate(args) {
+        if (args.thresholdGb < 100 || args.thresholdGb > 5000) {
+            return {
+                valid: false,
+                error: `Invalid storage threshold: ${args.thresholdGb}GB. Must be between 100 and 5000 GB.`,
+            };
+        }
+        return { valid: true };
+    }
+    async execute(args) {
+        await analyzeOneDriveSprawl(args.thresholdGb, args.dryRun);
+    }
+}
+TaskRegistry.register(new OneDriveSprawlHandler());

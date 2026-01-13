@@ -1,0 +1,642 @@
+import { Command } from "commander";
+import { loadCommands } from "./loader";
+import { TaskRegistry } from "./handlers/registry";
+import { printError, printInfo, printSuccess } from "./utils/output";
+import { AuthService } from "./services/auth";
+import { TokenStorage } from "./services/token-storage";
+import { NavigationService } from "./services/navigation";
+import { getCategoryChoices, getModulesInCategory, CATEGORY_MAP, getAllModuleChoices } from "./utils/menu";
+import { select, input, Separator, confirm, search, enableGlobalCancellation } from "./utils/prompts";
+import { jwtDecode } from "jwt-decode";
+import { IPC } from "./utils/ipc";
+import { setupSignalHandlers } from "./utils/process";
+import { theme } from "./utils/theme";
+import { GraphService } from "./services/graph";
+import * as fs from "fs";
+import path from "path";
+import chalk from "chalk";
+import ora from "ora";
+
+setupSignalHandlers();
+enableGlobalCancellation();
+
+const tokenStorage = new TokenStorage("o365-cli");
+const nav = new NavigationService();
+
+interface DecodedToken {
+    name?: string;
+    upn?: string;
+    unique_name?: string;
+    tid?: string;
+    exp?: number;
+    iat?: number;
+    scp?: string;
+}
+
+// Minimalist theme for sub-prompts
+const CUSTOM_THEME = {
+    helpMode: 'never' as const
+};
+
+// Global cache for org name to avoid redundant API calls
+let cachedOrgName: string | null = null;
+
+/**
+ * Formats scopes into an elegant, grouped display
+ */
+function renderScopes(scopes: string[], indent: number = 4): string {
+    if (!scopes || scopes.length === 0) return chalk.dim("None");
+
+    const sorted = [...scopes].sort();
+    const groups: Record<string, string[]> = {};
+
+    sorted.forEach(s => {
+        const parts = s.split('.');
+        const prefix = parts.length > 1 ? parts[0] : 'Base';
+        const suffix = parts.slice(1).join('.') || 'Access';
+        
+        if (!groups[prefix]) groups[prefix] = [];
+        groups[prefix].push(suffix);
+    });
+
+    const lines: string[] = [];
+    const prefixes = Object.keys(groups).sort();
+    
+    prefixes.forEach(prefix => {
+        const suffixes = groups[prefix].join(", ");
+        lines.push(`${" ".repeat(indent)}${chalk.cyan(prefix.padEnd(12))} ${theme.dim("→")} ${theme.muted(suffixes)}`);
+    });
+
+    return lines.join("\n");
+}
+
+async function getSessionDetails(tenantId: string = "common", includeOrg: boolean = true) {
+    const token = await tokenStorage.getToken(`user@${tenantId}`);
+    if (!token) return null;
+
+    try {
+        const decoded = jwtDecode<DecodedToken>(token);
+        const details: any = {
+            user: decoded.name || decoded.upn || decoded.unique_name || "Unknown User",
+            email: decoded.upn || decoded.unique_name || "N/A",
+            tenant: decoded.tid || tenantId,
+            expires: decoded.exp ? new Date(decoded.exp * 1000) : null,
+            issuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null,
+            scopes: decoded.scp?.split(" ") || []
+        };
+
+        if (includeOrg) {
+            details.orgName = await getOrganizationName();
+        }
+
+        return details;
+    } catch {
+        return null;
+    }
+}
+
+async function ensureAuthenticated(tenantId: string = "common"): Promise<string> {
+    const account = `user@${tenantId}`;
+    let token = await tokenStorage.getToken(account);
+
+    let isExpired = false;
+    if (token) {
+        try {
+            const decoded = jwtDecode<DecodedToken>(token);
+            if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+                isExpired = true;
+            }
+        } catch {
+            isExpired = true;
+        }
+    }
+
+    if (!token || isExpired) {
+        if (isExpired) {
+            printInfo("Session expired. Re-authenticating...");
+            await tokenStorage.deleteToken(account);
+        } else {
+            printInfo("No active session found. Initializing login...");
+        }
+        
+        const authService = new AuthService(tenantId);
+        const { accessToken, refreshToken } = await authService.login();
+        
+        await tokenStorage.saveToken(account, accessToken);
+        if (refreshToken) {
+            await tokenStorage.saveToken(`${account}:refresh`, refreshToken);
+        }
+        token = accessToken;
+        printSuccess("Authentication successful!");
+    }
+
+    return token;
+}
+
+async function handleLoginMenu() {
+    nav.push("System Settings");
+    nav.refresh();
+
+    try {
+        const session = await getSessionDetails("common");
+        
+        if (session) {
+            console.log(theme.primary.bold("👤 Current Session Details:"));
+            console.log(`  ${chalk.bold("Organization:")} ${chalk.yellow(session.orgName || "N/A")}`);
+            console.log(`  ${chalk.bold("User:")}         ${session.user}`);
+            console.log(`  ${chalk.bold("Email:")}        ${session.email}`);
+            console.log(`  ${chalk.bold("Tenant:")}       ${session.tenant}`);
+            if (session.issuedAt) console.log(`  ${chalk.bold("Issued At:")}     ${session.issuedAt.toLocaleString()}`);
+            if (session.expires) {
+                const isExpired = session.expires < new Date();
+                const color = isExpired ? chalk.red : chalk.green;
+                console.log(`  ${chalk.bold("Expires At:")}    ${color(session.expires.toLocaleString())}`);
+                console.log(`  ${chalk.bold("Status:")}        ${color(isExpired ? "Expired" : "Active")}`);
+            }
+            console.log(`  ${chalk.bold("Scopes:")}`);
+            console.log(renderScopes(session.scopes));
+            console.log("");
+
+            const choice = await select({
+                message: "Account Management:",
+                choices: [
+                    { name: "🔄 Refresh Session", value: "refresh" },
+                    { name: "🔑 Switch Tenant / New Login", value: "switch" },
+                    { name: "🗑️ Logout (Clear Cache)", value: "logout" },
+                    { name: theme.muted("🔙 Back to Menu (q)"), value: "back" }
+                ],
+            });
+
+            if (choice === "refresh") {
+                await tokenStorage.deleteToken("user@common");
+                await ensureAuthenticated("common");
+            } else if (choice === "switch") {
+                const tenant = await input({ message: "Enter Tenant ID or domain:", default: "common" });
+                await ensureAuthenticated(tenant);
+            } else if (choice === "logout") {
+                await tokenStorage.deleteToken("user@common");
+                await tokenStorage.deleteToken("user@common:refresh");
+                cachedOrgName = null; // Clear org name cache
+                printSuccess("Logged out successfully.");
+            }
+        } else {
+            printInfo("No active session found.");
+            const start = await select({
+                message: "What would you like to do?",
+                choices: [
+                    { name: "🔐 Login to Microsoft 365", value: "login" },
+                    { name: "🔙 Back to Menu", value: "back" }
+                ],
+            });
+            if (start === "login") {
+                const tenant = await input({ message: "Enter Tenant ID:", default: "common" });
+                await ensureAuthenticated(tenant);
+            }
+        }
+    } catch (e) {
+        // Ignore cancellation
+    } finally {
+        nav.pop();
+    }
+}
+
+/**
+ * Global Search Module Picker
+ */
+async function runSearchablePicker(showAll: boolean = false): Promise<string | "exit"> {
+    nav.push("Search");
+    nav.refresh();
+
+    const choices = getAllModuleChoices(showAll);
+
+    try {
+        const moduleId = await search({
+            message: "Search modules (type to filter):",
+            source: async (input: string | undefined) => {
+                if (!input) return choices;
+                
+                const term = input.toLowerCase();
+                return choices.filter(c => 
+                    c.name.toLowerCase().includes(term) || 
+                    c.value.toLowerCase().includes(term) ||
+                    c.description?.toLowerCase().includes(term)
+                );
+            },
+            emptyText: theme.dim("No modules found matching your search term."),
+        }) as string;
+
+        nav.pop();
+        return moduleId;
+    } catch (e: any) {
+        nav.pop();
+        return "exit";
+    }
+}
+
+/**
+ * Interactive Categorized Module Picker
+ */
+async function runCategorizedPicker(showAll: boolean = false): Promise<string | "exit"> {
+    nav.push("Categories");
+    nav.refresh();
+
+    const taskIds = TaskRegistry.getRegisteredTasks();
+    const categories = getCategoryChoices(taskIds, showAll);
+
+    try {
+        const category = await select({
+            message: "Select a Task Category:",
+            choices: [
+                ...categories,
+                { name: theme.muted("🔙 Back (q)"), value: "exit" }
+            ],
+        }) as string;
+
+        if (category === "exit") {
+            nav.pop();
+            return "exit";
+        }
+
+        const categoryMeta = (CATEGORY_MAP as any)[category] || { name: category.toUpperCase() };
+        nav.push(categoryMeta.name);
+        nav.refresh();
+
+        const moduleId = await select({
+            message: `Modules in ${categoryMeta.name}`,
+            choices: [
+                ...getModulesInCategory(taskIds, category, showAll),
+                { name: theme.muted("🔙 Back to Categories"), value: "exit" }
+            ],
+        }) as string;
+
+        if (moduleId === "exit") {
+            nav.pop(); // Pop category name
+            nav.pop(); // Pop "Categories"
+            return await runCategorizedPicker(showAll);
+        }
+
+        nav.pop(); // Pop category name
+        nav.pop(); // Pop "Categories"
+        return moduleId;
+    } catch {
+        nav.pop();
+        nav.pop();
+        return "exit";
+    }
+}
+
+/**
+ * Unified Module Selector
+ */
+async function interactiveModulePicker(showAll: boolean = false): Promise<string | "exit"> {
+    try {
+        const mode = await select({
+            message: `Module Selection ${showAll ? theme.dim("(Developer Mode)") : ""}:`,
+            choices: [
+                { name: "⚡ Quick Search", value: "search" },
+                { name: "📂 Browse Categories", value: "browse" },
+                { name: theme.dim("⎋  Cancel (q)"), value: "exit" }
+            ],
+        });
+
+        if (mode === "exit") return "exit";
+        if (mode === "search") return await runSearchablePicker(showAll);
+        return await runCategorizedPicker(showAll);
+    } catch {
+        return "exit";
+    }
+}
+
+async function showInteractiveMenu(showAll: boolean = false) {
+    let running = true;
+    
+    while (running) {
+        nav.clear();
+        nav.refresh();
+        
+        try {
+            const action = await select({
+                message: "Control Center:",
+                choices: [
+                    new Separator(theme.primary("─── TASKS ───")),
+                    { name: "⚡ Run a Module", value: "run" },
+                    { name: "📋 List All Modules", value: "list" },
+                    new Separator(theme.primary("─── SYSTEM ───")),
+                    { name: "⚙️  Settings & Accounts", value: "settings" },
+                    new Separator(theme.dim("──────────────────────────────")),
+                    { name: theme.dim("🚪 Exit (q)"), value: "exit" }
+                ],
+            });
+
+            switch (action) {
+                case "list": {
+                    nav.push("List Modules");
+                    nav.refresh();
+                    const tasks = TaskRegistry.getRegisteredTasks();
+                    const categories = getCategoryChoices(tasks, showAll);
+                    categories.forEach(cat => {
+                        console.log(chalk.yellow.bold(`\n${cat.name}`));
+                        getModulesInCategory(tasks, cat.value, showAll).forEach(m => {
+                            console.log(m.name);
+                        });
+                    });
+                    console.log("");
+                    try {
+                        await input({ message: "Press Enter to continue..." });
+                    } catch {
+                        // Ignore ESC/Cancel
+                    }
+                    break;
+                }
+                case "run": {
+                    const moduleId = await interactiveModulePicker(showAll);
+                    if (moduleId !== "exit") {
+                        const handler = TaskRegistry.getHandler(moduleId);
+                        let args = (handler?.type === "action") ? ["--dry-run", "true"] : [];
+
+                        // Special handling for CA Roadmap - ask for report options
+                        if (moduleId === "rep:ca-roadmap") {
+                            try {
+                                const showDetailed = await confirm({
+                                    message: "Show detailed per-policy alignment analysis?",
+                                    default: false,
+                                    theme: CUSTOM_THEME
+                                });
+
+                                const showMaturity = await confirm({
+                                    message: "Include CA maturity score in roadmap?",
+                                    default: true,
+                                    theme: CUSTOM_THEME
+                                });
+
+                                if (showDetailed) {
+                                    args.push("--detailed", "true");
+                                }
+                                if (!showMaturity) {
+                                    args.push("--no-maturity", "true");
+                                }
+                            } catch {
+                                // User cancelled options, proceed with defaults
+                            }
+                        }
+
+                        await runTask(moduleId, args);
+                        try {
+                            await input({ message: "\nTask completed. Press Enter to return to menu..." });
+                        } catch {
+                            // Ignore ESC/Cancel
+                        }
+                    }
+                    break;
+                }
+                case "settings": {
+                    await handleLoginMenu();
+                    break;
+                }
+                case "exit": {
+                    running = false;
+                    break;
+                }
+            }
+        } catch (e: any) {
+            // Treat ESC or Error as Exit from main menu
+            running = false;
+        }
+    }
+
+    console.log("\n" + theme.primary("👋 Goodbye!"));
+    // No process.exit() - allow natural return and terminal restoration
+}
+
+async function showStatus() {
+    const session = await getSessionDetails("common");
+    if (session) {
+        printSuccess(`Session Active for ${chalk.yellow(session.email)}`);
+        console.log(`  - Tenant:     ${session.tenant}`);
+        if (session.issuedAt) console.log(`  - Issued At:  ${session.issuedAt.toLocaleString()}`);
+        if (session.expires) {
+            const isExpired = session.expires < new Date();
+            const color = isExpired ? chalk.red : chalk.green;
+            console.log(`  - Expires At: ${color(session.expires.toLocaleString())}`);
+            console.log(`  - Status:     ${color(isExpired ? "Expired" : "Active")}`);
+        }
+        console.log(`  - Scopes:`);
+        console.log(renderScopes(session.scopes, 6));
+    } else {
+        printInfo("No active sessions found. Run 'login' to connect.");
+    }
+}
+
+async function getOrganizationName(forFilename: boolean = false): Promise<string> {
+    if (cachedOrgName && !forFilename) return cachedOrgName;
+    
+    const session = await getSessionDetails("common", false); 
+    if (!session?.tenant) return "o365";
+
+    let name = "o365";
+    try {
+        const org = await GraphService.get(`/organization/${session.tenant}`);
+        if (org?.displayName) {
+            name = org.displayName;
+            cachedOrgName = name;
+        }
+    } catch {
+        const domain = session.email?.split('@')[1]?.split('.')[0];
+        if (domain) name = domain.toUpperCase();
+    }
+
+    if (forFilename) {
+        return name.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '-').toLowerCase();
+    }
+    return name;
+}
+
+async function runTask(moduleName: string, args: string[]) {
+    try {
+        const token = await ensureAuthenticated("common");
+        process.env.GRAPH_TOKEN = token;
+        
+        IPC.setMode('pretty');
+        IPC.clearLastTable();
+
+        console.log("");
+        const spinner = ora(`Initializing ${chalk.yellow(moduleName)}...`).start();
+        
+        // Hook IPC progress to update the spinner text instead of printing new lines
+        IPC.onProgress((message, percent) => {
+            const p = percent !== undefined ? ` [${percent}%]` : '';
+            spinner.text = `${chalk.yellow(moduleName)}: ${message}${p}`;
+        });
+
+        try {
+            await TaskRegistry.execute(moduleName, args);
+            spinner.succeed(chalk.green(`Task ${moduleName} completed.`));
+
+            // Clean up the hook
+            IPC.onProgress(() => {});
+
+            // Post-Task Export Logic
+            const lastTable = IPC.getLastTable();
+            const lastResult = IPC.getLastResult();
+
+            if (lastTable) {
+                const orgSlug = await getOrganizationName(true);
+                
+                const shouldExport = await confirm({
+                    message: "Would you like to export these results to a CSV file?",
+                    default: false,
+                    theme: CUSTOM_THEME
+                });
+
+                if (shouldExport) {
+                    const cleanModuleName = moduleName.replace(':', '_');
+                    const defaultFilename = `${orgSlug}_${cleanModuleName}_results.csv`;
+                    
+                    const outputDir = path.resolve(process.cwd(), "output");
+                    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+                    const filename = await input({ message: "Enter filename:", default: defaultFilename });
+                    const fullPath = path.resolve(outputDir, filename);
+                    
+                    const csv = [
+                        lastTable.headers.join(","),
+                        ...lastTable.rows.map(row => row.map(cell => `"${cell}"`).join(","))
+                    ].join("\n");
+                    
+                    fs.writeFileSync(fullPath, csv);
+                    printSuccess(`Results exported to ${chalk.yellow(fullPath)}`);
+                }
+            }
+
+            // Specific check for Roadmap export
+            if (lastResult?.roadmap) {
+                const shouldExportRoadmap = await confirm({
+                    message: "Would you like to export the CA Implementation Roadmap to a text file?",
+                    default: false,
+                    theme: CUSTOM_THEME
+                });
+
+                if (shouldExportRoadmap) {
+                    const orgSlug = await getOrganizationName(true);
+                    const defaultFilename = `${orgSlug}_ca_roadmap.txt`;
+                    
+                    const outputDir = path.resolve(process.cwd(), "output");
+                    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+                    const filename = await input({ message: "Enter roadmap filename:", default: defaultFilename });
+                    const fullPath = path.resolve(outputDir, filename);
+                    
+                    fs.writeFileSync(fullPath, lastResult.roadmap);
+                    printSuccess(`Roadmap exported to ${chalk.yellow(fullPath)}`);
+                }
+            }
+        } catch (error: any) {
+            spinner.fail(chalk.red(`Task ${moduleName} failed.`));
+            printError(error.message);
+        }
+    } catch (error: any) {
+        printError(`Authentication failed: ${error.message}`);
+    }
+}
+
+export async function setupCLI(program: Command) {
+  program
+    .version("1.0.0")
+    .description("O365 CLI - Unified TypeScript Orchestration");
+
+  program
+    .option("-t, --tenant <tenantId>", "Microsoft 365 Tenant ID or domain", "common");
+
+  // Load handlers
+  const handlersPath = path.resolve(__dirname, "handlers");
+  await loadCommands(handlersPath);
+  
+  if (TaskRegistry.getRegisteredTasks().length === 0) {
+      await loadCommands(path.resolve(process.cwd(), "src/handlers"));
+  }
+
+  program
+    .command("run [moduleName] [args...]")
+    .description("Run a module (interactive if name is omitted)")
+    .action(async (moduleName, args) => {
+      let showAll = false;
+      if (moduleName === "dev") {
+          showAll = true;
+          moduleName = undefined;
+      }
+
+      if (!moduleName) {
+          const id = await interactiveModulePicker(showAll);
+          if (id === "exit") return;
+          moduleName = id;
+      }
+      await runTask(moduleName, args);
+    });
+
+  program
+    .command("dev")
+    .description("Launch interactive menu in Developer Mode (shows all modules)")
+    .action(async () => {
+        await showInteractiveMenu(true);
+    });
+
+  program
+    .command("login [tenantId]")
+    .description("Authenticate with Microsoft 365")
+    .action(async (tenantId) => {
+        const options = program.opts();
+        if (!tenantId && process.argv.includes("login") && !process.argv.includes("-t")) {
+            await handleLoginMenu();
+        } else {
+            const tenant = tenantId || options.tenant;
+            try {
+                await ensureAuthenticated(tenant);
+            } catch (error: any) {
+                printError(error.message);
+            }
+        }
+    });
+
+  program
+    .command("status")
+    .description("Show session status")
+    .action(async () => {
+        await showStatus();
+    });
+    
+  program
+    .command("list")
+    .description("List all available modules")
+    .option("-a, --all", "Show all modules including Beta and Draft", false)
+    .action((options) => {
+        const showAll = options.all;
+        const tasks = TaskRegistry.getRegisteredTasks();
+        const categories = getCategoryChoices(tasks, showAll);
+        
+        categories.forEach(cat => {
+            console.log(chalk.yellow.bold(`\n${cat.name}`));
+            const modules = getModulesInCategory(tasks, cat.value, showAll);
+            modules.forEach(m => {
+                const handler = TaskRegistry.getHandler(m.value)!;
+                const statusColor = handler.status === "prod" ? chalk.green : (handler.status === "beta" ? chalk.yellow : chalk.gray);
+                const statusTag = `[${handler.status.toUpperCase()}]`;
+                
+                console.log(`  ${theme.primary("→")} ${chalk.bold(handler.name)} ${statusColor(statusTag)}`);
+                console.log(`    ${theme.dim(handler.taskId)} › ${theme.muted(handler.description)}`);
+            });
+        });
+        console.log("");
+    });
+}
+
+if (import.meta.main) {
+  const program = new Command();
+  setupCLI(program).then(() => {
+     const args = process.argv.slice(2);
+     if (args.length === 0 || (args.length === 2 && (args[0] === "-t" || args[0] === "--tenant"))) {
+         showInteractiveMenu();
+     } else {
+         program.parse(process.argv);
+     }
+  });
+}
