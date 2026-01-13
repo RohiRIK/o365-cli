@@ -22,6 +22,7 @@ Desktop.ini
 !package.json
 !tsconfig.json
 !Cargo.toml
+!conductor/context.json
 
 # Project specific temporary or output folders
 .gemini-clipboard/
