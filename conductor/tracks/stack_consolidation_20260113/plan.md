@@ -20,9 +20,9 @@ Goal: Create a centralized documentation entry point and machine-readable contex
 - [x] Task: Update `.github/copilot-instructions.md` to point to `conductor/agents.md` 8772fe0
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Agent Context & Integration' (Protocol in workflow.md)
 
-## Phase 3: Tracks & Roadmap Alignment
+## Phase 3: Tracks & Roadmap Alignment [checkpoint: 9836ada]
 Goal: Align the project roadmap with the new stack and clean up the tracks list.
 
-- [ ] Task: Review and update `conductor/tracks.md` to remove or pivot any Rust-specific tracks
-- [ ] Task: Perform a general audit of `conductor/` directory for any lingering "legacy" terminology
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Tracks & Roadmap Alignment' (Protocol in workflow.md)
+- [x] Task: Review and update `conductor/tracks.md` to remove or pivot any Rust-specific tracks (Verified Clean)
+- [x] Task: Perform a general audit of `conductor/` directory for any lingering "legacy" terminology (Verified Clean)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Tracks & Roadmap Alignment' (Protocol in workflow.md)
