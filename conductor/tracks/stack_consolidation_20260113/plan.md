@@ -10,7 +10,7 @@ Goal: Remove Rust references and standardize Bun/TypeScript and PowerShell in th
 - [x] Task: Update `conductor/workflow.md` examples to use `bun` commands 09f78fe
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Stack Consolidation & Cleanup' (Protocol in workflow.md)
 
-## Phase 2: Agent Context & Integration
+## Phase 2: Agent Context & Integration [checkpoint: 1ef03ea]
 Goal: Create a centralized documentation entry point and machine-readable context for AI agents.
 
 - [x] Task: Create `conductor/agents.md` with system instructions for all agents 307ca30
@@ -18,7 +18,7 @@ Goal: Create a centralized documentation entry point and machine-readable contex
 - [x] Task: Update `CLAUDE.md` and `GEMINI.md` to point to `conductor/agents.md` fe20dbc
 - [x] Task: Document/Create `.cursorrules` and Windsurf-compatible instructions pointing to `conductor/agents.md` ff16868
 - [x] Task: Update `.github/copilot-instructions.md` to point to `conductor/agents.md` 8772fe0
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Agent Context & Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Agent Context & Integration' (Protocol in workflow.md)
 
 ## Phase 3: Tracks & Roadmap Alignment
 Goal: Align the project roadmap with the new stack and clean up the tracks list.
