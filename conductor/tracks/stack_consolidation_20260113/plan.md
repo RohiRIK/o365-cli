@@ -14,8 +14,8 @@ Goal: Remove Rust references and standardize Bun/TypeScript and PowerShell in th
 Goal: Create a centralized documentation entry point and machine-readable context for AI agents.
 
 - [x] Task: Create `conductor/agents.md` with system instructions for all agents 307ca30
-- [ ] Task: Create `conductor/context.json` with machine-readable project metadata
-- [ ] Task: Update `CLAUDE.md` and `GEMINI.md` to point to `conductor/agents.md`
+- [x] Task: Create `conductor/context.json` with machine-readable project metadata 15d4bcf
+- [~] Task: Update `CLAUDE.md` and `GEMINI.md` to point to `conductor/agents.md`
 - [ ] Task: Document/Create `.cursorrules` and Windsurf-compatible instructions pointing to `conductor/agents.md`
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Agent Context & Integration' (Protocol in workflow.md)
 
