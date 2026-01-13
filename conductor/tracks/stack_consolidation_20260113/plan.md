@@ -16,7 +16,8 @@ Goal: Create a centralized documentation entry point and machine-readable contex
 - [x] Task: Create `conductor/agents.md` with system instructions for all agents 307ca30
 - [x] Task: Create `conductor/context.json` with machine-readable project metadata 15d4bcf
 - [x] Task: Update `CLAUDE.md` and `GEMINI.md` to point to `conductor/agents.md` fe20dbc
-- [~] Task: Document/Create `.cursorrules` and Windsurf-compatible instructions pointing to `conductor/agents.md`
+- [x] Task: Document/Create `.cursorrules` and Windsurf-compatible instructions pointing to `conductor/agents.md` ff16868
+- [x] Task: Update `.github/copilot-instructions.md` to point to `conductor/agents.md` 8772fe0
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Agent Context & Integration' (Protocol in workflow.md)
 
 ## Phase 3: Tracks & Roadmap Alignment
