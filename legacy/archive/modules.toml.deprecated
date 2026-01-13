@@ -1,0 +1,520 @@
+# O365-CLI Module Configuration
+# This is the single source of truth for all module metadata, permissions, and input definitions.
+# Used by both Rust TUI (module registry) and TypeScript workers (task routing).
+
+[system]
+# Maximum number of concurrent Bun workers for parallel task execution
+max_concurrent_workers = 3
+
+# Default dry-run mode (true = simulate, false = execute)
+default_dry_run = true
+
+# IPC protocol version for compatibility checking
+ipc_version = "1.0"
+
+## ═══════════════════════════════════════════════════════════════════════════
+## IDENTITY & ACCESS MANAGEMENT (IAM) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "iam:offboard"
+display_name = "Graceful Offboarding"
+category = "IAM"
+description = "Comprehensive user offboarding with mailbox preservation, license reclamation, and device cleanup"
+priority = 100
+permissions = [
+  "User.ReadWrite.All",
+  "Directory.ReadWrite.All",
+  "Mail.ReadWrite",
+  "Device.ReadWrite.All",
+  "DeviceManagementManagedDevices.ReadWrite.All"
+]
+supported = true  # Currently implemented in TypeScript
+inputs = [
+  { name = "user", type = "email", prompt = "Email of user to offboard", required = true },
+  { name = "manager", type = "email", prompt = "Manager email (for mailbox delegation)", optional = true },
+  { name = "device_action", type = "choice", choices = ["retire", "wipe", "none"], default = "retire", prompt = "Device action (retire/wipe/none)" }
+]
+
+[[modules]]
+id = "iam:guest-cleanup"
+display_name = "Guest Lifecycle Cleanup"
+category = "IAM"
+description = "Identify and remediate stale guest accounts based on inactivity threshold"
+priority = 90
+permissions = ["User.ReadWrite.All", "Directory.Read.All"]
+supported = true  # Currently implemented in TypeScript
+inputs = [
+  { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 90, min = 30, max = 365 }
+]
+
+[[modules]]
+id = "iam:onboard"
+display_name = "New User Onboarding"
+category = "IAM"
+description = "Automated provisioning for Day 1 readiness with template-based cloning or department defaults"
+priority = 85
+permissions = [
+  "User.ReadWrite.All",
+  "Group.ReadWrite.All",
+  "Directory.ReadWrite.All"
+]
+supported = true  # Implemented - User provisioning with template cloning for groups and licenses
+inputs = [
+  { name = "firstname", type = "text", prompt = "First name", required = true },
+  { name = "lastname", type = "text", prompt = "Last name", required = true },
+  { name = "department", type = "text", prompt = "Department", required = true },
+  { name = "template_user", type = "email", prompt = "Template user email (for cloning groups/licenses)", optional = true }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## SECURITY & COMPLIANCE (SEC) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "sec:shadow-it"
+display_name = "Shadow IT Governance"
+category = "Security"
+description = "Detect risky OAuth applications with dangerous permissions, unverified publishers, and credential hygiene issues"
+priority = 95
+permissions = [
+  "Application.Read.All",
+  "Directory.Read.All",
+  "AuditLog.Read.All"
+]
+supported = true  # Currently implemented in TypeScript (production-ready)
+inputs = []  # No user inputs required - scans entire tenant
+
+[[modules]]
+id = "sec:surgical-lockdown"
+display_name = "Surgical Lockdown"
+category = "Security"
+description = "Emergency user lockdown (<60s response) for incident response - disables account, revokes sessions, wipes devices, blocks mail"
+priority = 98
+permissions = [
+  "User.ReadWrite.All",
+  "Directory.ReadWrite.All",
+  "Device.ReadWrite.All",
+  "DeviceManagementManagedDevices.ReadWrite.All",
+  "Mail.ReadWrite"
+]
+supported = true  # Implemented - Emergency lockdown with <60s response time
+inputs = [
+  { name = "user", type = "email", prompt = "Email of user to lock down (EMERGENCY)", required = true }
+]
+
+[[modules]]
+id = "sec:external-sharing"
+display_name = "External Sharing Audit"
+category = "Security"
+description = "Scan SharePoint/OneDrive for anonymous links, external shares, and DLP violations"
+priority = 92
+permissions = [
+  "Sites.Read.All",
+  "Files.Read.All",
+  "User.Read.All"
+]
+supported = true  # Implemented - External sharing audit with risk-based scanning
+inputs = []  # No user inputs - scans entire tenant
+
+[[modules]]
+id = "sec:mailbox-permissions"
+display_name = "Mailbox Permissions Audit"
+category = "Security"
+description = "Detect unauthorized full-access delegates, cross-departmental mailbox access, and dormant delegates"
+priority = 88
+permissions = [
+  "MailboxSettings.Read",
+  "User.Read.All",
+  "Directory.Read.All"
+]
+supported = true  # Implemented - Mailbox permissions audit with dormant delegate detection
+inputs = []  # No user inputs - scans all mailboxes
+
+## ═══════════════════════════════════════════════════════════════════════════
+## RESOURCE OPTIMIZATION (RES) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "res:license-optimization"
+display_name = "License Optimization"
+category = "Resources"
+description = "Detect license waste (zombies, ghosts, downgrade candidates) with ROI calculations - potential $50K-200K/year savings"
+priority = 100  # Highest ROI module
+permissions = [
+  "User.Read.All",
+  "Organization.Read.All",
+  "Directory.Read.All",
+  "Reports.Read.All"
+]
+supported = true  # Implemented - License optimization with ROI calculations
+inputs = []  # No user inputs - analyzes all licensed users
+
+[[modules]]
+id = "res:device-cleanup"
+display_name = "Stale Device Cleanup"
+category = "Resources"
+description = "Remove stale Intune/Entra devices based on inactivity threshold - improves CMDB accuracy and removes security risks"
+priority = 82
+permissions = [
+  "Device.ReadWrite.All",
+  "DeviceManagementManagedDevices.ReadWrite.All"
+]
+supported = true  # Implemented - Stale device cleanup with configurable inactivity threshold
+inputs = [
+  { name = "days", type = "number", prompt = "Device inactivity threshold (days)", default = 90, min = 60, max = 180 }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## DEEP REPORTING (REP) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "rep:user-analyzer"
+display_name = "360° User Analyzer"
+category = "Reporting"
+description = "Comprehensive pre-offboarding asset map - aggregates groups, files, sites, teams, devices, and mail delegates"
+priority = 87
+permissions = [
+  "User.Read.All",
+  "Sites.Read.All",
+  "Files.Read.All",
+  "Mail.Read",
+  "Group.Read.All",
+  "Directory.Read.All",
+  "Device.Read.All"
+]
+supported = true  # Implemented - 360° user asset aggregation across all M365 services
+inputs = [
+  { name = "user", type = "email", prompt = "Email of user to analyze", required = true }
+]
+
+[[modules]]
+id = "rep:teams-sprawl"
+display_name = "Teams Sprawl Report"
+category = "Reporting"
+description = "Identify abandoned Teams workspaces based on activity thresholds - reclaim SharePoint storage"
+priority = 80
+permissions = [
+  "Team.ReadBasic.All",
+  "Group.Read.All",
+  "Reports.Read.All"
+]
+supported = true  # Implemented - Teams workspace inactivity analysis with storage reclamation recommendations
+inputs = [
+  { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 90, min = 30, max = 180 }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## DEVICE MANAGEMENT (DEV) MODULES - Windows/macOS/Mobile + Intune Compliance
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "dev:windows-updates"
+display_name = "Windows Update Compliance"
+category = "Resources"
+description = "Audit Windows Update status across Intune-managed devices - identify outdated builds, patch gaps, and update rings"
+priority = 88
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementConfiguration.Read.All"
+]
+supported = true  # Implemented - Windows update compliance audit with build and patch analysis
+inputs = [
+  { name = "min_os_build", type = "text", prompt = "Minimum required OS build (e.g., 22H2)", default = "22H2" },
+  { name = "max_days_behind", type = "number", prompt = "Maximum days behind current patch (e.g., 30)", default = 30, min = 7, max = 90 }
+]
+
+[[modules]]
+id = "dev:macos-compliance"
+display_name = "macOS Device Compliance"
+category = "Resources"
+description = "Audit macOS device compliance policies - encryption status, OS version, security settings via Intune"
+priority = 85
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementConfiguration.Read.All"
+]
+supported = true  # Implemented - macOS compliance audit with encryption and OS version checks
+inputs = [
+  { name = "min_os_version", type = "text", prompt = "Minimum macOS version (e.g., 14.0 Sonoma)", default = "14.0" }
+]
+
+[[modules]]
+id = "dev:mobile-hygiene"
+display_name = "Mobile Device Hygiene"
+category = "Resources"
+description = "Audit iOS/Android devices for jailbreak/root status, outdated OS versions, missing compliance policies"
+priority = 82
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "DeviceManagementConfiguration.Read.All"
+]
+supported = true  # Implemented - Mobile hygiene audit with jailbreak/root detection and OS version checks
+inputs = []
+
+[[modules]]
+id = "dev:bitlocker-audit"
+display_name = "BitLocker Encryption Audit"
+category = "Security"
+description = "Verify BitLocker encryption status across Windows devices - identify unencrypted or suspended volumes"
+priority = 90
+permissions = [
+  "DeviceManagementManagedDevices.Read.All",
+  "BitlockerKey.Read.All"
+]
+supported = true  # Implemented - Windows BitLocker audit with risk assessment
+inputs = []
+
+## ═══════════════════════════════════════════════════════════════════════════
+## GOVERNANCE MODULES - GDPR, Retention, DLP, Audit Logs
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "gov:gdpr-export"
+display_name = "GDPR User Data Export"
+category = "Governance"
+description = "Generate comprehensive GDPR data subject access request (DSAR) export - mailbox, OneDrive, Teams, audit logs"
+priority = 95
+permissions = [
+  "User.Read.All",
+  "Mail.Read",
+  "Files.Read.All",
+  "AuditLog.Read.All",
+  "Chat.Read.All"
+]
+supported = true  # Implemented - GDPR Article 15 compliance
+inputs = [
+  { name = "user", type = "email", prompt = "User email for GDPR export", required = true }
+]
+
+[[modules]]
+id = "gov:retention-audit"
+display_name = "Retention Policy Audit"
+category = "Governance"
+description = "Audit retention policies across Exchange, SharePoint, Teams - detect gaps, overlaps, and policy conflicts"
+priority = 86
+permissions = [
+  "InformationProtectionPolicy.Read",
+  "Policy.Read.All"
+]
+supported = true  # Implemented - Compliance policy auditing
+inputs = []
+
+[[modules]]
+id = "gov:dlp-violations"
+display_name = "DLP Violation Report"
+category = "Governance"
+description = "Generate DLP policy violation report - identify users, file types, and sensitive data exposure patterns"
+priority = 92
+permissions = [
+  "SecurityEvents.Read.All",
+  "InformationProtectionPolicy.Read"
+]
+supported = true  # Implemented - DLP compliance monitoring
+inputs = [
+  { name = "days", type = "number", prompt = "Report lookback period (days)", default = 30, min = 7, max = 90 }
+]
+
+[[modules]]
+id = "gov:audit-log-export"
+display_name = "Unified Audit Log Export"
+category = "Governance"
+description = "Export filtered unified audit logs for compliance investigations - supports O365, Entra ID, Intune events"
+priority = 84
+permissions = [
+  "AuditLog.Read.All"
+]
+supported = true  # Implemented - Compliance investigations and forensics
+inputs = [
+  { name = "start_date", type = "text", prompt = "Start date (YYYY-MM-DD)", required = true },
+  { name = "end_date", type = "text", prompt = "End date (YYYY-MM-DD)", required = true },
+  { name = "operations", type = "text", prompt = "Filter operations (comma-separated, optional)", optional = true }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## ADVANCED SECURITY (SEC-ADV) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "sec:mfa-enforcement"
+display_name = "MFA Enforcement Audit"
+category = "Security"
+description = "Identify users without MFA enabled, legacy auth usage, and conditional access gaps - generate remediation plan"
+priority = 98
+permissions = [
+  "User.Read.All",
+  "UserAuthenticationMethod.Read.All",
+  "Policy.Read.All"
+]
+supported = true  # Implemented - Critical security control audit
+inputs = []
+
+[[modules]]
+id = "sec:risky-signins"
+display_name = "Risky Sign-In Report"
+category = "Security"
+description = "Analyze Entra ID risky sign-ins - detect impossible travel, unfamiliar locations, anonymous IPs"
+priority = 94
+permissions = [
+  "IdentityRiskyUser.Read.All",
+  "IdentityRiskEvent.Read.All"
+]
+supported = true  # Implemented - Risky sign-in detection with configurable lookback period
+inputs = [
+  { name = "days", type = "number", prompt = "Lookback period (days)", default = 7, min = 1, max = 30 }
+]
+
+[[modules]]
+id = "sec:privileged-access"
+display_name = "Privileged Access Audit"
+category = "Security"
+description = "Audit privileged roles (Global Admin, Security Admin) - detect stale assignments, PIM gaps, over-privileged users"
+priority = 96
+permissions = [
+  "RoleManagement.Read.All",
+  "Directory.Read.All",
+  "PrivilegedAccess.Read.AzureAD"
+]
+supported = true  # Implemented - Privileged role audit with risk assessment
+inputs = []
+
+[[modules]]
+id = "sec:conditional-access"
+display_name = "Conditional Access Review"
+category = "Security"
+description = "Audit conditional access policies - detect disabled policies, exclusion sprawl, and coverage gaps"
+priority = 93
+permissions = [
+  "Policy.Read.All",
+  "Directory.Read.All"
+]
+supported = true  # Implemented - CA policy gap analysis with recommendations
+inputs = []
+
+## ═══════════════════════════════════════════════════════════════════════════
+## COST OPTIMIZATION (COST) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "cost:mailbox-sizing"
+display_name = "Mailbox Storage Optimization"
+category = "Resources"
+description = "Identify oversized mailboxes, archive candidates, and potential downgrades from E5 to E3 based on usage"
+priority = 85
+permissions = [
+  "MailboxSettings.Read",
+  "User.Read.All"
+]
+supported = true  # Implemented - Mailbox sizing analysis with archive and downgrade recommendations
+inputs = [
+  { name = "threshold_gb", type = "number", prompt = "Large mailbox threshold (GB)", default = 50, min = 25, max = 100 }
+]
+
+[[modules]]
+id = "cost:unused-groups"
+display_name = "Unused Group Cleanup"
+category = "Resources"
+description = "Detect inactive M365 groups, distribution lists, and security groups - reclaim licenses and storage"
+priority = 83
+permissions = [
+  "Group.Read.All",
+  "Reports.Read.All"
+]
+supported = true  # Implemented - Unused group cleanup with activity tracking and safe deletion
+inputs = [
+  { name = "days", type = "number", prompt = "Inactivity threshold (days)", default = 180, min = 90, max = 365 }
+]
+
+[[modules]]
+id = "cost:power-platform"
+display_name = "Power Platform License Audit"
+category = "Resources"
+description = "Audit Power Apps, Power Automate, and Power BI usage - identify unused premium licenses"
+priority = 88
+permissions = [
+  "User.Read.All",
+  "Organization.Read.All"
+]
+supported = true  # Implemented - Power Platform license audit with savings calculation
+inputs = []
+
+## ═══════════════════════════════════════════════════════════════════════════
+## COLLABORATION HYGIENE (COLLAB) MODULES
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "collab:calendar-permissions"
+display_name = "Calendar Permission Audit"
+category = "Security"
+description = "Audit calendar sharing permissions - detect oversharing, external delegates, and default permissions"
+priority = 81
+permissions = [
+  "Calendars.Read",
+  "User.Read.All"
+]
+supported = true  # Implemented - Calendar sharing audit with external delegate detection
+inputs = []
+
+[[modules]]
+id = "collab:shared-mailboxes"
+display_name = "Shared Mailbox Hygiene"
+category = "Resources"
+description = "Audit shared mailbox delegates, size limits, and identify candidates for conversion to M365 groups"
+priority = 79
+permissions = [
+  "MailboxSettings.Read",
+  "User.Read.All"
+]
+supported = true  # Implemented - Shared mailbox delegate audit with M365 group conversion recommendations
+inputs = []
+
+[[modules]]
+id = "collab:onedrive-sprawl"
+display_name = "OneDrive Storage Cleanup"
+category = "Resources"
+description = "Identify users approaching OneDrive quota limits and large file hoarders - generate cleanup recommendations"
+priority = 77
+permissions = [
+  "Files.Read.All",
+  "Sites.Read.All",
+  "User.Read.All"
+]
+supported = true  # Implemented - OneDrive storage analysis with quota and large file detection
+inputs = [
+  { name = "threshold_gb", type = "number", prompt = "Large storage threshold (GB)", default = 500, min = 100, max = 5000 }
+]
+
+## ═══════════════════════════════════════════════════════════════════════════
+## SETTINGS - TUI Configuration & Management
+## ═══════════════════════════════════════════════════════════════════════════
+
+[[modules]]
+id = "settings:authentication"
+display_name = "Authentication & Tokens"
+category = "Settings"
+description = "Manage OAuth tokens, view session status, and re-authenticate with Microsoft 365"
+priority = 100
+permissions = []
+supported = true
+inputs = []
+
+[[modules]]
+id = "settings:configuration"
+display_name = "Execution Configuration"
+category = "Settings"
+description = "Adjust concurrency limits, retry attempts, and dry-run defaults"
+priority = 90
+permissions = []
+supported = true
+inputs = []
+
+[[modules]]
+id = "settings:health"
+display_name = "System Health"
+category = "Settings"
+description = "View Microsoft Graph API latency, connectivity status, and health metrics"
+priority = 80
+permissions = []
+supported = true
+inputs = []

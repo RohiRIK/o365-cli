@@ -1,0 +1,88 @@
+name: Sync Production Modules to Prod Branch
+
+on:
+  push:
+    branches: [dev]  # Trigger on any push to dev branch
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-prod-modules:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for clean branch creation
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: ./core
+        run: bun install
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Create clean prod branch
+        run: |
+          # Delete existing prod branch if it exists (local and remote)
+          git branch -D prod 2>/dev/null || true
+          git push origin --delete prod 2>/dev/null || true
+
+          # Create fresh orphan prod branch (no history)
+          git checkout --orphan prod
+
+          # Remove all files from staging
+          git rm -rf . 2>/dev/null || true
+
+      - name: Copy base structure
+        run: |
+          # Checkout dev to get files (not main)
+          git checkout dev -- .gitignore
+          git checkout dev -- core/
+          git checkout dev -- scripts/
+
+          echo "Base structure copied from dev"
+
+      - name: Filter to prod modules only
+        working-directory: ./core
+        run: |
+          bun run ../scripts/filter-prod-modules.ts
+          echo "Filtered to production modules only"
+
+      - name: Sanitize configs
+        working-directory: ./core
+        run: |
+          bun run ../scripts/sanitize-configs.ts
+          echo "Sanitized sensitive files"
+
+      - name: Generate production README
+        working-directory: ./core
+        run: |
+          bun run ../scripts/generate-prod-readme.ts
+          echo "Generated production README"
+
+      - name: Commit and push prod branch
+        run: |
+          git add .
+          git commit -m "chore: sync prod modules from dev@$(git rev-parse --short dev)" || echo "No changes to commit"
+          git push origin prod --force
+
+          echo "✅ Production branch updated successfully"
+
+      - name: Create summary
+        run: |
+          echo "### 🎯 Production Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`prod\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Source:** \`dev@$(git rev-parse --short dev)\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Production modules have been synchronized." >> $GITHUB_STEP_SUMMARY
