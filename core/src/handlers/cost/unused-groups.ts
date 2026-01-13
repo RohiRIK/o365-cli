@@ -21,8 +21,9 @@ class UnusedGroupsHandler implements TaskHandler {
   status = "draft" as const;
 
   parseArgs(rawArgs: string[]): UnusedGroupsArgs {
-    const days = parseNumberFlag(rawArgs, "days", 180);
+    const days = parseNumberFlag(rawArgs, "days", 90) || 90;
     const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+
     return { days, dryRun };
   }
 

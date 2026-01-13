@@ -11,11 +11,11 @@ import { jwtDecode } from "jwt-decode";
 import { IPC } from "./utils/ipc";
 import { setupSignalHandlers } from "./utils/process";
 import { theme } from "./utils/theme";
+import { GraphService } from "./services/graph";
 import * as fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import ora from "ora";
-import * as readline from "readline";
 
 setupSignalHandlers();
 enableGlobalCancellation();
@@ -212,7 +212,7 @@ async function runSearchablePicker(showAll: boolean = false): Promise<string | "
     try {
         const moduleId = await search({
             message: "Search modules (type to filter):",
-            source: async (input) => {
+            source: async (input: string | undefined) => {
                 if (!input) return choices;
                 
                 const term = input.toLowerCase();
@@ -223,7 +223,7 @@ async function runSearchablePicker(showAll: boolean = false): Promise<string | "
                 );
             },
             emptyText: theme.dim("No modules found matching your search term."),
-        });
+        }) as string;
 
         nav.pop();
         return moduleId;
@@ -250,14 +250,14 @@ async function runCategorizedPicker(showAll: boolean = false): Promise<string | 
                 ...categories,
                 { name: theme.muted("🔙 Back (q)"), value: "exit" }
             ],
-        });
+        }) as string;
 
         if (category === "exit") {
             nav.pop();
             return "exit";
         }
 
-        const categoryMeta = CATEGORY_MAP[category] || { name: category.toUpperCase() };
+        const categoryMeta = (CATEGORY_MAP as any)[category] || { name: category.toUpperCase() };
         nav.push(categoryMeta.name);
         nav.refresh();
 
@@ -267,7 +267,7 @@ async function runCategorizedPicker(showAll: boolean = false): Promise<string | 
                 ...getModulesInCategory(taskIds, category, showAll),
                 { name: theme.muted("🔙 Back to Categories"), value: "exit" }
             ],
-        });
+        }) as string;
 
         if (moduleId === "exit") {
             nav.pop(); // Pop category name

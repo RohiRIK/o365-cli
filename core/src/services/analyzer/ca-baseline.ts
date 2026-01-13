@@ -5,7 +5,7 @@ import { MaturityCalculator, type MaturityScore } from "./maturity-calculator";
 import { ConflictDetector, type PolicyConflict } from "./conflict-detector";
 
 // Re-export types for external consumers
-export type { ExclusionImpact, MaturityScore, PolicyConflict };
+export type { ExclusionImpact, MaturityScore, PolicyConflict, Policy };
 
 /**
  * Granular coverage breakdown for a policy match

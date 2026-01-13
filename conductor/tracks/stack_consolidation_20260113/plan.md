@@ -7,7 +7,7 @@ Goal: Remove Rust references and standardize Bun/TypeScript and PowerShell in th
 
 - [x] Task: Remove Rust references from `conductor/product.md` (Already clean)
 - [x] Task: Update `conductor/tech-stack.md` to define Bun + TypeScript as primary and PowerShell as secondary fa5359f
-- [ ] Task: Update `conductor/workflow.md` examples to use `bun` commands
+- [x] Task: Update `conductor/workflow.md` examples to use `bun` commands 09f78fe
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Stack Consolidation & Cleanup' (Protocol in workflow.md)
 
 ## Phase 2: Agent Context & Integration

@@ -16,3 +16,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## [~] Track: Conditional Access Policy Audit & Best Practice Analyzer
 *Link: [./conductor/tracks/ca_audit_20251231/](./conductor/tracks/ca_audit_20251231/)*
+
+---
+
+## [~] Track: Update Conductor Documentation & Agent Context
+*Link: [./conductor/tracks/stack_consolidation_20260113/](./conductor/tracks/stack_consolidation_20260113/)*

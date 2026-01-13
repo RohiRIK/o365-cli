@@ -98,7 +98,13 @@ export async function auditBitLocker(dryRun: boolean = true) {
     IPC.progress("Generating audit report...", 90);
 
     // Sort by risk level (Critical > High > Medium > Low)
-    const riskOrder = { "Critical": 0, "High": 1, "Medium": 2, "Low": 3 };
+    const riskOrder: Record<string, number> = {
+        Critical: 0,
+        High: 1,
+        Medium: 2,
+        Low: 3,
+    };
+
     deviceStatuses.sort((a, b) => (riskOrder[a.risk] || 999) - (riskOrder[b.risk] || 999));
 
     // Filter to show at-risk devices (not low risk)

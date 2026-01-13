@@ -123,7 +123,12 @@ export async function analyzeOneDriveSprawl(thresholdGb: number = 500, dryRun: b
     IPC.log(`${issues.length} storage issues found`, issues.length > 0 ? "warn" : "info");
 
     // Sort by severity (Critical > High > Medium)
-    const severityOrder = { "Critical": 0, "High": 1, "Medium": 2 };
+    const severityOrder: Record<string, number> = {
+        Critical: 0,
+        High: 1,
+        Medium: 2,
+    };
+
     issues.sort((a, b) => (severityOrder[a.severity] || 999) - (severityOrder[b.severity] || 999));
 
     if (issues.length === 0) {

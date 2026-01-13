@@ -21,8 +21,9 @@ class OneDriveSprawlHandler implements TaskHandler {
   status = "draft" as const;
 
   parseArgs(rawArgs: string[]): OneDriveSprawlArgs {
-    const thresholdGb = parseNumberFlag(rawArgs, "threshold_gb", 500);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
+    const thresholdGb = parseNumberFlag(rawArgs, "threshold", 10) || 10;
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+
     return { thresholdGb, dryRun };
   }
 

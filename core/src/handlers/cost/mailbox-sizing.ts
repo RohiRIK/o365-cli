@@ -21,8 +21,9 @@ class MailboxSizingHandler implements TaskHandler {
   status = "draft" as const;
 
   parseArgs(rawArgs: string[]): MailboxSizingArgs {
-    const thresholdGb = parseNumberFlag(rawArgs, "threshold_gb", 50);
-    const dryRun = parseBooleanFlag(rawArgs, "dry-run", false);
+    const thresholdGb = parseNumberFlag(rawArgs, "threshold", 50) || 50;
+    const dryRun = parseBooleanFlag(rawArgs, "dry-run", true);
+
     return { thresholdGb, dryRun };
   }
 
