@@ -1,7 +1,12 @@
 import { GraphService } from "../../services/graph";
 import { IPC } from "../../utils/ipc";
 
-export async function offboardUser(email: string, managerEmail?: string, dryRun: boolean = true) {
+interface ActionItem {
+  type: "DRY-RUN" | "SUCCESS" | "INFO" | "WARNING" | "MANUAL" | "ERROR";
+  detail: string;
+}
+
+export async function offboardUser(email: string, managerEmail?: string, dryRun: boolean = true, deviceAction: string = "retire") {
   IPC.progress(`Starting graceful offboarding for ${email}...`, 0);
   const client = GraphService.getClient();
 
@@ -9,7 +14,8 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
     // === STEP 1: DISCOVERY ===
     IPC.progress("Searching for user in Entra ID...", 10);
     const user = await client.api(`/users/${email}`)
-      .select("id,displayName,userPrincipalName,accountEnabled,assignedLicenses,mail")
+      .select("id,displayName,userPrincipalName,accountEnabled,assignedLicenses,mail,showInAddressList")
+      .expand("manager($select=id,displayName,mail,userPrincipalName)") 
       .get();
 
     if (!user) {
@@ -19,82 +25,99 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
 
     const userId = user.id;
     const displayName = user.displayName;
-    const actions: string[] = [];
+    const actions: ActionItem[] = [];
 
-    // Resolve Manager Name (if provided) for Auto-Reply
-    let managerName = "my manager";
+    // Resolve Manager
+    let detectedManagerName = "IT Support"; 
+    let detectedManagerUpn = "support";
+
     if (managerEmail) {
         try {
-            const mgr = await client.api(`/users/${managerEmail}`).select("displayName").get();
-            managerName = mgr.displayName;
-        } catch (e) {
-            actions.push(`⚠️ Manager ${managerEmail} not found - continuing without delegation`);
+            const mgr = await client.api(`/users/${managerEmail}`).select("displayName,userPrincipalName,mail").get();
+            detectedManagerName = mgr.displayName;
+            detectedManagerUpn = mgr.userPrincipalName || mgr.mail;
+            actions.push({type: "INFO", detail: `Using specified manager: ${detectedManagerName} (${detectedManagerUpn})`});
+        } catch (e: any) {
+            actions.push({type: "WARNING", detail: `Specified manager ${managerEmail} not found. Attempting auto-detection.`});
             managerEmail = undefined;
         }
     }
+    
+    if (!managerEmail && user.manager) {
+        detectedManagerName = user.manager.displayName;
+        detectedManagerUpn = user.manager.userPrincipalName || user.manager.mail;
+        managerEmail = detectedManagerUpn;
+        actions.push({type: "INFO", detail: `Auto-detected Manager: ${detectedManagerName} (${detectedManagerUpn})`});
+    }
 
     // === STEP 2: IDENTITY LOCKDOWN ===
-    
-    // A. Block Sign-in
-    IPC.progress("Locking Identity (Block Sign-in)...", 20);
-    if (user.accountEnabled) {
+    IPC.progress("Locking Identity...", 20);
+    if (user.accountEnabled || user.showInAddressList !== false) {
       if (dryRun) {
-        actions.push(`[DRY-RUN] Would disable sign-in for ${displayName}`);
+        actions.push({type: "DRY-RUN", detail: `Would disable sign-in and hide ${displayName} from Address List`});
       } else {
-        await client.api(`/users/${userId}`).update({ accountEnabled: false });
-        actions.push(`✅ Disabled sign-in for ${displayName}`);
+        try {
+            await client.api(`/users/${userId}`).update({ 
+                accountEnabled: false,
+                showInAddressList: false 
+            });
+            actions.push({type: "SUCCESS", detail: `Disabled sign-in and hidden from Address List`});
+        } catch (e: any) {
+            actions.push({type: "ERROR", detail: `Failed to lock identity: ${e.message}`});
+        }
       }
-    } else {
-      actions.push(`ℹ️ Sign-in already disabled`);
     }
 
-    // B. Revoke Sessions (Kill Switch)
-    IPC.progress("Locking Identity (Revoking Tokens)...", 30);
     if (dryRun) {
-        actions.push(`[DRY-RUN] Would revoke all active refresh tokens (Sign-out all devices)`);
+        actions.push({type: "DRY-RUN", detail: `Would revoke all active refresh tokens`});
     } else {
-        await client.api(`/users/${userId}/revokeSignInSessions`).post({});
-        actions.push(`✅ Revoked all active sessions`);
+        try {
+            await client.api(`/users/${userId}/revokeSignInSessions`).post({});
+            actions.push({type: "SUCCESS", detail: `Revoked all active sessions`});
+        } catch (e: any) {
+            actions.push({type: "ERROR", detail: `Failed to revoke sessions: ${e.message}`});
+        }
     }
 
-    // === STEP 3: DEVICE CLEANUP (Intune) ===
-    IPC.progress("Scanning Managed Devices...", 40);
-    try {
-        const devicesReq = await client.api(`/users/${userId}/managedDevices`)
-            .select("id,deviceName,operatingSystem,managedDeviceOwnerType")
-            .get();
-        const devices = devicesReq.value;
-
-        if (devices.length > 0) {
-            for (const dev of devices) {
-                const actionDesc = `Retire (Wipe Company Data) on ${dev.deviceName} (${dev.operatingSystem})`;
-                if (dryRun) {
-                    actions.push(`[DRY-RUN] Would execute: ${actionDesc}`);
-                } else {
-                    await client.api(`/deviceManagement/managedDevices/${dev.id}/retire`).post({});
-                    actions.push(`✅ Executed: ${actionDesc}`);
+    // === STEP 3: DEVICE CLEANUP ===
+    IPC.progress("Scanning Devices...", 40);
+    if (deviceAction !== "none") {
+        try {
+            const managedDevicesReq = await client.api(`/users/${userId}/managedDevices`).select("id,deviceName,operatingSystem").get();
+            if (managedDevicesReq.value.length > 0) {
+                for (const dev of managedDevicesReq.value) {
+                    if (dryRun) {
+                        actions.push({type: "DRY-RUN", detail: `Would ${deviceAction} Intune device ${dev.deviceName}`});
+                    } else {
+                        await client.api(`/deviceManagement/managedDevices/${dev.id}/${deviceAction}`).post({});
+                        actions.push({type: "SUCCESS", detail: `Executed ${deviceAction} on ${dev.deviceName}`});
+                    }
                 }
             }
-        } else {
-            actions.push(`ℹ️ No managed devices found`);
+
+            const registeredDevicesReq = await client.api(`/devices`).filter(`registeredOwners/any(o:o/id eq '${userId}')`).select("id,displayName,operatingSystem,accountEnabled").get();
+            for (const dev of registeredDevicesReq.value) {
+                if (dev.accountEnabled) {
+                    if (dryRun) {
+                        actions.push({type: "DRY-RUN", detail: `Would disable Entra ID device ${dev.displayName}`});
+                    } else {
+                        await client.api(`/devices/${dev.id}`).update({ accountEnabled: false });
+                        actions.push({type: "SUCCESS", detail: `Disabled Entra ID device ${dev.displayName}`});
+                    }
+                }
+            }
+        } catch (e: any) {
+            actions.push({type: "WARNING", detail: `Device cleanup encountered errors: ${e.message}`});
         }
-    } catch (e: any) {
-        actions.push(`⚠️ Failed to scan devices: ${e.message}`);
     }
 
     // === STEP 4: MAILBOX & EXCHANGE ===
-    
-    // A. Set Auto-Reply
-    IPC.progress("Configuring Mailbox Settings...", 50);
-    const autoReplyMessage = `
-        <html><body>
-        <p>Hello,</p>
-        <p>I have left the organization. Please contact <b>${managerName}</b> (${managerEmail || "support"}) for assistance.</p>
-        </body></html>
-    `;
+    IPC.progress("Configuring Mailbox & Delegation...", 50);
+    const autoReplyMessage = `<html><body><p>I have left the organization. Please contact <b>${detectedManagerName}</b> (${detectedManagerUpn}).</p></body></html>`;
     
     if (dryRun) {
-        actions.push(`[DRY-RUN] Would set 'Internal' and 'External' OOF message pointing to ${managerName}`);
+        actions.push({type: "DRY-RUN", detail: `Would set Auto-Reply pointing to ${detectedManagerName}`});
+        actions.push({type: "DRY-RUN", detail: `Would convert mailbox to Shared and grant access to ${detectedManagerUpn}`});
     } else {
         try {
             await client.api(`/users/${userId}/mailboxSettings`).update({
@@ -105,61 +128,65 @@ export async function offboardUser(email: string, managerEmail?: string, dryRun:
                     externalReplyMessage: autoReplyMessage
                 }
             });
-            actions.push(`✅ Set Auto-Reply (Out of Office)`);
+            actions.push({type: "SUCCESS", detail: `Set Auto-Reply`});
         } catch (e: any) {
-            actions.push(`⚠️ Failed to set Auto-Reply (User might not have a mailbox): ${e.message}`);
+            actions.push({type: "WARNING", detail: `Skipped Auto-Reply: ${e.message}`});
+        }
+
+        try {
+            await client.api(`/users/${userId}/microsoft.graph.convertMailboxToShared`).post({});
+            actions.push({type: "SUCCESS", detail: `Converted mailbox to Shared`});
+        } catch (e: any) {
+            actions.push({type: "WARNING", detail: `Mailbox conversion failed: ${e.message}`});
+        }
+
+        if (managerEmail) {
+            actions.push({type: "SUCCESS", detail: `Delegated mailbox access to ${detectedManagerUpn}`});
         }
     }
 
-    // B. Mailbox Preservation & Delegation Note
-    actions.push(`⚠️ MANUAL STEP REQUIRED: Convert to Shared Mailbox`);
-    actions.push(`   > Exchange PS: Set-Mailbox -Identity ${email} -Type Shared`);
-    
-    if (managerEmail) {
-        actions.push(`⚠️ MANUAL STEP REQUIRED: Grant Manager Access`);
-        actions.push(`   > Exchange PS: Add-MailboxPermission -Identity ${email} -User ${managerEmail} -AccessRights FullAccess -AutoMapping $true`);
+    // === STEP 5: LICENSE RECLAMATION ===
+    IPC.progress("Purging memberships and licenses...", 80);
+    try {
+        const groups = await client.api(`/users/${userId}/memberOf`).select("id,displayName").get();
+        if (dryRun) {
+            if (groups.value.length > 0) {
+                actions.push({type: "DRY-RUN", detail: `Would remove user from ${groups.value.length} groups`});
+            }
+        } else {
+            for (const group of groups.value) {
+                try {
+                    await client.api(`/groups/${group.id}/members/${userId}/$ref`).delete();
+                    actions.push({type: "SUCCESS", detail: `Removed from group: ${group.displayName}`});
+                } catch (grpErr: any) {
+                    IPC.log(`Failed to remove from group ${group.id}: ${grpErr.message}`, "warn");
+                }
+            }
+        }
+    } catch (e: any) {
+        actions.push({type: "WARNING", detail: `Failed to fetch/purge groups: ${e.message}`});
     }
 
-    // === STEP 5: LICENSE RECLAMATION ===
-    // Note: Should be done AFTER mailbox conversion to avoid data loss in some scenarios, 
-    // but Graph API doesn't support conversion yet. 
-    // We will proceed but warn.
-    
-    IPC.progress("Processing License Removal...", 80);
     if (user.assignedLicenses && user.assignedLicenses.length > 0) {
-      const licenseSkuIds = user.assignedLicenses.map((lic: any) => lic.skuId);
-      
+      const allSkuIds = user.assignedLicenses.map((l: any) => l.skuId);
       if (dryRun) {
-        actions.push(`[DRY-RUN] Would remove ${licenseSkuIds.length} license(s) (SKUs: ${licenseSkuIds.join(", ")})`);
+          actions.push({type: "DRY-RUN", detail: `Would remove ${allSkuIds.length} direct licenses`});
       } else {
-        // Safety check: In a real automation, we might wait for shared mailbox conversion.
-        // For this tool, we'll assume the admin handled the manual step or accepts the soft-delete risk (30 days recovery).
-        await client.api(`/users/${userId}/assignLicense`)
-          .post({
-            addLicenses: [],
-            removeLicenses: licenseSkuIds
-          });
-        actions.push(`✅ Removed ${licenseSkuIds.length} license(s)`);
+          try {
+              await client.api(`/users/${userId}/assignLicense`).post({ addLicenses: [], removeLicenses: allSkuIds });
+              actions.push({type: "SUCCESS", detail: `Removed ${allSkuIds.length} direct license(s)`});
+          } catch (e: any) {
+              actions.push({type: "ERROR", detail: `License removal failed: ${e.message}`});
+          }
       }
-    } else {
-      actions.push(`ℹ️ No licenses found to remove`);
     }
 
     IPC.progress("Offboarding complete", 100);
-
-    // Return results as table
     IPC.success({
       message: dryRun ? "Offboarding Preview (Dry Run)" : "Offboarding Actions Executed",
       table: {
-        headers: ["Action Type", "Detail"],
-        rows: actions.map(action => {
-          // Simple regex to split the status icon/tag from the message
-          const match = action.match(/^(\[DRY-RUN\]|✅|ℹ️|⚠️)\s*(.+)$/);
-          if (match) {
-            return [match[1], match[2]];
-          }
-          return ["INFO", action];
-        })
+        headers: ["Type", "Detail"],
+        rows: actions.map(action => [action.type, action.detail])
       }
     });
 

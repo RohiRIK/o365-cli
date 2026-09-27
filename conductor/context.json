@@ -1,0 +1,32 @@
+{
+  "project_name": "o365-cli",
+  "version": "1.0.0",
+  "stack": {
+    "primary": {
+      "runtime": "bun",
+      "language": "typescript",
+      "package_manager": "bun"
+    },
+    "secondary": {
+      "language": "powershell",
+      "version": "7+"
+    }
+  },
+  "directories": {
+    "core": "core",
+    "legacy": "legacy",
+    "conductor": "conductor",
+    "tracks": "conductor/tracks"
+  },
+  "documentation": {
+    "agent_entry_point": "conductor/agents.md",
+    "tech_stack": "conductor/tech-stack.md",
+    "product_vision": "conductor/product.md",
+    "workflow": "conductor/workflow.md"
+  },
+  "rules": {
+    "tdd": true,
+    "dry_run_default": true,
+    "prefer_bun": true
+  }
+}
