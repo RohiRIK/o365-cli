@@ -1,0 +1,11 @@
+# Cursor Rules: o365-cli
+
+You MUST read and adhere to the instructions in **conductor/agents.md** before performing any task.
+
+## Summary of Standards
+- **Stack:** Bun + TypeScript (Primary), PowerShell (Secondary).
+- **Workflow:** Strict TDD (Test-Driven Development) via `conductor/workflow.md`.
+- **Logic:** Business logic MUST reside in `core/src/`.
+- **Docs:** Architectural truth resides in `conductor/`.
+
+Always check `conductor/context.json` for machine-readable project metadata.

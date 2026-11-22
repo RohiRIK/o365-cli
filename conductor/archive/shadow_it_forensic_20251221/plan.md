@@ -1,0 +1,33 @@
+# Track Plan: Shadow IT Forensic Enrichment
+
+## Phase 1: API & Data Model Enrichment [checkpoint: 7c6fbd7]
+- [x] Task: Expand `RiskyGrant` Interface and Data Fetching [8189286]
+    -   Context: Modify `core/src/commands/sec/shadow-it.ts`.
+    -   Sub-task: Add `appId`, `servicePrincipalId`, and `principalId` to the `RiskyGrant` interface.
+    -   Sub-task: Update Graph API calls to fetch precise `signInActivity` (last successful, failures) and `passwordCredentials`/`keyCredentials` details.
+    -   Sub-task: Implement `resolveScopeDescriptions` to fetch human-readable strings for permissions.
+- [x] Task: Update Risk Scoring & Classification [cd9be43]
+    -   Context: Modify `calculateRiskScore` and `generateRecommendation` in `shadow-it.ts`.
+    -   Sub-task: Incorporate "Credential Age" and "Sign-in Failure Rate" into the risk algorithm.
+    -   Sub-task: Add "Classification Source" metadata to each finding.
+- [x] Task: Write Tests for Data Enrichment [cd9be43]
+    -   Context: Create `core/src/commands/sec/shadow-it.test.ts` (Red Phase).
+    -   Sub-task: Verify that all new forensic fields are correctly populated from mock Graph responses.
+- [ ] Task: Conductor - User Manual Verification 'API & Data Model Enrichment' (Protocol in workflow.md)
+
+## Phase 2: TUI Detail View Refactor [checkpoint: 64f1401]
+- [x] Task: Enhance "Row Details" Popup for Forensic Data [7c2bbf7]
+    -   Context: Modify `cli/src/ui.rs`.
+    -   Sub-task: Refactor the detail popup to use a structured, multi-section layout (e.g., "Identifiers", "Permissions", "Activity", "Hygiene").
+    -   Sub-task: Ensure long lists of secrets or permissions are readable (implement scrolling or better wrapping).
+- [x] Task: Implement Local Results Filtering [79bce91]
+    -   Context: Modify `cli/src/app.rs` and `cli/src/ui.rs`.
+    -   Sub-task: Add a search buffer and logic to filter the results table by App Name, User, or Severity.
+- [ ] Task: Conductor - User Manual Verification 'TUI Detail View Refactor' (Protocol in workflow.md)
+
+## Phase 3: Final Verification & Export [checkpoint: ]
+- [x] Task: Update CSV Export logic [e1c70a6]
+    -   Context: Modify `cli/src/tui.rs` or `cli/src/app.rs`.
+    -   Sub-task: Ensure all new forensic IDs and timestamps are included in the CSV export file.
+- [x] Task: End-to-End Forensic Audit Test [e1c70a6]
+- [x] Task: Conductor - User Manual Verification 'Final Verification & Export' (Protocol in workflow.md) [e1c70a6]

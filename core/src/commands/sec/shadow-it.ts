@@ -116,6 +116,8 @@ interface RiskyGrant {
     grantType: "Delegated" | "Application";
     appName: string;
     appId: string;
+    servicePrincipalId: string;
+    principalId: string;
     publisher: string;
     publisherVerified: boolean;
     appOwnerType: "Microsoft" | "Internal" | "ThirdParty";
@@ -128,8 +130,8 @@ interface RiskyGrant {
     hasOfflineAccess: boolean;
     riskScore: number;
     riskLevel: "Critical" | "High" | "Medium" | "Low";
-    permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED"; // NEW
-    recommendation: string; // NEW
+    permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED";
+    recommendation: string;
     user: string;
     userDisplayName: string;
     userEnabled: boolean;
@@ -144,6 +146,9 @@ interface RiskyGrant {
     consentType: string;
     scopes: string;
     riskyScopes: string;
+    scopeDescriptions: string;
+    classificationSource: string; // NEW
+    credentialAgeDays: number;    // NEW
 }
 
 // Helper: Calculate risk score
@@ -157,7 +162,8 @@ function calculateRiskScore(
   daysSinceLastSignIn: number,
   userEnabled: boolean,
   userType: string,
-  consentType: string
+  consentType: string,
+  credentialAgeDays: number // NEW
 ): number {
   let score = 0;
   
@@ -174,6 +180,7 @@ function calculateRiskScore(
   // Credential Hygiene (0-15 points)
   if (credHealth.includes("EXPIRED")) score += 10;
   if (credHealth.includes("EXPIRING")) score += 5;
+  if (credentialAgeDays > 365) score += 5; // Stale credential
   
   // User Context (0-20 points)
   if (daysSinceLastSignIn > 180) score += 10; // Zombie grant
@@ -287,6 +294,26 @@ function generateRecommendation(grant: Partial<RiskyGrant>): string {
   } catch (e) {
     return "Review required";
   }
+}
+
+// Helper: Resolve scope descriptions (simplified mapping for core scopes)
+function resolveScopeDescriptions(scopes: string): string {
+  const scopeMap: Record<string, string> = {
+    "Mail.Read": "Read user mail",
+    "Mail.ReadWrite": "Read and write user mail",
+    "Mail.Send": "Send mail as user",
+    "Files.Read.All": "Read all files in the organization",
+    "Files.ReadWrite.All": "Read and write all files in the organization",
+    "Directory.ReadWrite.All": "Full control over the directory",
+    "Directory.AccessAsUser.All": "Access the directory as any user",
+    "User.Read": "Read basic user profile",
+    "User.ReadWrite.All": "Read and write all user profiles",
+    "offline_access": "Maintain access to data even when user is offline"
+  };
+
+  return scopes.split(" ")
+    .map(s => scopeMap[s] || s)
+    .join("; ");
 }
 
 export async function analyzeShadowIT(dryRun: boolean = true) {
@@ -448,13 +475,21 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
 
       const allCreds = [...(app.passwordCredentials || []), ...(app.keyCredentials || [])];
       let credHealth = "None";
+      let credentialAgeDays = 0;
 
       if (allCreds.length > 0) {
-          // Find the latest expiration date (the date the app will stop working)
+          // Find the latest expiration date
           const maxExpiry = allCreds.reduce((latest, current) => {
               const currentEnd = new Date(current.endDateTime);
               return currentEnd > latest ? currentEnd : latest;
           }, new Date(0)); 
+
+          // Find the earliest start date (creation)
+          const minStart = allCreds.reduce((earliest, current) => {
+              const currentStart = new Date(current.startDateTime);
+              return currentStart < earliest ? currentStart : earliest;
+          }, new Date());
+          credentialAgeDays = Math.floor((now.getTime() - minStart.getTime()) / (1000 * 60 * 60 * 24));
 
           if (maxExpiry < now) {
               credHealth = "ALL EXPIRED";
@@ -500,15 +535,21 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         daysSinceLastSignIn,
         user.accountEnabled,
         user.userType,
-        grant.consentType
+        grant.consentType,
+        credentialAgeDays
       );
 
       // Classify permissions and generate recommendation
       let permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED" = "LOW";
       let recommendation = "Monitor for unusual activity";
+      let classificationSource = "Internal High-Risk List";
       
       try {
         permissionSeverity = classifyPermissions(riskyScopeList);
+        // Check if any critical/high scopes are in the Microsoft Official list
+        if (riskyScopeList.some(s => PERMISSION_SEVERITY.CRITICAL.includes(s) || PERMISSION_SEVERITY.HIGH.includes(s))) {
+            classificationSource = "Microsoft Security Classification";
+        }
         
         const grantData: Partial<RiskyGrant> = {
           appName: app.displayName,
@@ -537,6 +578,8 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         grantType: "Delegated",
         appName: app.displayName,
         appId: app.appId,
+        servicePrincipalId: grant.clientId,
+        principalId: grant.principalId || "Tenant",
         publisher: app.publisherName || "Unverified",
         publisherVerified,
         appOwnerType,
@@ -564,7 +607,10 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
         grantExpiry: grant.expiryTime || "Never",
         consentType: grant.consentType,
         scopes: grant.scope,
-        riskyScopes: riskyScopeList.join(" ")
+        riskyScopes: riskyScopeList.join(" "),
+        scopeDescriptions: resolveScopeDescriptions(grant.scope),
+        classificationSource,
+        credentialAgeDays
       });
     }
 
@@ -624,11 +670,20 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
           // Analyze credentials
           const allCreds = [...(app.passwordCredentials || []), ...(app.keyCredentials || [])];
           let credHealth = "None";
+          let credentialAgeDays = 0;
           if (allCreds.length > 0) {
             const maxExpiry = allCreds.reduce((latest, current) => {
               const currentEnd = new Date(current.endDateTime);
               return currentEnd > latest ? currentEnd : latest;
             }, new Date(0));
+            
+            // Find creation date
+            const minStart = allCreds.reduce((earliest, current) => {
+                const currentStart = new Date(current.startDateTime);
+                return currentStart < earliest ? currentStart : earliest;
+            }, new Date());
+            credentialAgeDays = Math.floor((now.getTime() - minStart.getTime()) / (1000 * 60 * 60 * 24));
+
             const warningWindow = new Date();
             warningWindow.setDate(warningWindow.getDate() + 30);
             if (maxExpiry < now) credHealth = "ALL EXPIRED";
@@ -653,15 +708,20 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             0, // No user context for app permissions
             true,
             "N/A",
-            "Admin"
+            "Admin",
+            credentialAgeDays
           );
           
           // Classify permissions and generate recommendation
           let permissionSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "MIXED" = "LOW";
           let recommendation = "Monitor for unusual activity";
+          let classificationSource = "Internal High-Risk List";
           
           try {
             permissionSeverity = classifyPermissions([permissionValue]);
+            if (PERMISSION_SEVERITY.CRITICAL.includes(permissionValue) || PERMISSION_SEVERITY.HIGH.includes(permissionValue)) {
+                classificationSource = "Microsoft Security Classification";
+            }
             
             const grantData: Partial<RiskyGrant> = {
               appName: app.displayName,
@@ -690,6 +750,8 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             grantType: "Application",
             appName: app.displayName,
             appId: app.appId,
+            servicePrincipalId: sp.id,
+            principalId: "Tenant-Wide",
             publisher: app.publisherName || "Unverified",
             publisherVerified,
             appOwnerType,
@@ -717,7 +779,10 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
             grantExpiry: "Never",
             consentType: "Admin",
             scopes: permissionValue,
-            riskyScopes: permissionValue
+            riskyScopes: permissionValue,
+            scopeDescriptions: resolveScopeDescriptions(permissionValue),
+            classificationSource,
+            credentialAgeDays
           });
         }
       } catch (e: any) {
@@ -806,24 +871,33 @@ export async function analyzeShadowIT(dryRun: boolean = true) {
           return [
             `${riskEmoji} ${g.riskScore || 0}`,
             g.appName || "Unknown",
-            publisherDisplay && publisherDisplay.length > 20 ? publisherDisplay.substring(0, 17) + "..." : (publisherDisplay || "Unknown"),
             `${severityEmoji} ${g.permissionSeverity || "LOW"}`,
-            g.grantType || "Unknown",
             g.user && g.user.length > 25 ? g.user.substring(0, 22) + "..." : (g.user || "N/A"),
             lastActiveDisplay,
-            g.consentType === "AllPrincipals" || g.consentType === "Admin" ? "🌐 Tenant" : "👤 User",
-            g.riskyScopes && g.riskyScopes.length > 40 ? g.riskyScopes.substring(0, 37) + "..." : (g.riskyScopes || ""),
-            g.recommendation && g.recommendation.length > 50 ? g.recommendation.substring(0, 47) + "..." : (g.recommendation || "Review required")
+            g.appId || "N/A",
+            g.servicePrincipalId || "N/A",
+            g.principalId || "N/A",
+            g.publisher || "N/A", // NEW
+            g.appOwnerType || "N/A", // NEW
+            g.homepage || "N/A", // NEW
+            g.secretStatus || "N/A", // NEW
+            g.certStatus || "N/A", // NEW
+            g.credentialHealth || "N/A", // NEW
+            g.riskyScopes || "N/A",
+            g.scopeDescriptions || "N/A", // NEW
+            g.classificationSource || "N/A", // NEW
+            `${g.credentialAgeDays || 0} days`, // NEW
+            g.recommendation || "Review required"
           ];
         } catch (rowError: any) {
           console.error(`[ERROR] Failed to format row ${idx}: ${rowError.message}`);
-          return ["Error", "Error formatting row", "", "", "", "", "", "", "", ""];
+          return ["Error", "Error formatting row", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
         }
       });
       
       IPC.progress(`Table rows prepared (${tableRows.length} rows)`, 94);
     } catch (e: any) {
-      tableRows = [["Error", "Failed to generate table", "", "", "", "", "", "", "", ""]];
+      tableRows = [["Error", "Failed to generate table", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]];
     }
 
     IPC.progress(`Building summary...`, 95);
@@ -851,7 +925,12 @@ ${riskyGrants.length > 50 ? `\n⚠️ Showing top 50 of ${riskyGrants.length} ri
     const successPayload = {
         message: dryRun ? summaryMessage : "Remediation Complete",
         table: {
-            headers: ["Risk", "App Name", "Publisher", "Permission Severity", "Type", "User/Scope", "Last Active", "Consent", "Risky Permissions", "Recommendation"],
+            headers: [
+                "Risk", "App Name", "Severity", "User/Scope", "Last Active", 
+                "App ID", "SP ID", "Principal ID", "Publisher", "Owner Type", 
+                "Homepage", "Secrets", "Certs", "Cred Health", "Risky Scopes", 
+                "Scope Details", "Source", "Cred Age", "Recommendation"
+            ],
             rows: tableRows
         }
     };

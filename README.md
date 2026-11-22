@@ -1,8 +1,8 @@
 # 🛡️ o365-cli: The Enterprise Governance Platform
 
-> **"The Amazing GUI in CLI" for Microsoft 365 Administrators.**
+> **"The High-Performance CLI" for Microsoft 365 Administrators.**
 
-`o365-cli` is not just a script repository; it is a **comprehensive governance platform** designed to tame the chaos of Microsoft 365 administration. It reimagines daily operations by replacing fragmented, slow PowerShell scripts with a **high-performance, interactive TUI (Terminal User Interface)**.
+`o365-cli` is a **comprehensive governance platform** designed to tame the chaos of Microsoft 365 administration. It reimagines daily operations by replacing fragmented, slow PowerShell scripts with a **high-performance TypeScript orchestration engine** powered by the **Bun** runtime.
 
 ---
 
@@ -19,123 +19,210 @@ We treat infrastructure as code and governance as a continuous process, not a on
 
 ---
 
-## 🖥️ The Interactive Dashboard
-
-Built with **Rust** and **Ratatui**, the CLI provides a blazing fast, keyboard-driven interface.
-
-| Feature | Description |
-| :--- | :--- |
-| **⚡ Real-Time Logs** | Watch complex backend tasks execute with millisecond precision logs scrolling in real-time. |
-| **🔐 Secure Auth** | Built-in **OAuth2 PKCE** flow with token persistence. Log in once, manage forever. |
-| **📊 Rich Results** | Results aren't just text; they are interactive **Tables** that you can sort, filter, and export to CSV. |
-| **🛑 Safety First** | "Dry Run" is the default. Every destructive action requires explicit confirmation or toggle. |
-
----
-
-## 🧩 The Module Ecosystem
-
-The platform is divided into four strategic pillars. Each module is designed to solve a specific high-value business problem.
-
-### 👤 Identity & Access Management (IAM)
-*Standardizing the chaotic lifecycle of users.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **IAM-01** | [Graceful Offboarding](legacy/01-IAM-GracefulOffboarding/README.md) | **Data Preservation** | • 100% Data retention (Mail/OneDrive)<br>• Zero "Zombie" accounts left active |
-| **IAM-01-G** | [Guest Lifecycle](legacy/01-IAM-GuestUserCleanup/README.md) | **Perimeter Hygiene** | • Reduction in stale guest accounts<br>• 100% Sponsor attribution for external users |
-| **IAM-01-N** | [User Onboarding](legacy/01-IAM-NewUserOnboarding/README.md) | **Day 1 Readiness** | • 0 Day-1 Ticket volume<br>• 100% License & Group accuracy |
-
-### 🛡️ Security & Compliance (SEC)
-*Hardening the perimeter and detecting invisible threats.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **SEC-02-S** | [Shadow IT Governance](legacy/02-SEC-ShadowITGovernance/README.md) | **App Control** | • Count of Risky OAuth Apps Revoked<br>• % Reduction in "High Risk" scopes |
-| **SEC-02-K** | [Surgical Lockdown](legacy/02-SEC-SurgicalLockdown/README.md) | **Incident Containment** | • Time-to-Neutralize (< 60 seconds)<br>• 3-Layer containment (Id, Device, Endpoint) |
-| **SEC-02** | [External Sharing](legacy/02-SEC-ExternalSharingAudit/README.md) | **DLP / Exfiltration** | • Count of Anonymous Links removed<br>• Identification of top "Over-Sharers" |
-| **SEC-02-M** | [Mailbox Permissions](legacy/02-SEC-MailboxPermissionsAudit/README.md) | **Privilege Monitoring** | • Detection of unauthorized "Full Access" delegates<br>• Identification of Cross-Dept access |
-
-### 💰 Resource Optimization (RES)
-*Turning IT from a cost center into a value driver.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **RES-03** | [License Optimization](legacy/03-RES-LicenseOptimization/README.md) | **Cost Reduction** | • **$$ Monthly Waste Reclaimed**<br>• Count of "Ghost" & "Zombie" users |
-| **RES-03-D** | [Device Sanitizer](legacy/03-RES-StaleDeviceCleanup/README.md) | **Inventory Accuracy** | • % Accuracy of CMDB / Intune<br>• Removal of security-risk (unpatched) stale devices |
-
-### 📈 Deep Reporting (REP)
-*Forensic intelligence for decision making.*
-
-| Module ID | Name | Primary Goal | Key Metrics / Outcomes |
-| :--- | :--- | :--- | :--- |
-| **REP-04** | [360° User Analyzer](legacy/04-REP-360OffboardingAnalyzer/README.md) | **Forensic Insight** | • Full asset map per user (Keys, Sites, Teams)<br>• Flight Risk / Insider Threat indicators |
-| **REP-04-T** | [Teams Sprawl](legacy/04-REP-TeamsActivityReport/README.md) | **Collaboration Hygiene** | • Count of Abandoned Teams<br>• Storage reclaimed from dead SharePoint sites |
-
----
-
-## 📊 Implementation Status Matrix
-
-| Module ID | Module Name | Legacy (PowerShell) | Core (TypeScript) | TUI Integration (Rust) |
-| :--- | :--- | :---: | :---: | :---: |
-| **IAM-01** | Graceful Offboarding | ✅ Stable | 🚧 In Progress | ❌ Planned |
-| **IAM-01-G** | Guest User Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
-| **IAM-01-N** | New User Onboarding | 🚧 Partial | ❌ Planned | ❌ Planned |
-| **SEC-02-S** | Shadow IT Governance | ✅ Stable | ✅ Production | ✅ Accessible |
-| **SEC-02-K** | Surgical Lockdown | ✅ Stable | ❌ Planned | ❌ Planned |
-| **SEC-02** | External Sharing Audit | ✅ Stable | ❌ Planned | ❌ Planned |
-| **SEC-02-M** | Mailbox Permissions | ❌ Planned | ❌ Planned | ❌ Planned |
-| **RES-03** | License Optimization | ✅ Stable | ❌ Planned | ❌ Planned |
-| **RES-03-D** | Stale Device Cleanup | ✅ Stable | ❌ Planned | ❌ Planned |
-| **REP-04** | 360° User Analyzer | ✅ Stable | ❌ Planned | ❌ Planned |
-| **REP-04-T** | Teams Sprawl Report | ❌ Planned | ❌ Planned | ❌ Planned |
-
-**Legend:**
-*   ✅ **Stable/Production:** Fully functional and tested.
-*   🚧 **In Progress:** Code exists but may be incomplete or beta.
-*   ❌ **Planned:** Specified in architecture but implementation not started.
-
----
-
 ## 🛠️ Technical Architecture
 
-This project uses a **Hybrid Architecture** to leverage the best of all worlds:
+**100% TypeScript** - Built with Bun runtime for maximum performance.
 
-1.  **The Brain (Rust 🦀):**
-    *   Handles the CLI/TUI, Authentication, Configuration, and State Management.
-    *   *Why?* Instant startup, binary safety, and memory efficiency.
-2.  **The Muscle (TypeScript + Bun 🍞):**
-    *   Executes the complex Graph API business logic.
-    *   *Why?* The Graph JS SDK is mature, and Bun provides incredible performance for script execution.
-3.  **The Foundation (PowerShell 🐚):**
-    *   Legacy scripts provided for backward compatibility and complex Exchange Online operations.
+**Core Components:**
+1. **TypeScript Engine** (`core/`)
+   - CLI interface with `@inquirer/prompts`
+   - OAuth2 PKCE authentication
+   - Microsoft Graph API integration
+   - Modular handler-based architecture
 
-### Prerequisites
+2. **Bun Runtime** 🍞
+   - Near-instant startup times
+   - Native TypeScript execution (no build step!)
+   - High-performance HTTP and file I/O
 
-*   **Rust Toolchain** (for the CLI)
-*   **Bun Runtime** (for the Core logic)
-*   **PowerShell 7+** (for legacy modules)
+3. **Secure Storage**
+   - OS Keychain integration via `keytar`
+   - Never stores credentials in plaintext
 
-## 🏁 Getting Started
+**Note:** Legacy Rust and PowerShell implementations exist in archives for reference only.
 
-### 1. Clone & Build
+---
+
+## 🏁 Quick Start
+
+### 1. Prerequisites
+*   **Bun Runtime:** [Install Bun](https://bun.sh/)
+*   **Node.js** (Optional, for some dependencies)
+
+### 2. Install & Authenticate
 ```bash
-git clone git@github.com:RohiRIK/o365-cli.git
-cd o365-cli
-cargo build --release --manifest-path cli/Cargo.toml
+cd core
+bun install
+bun src/cli.ts login --tenant <your-tenant-id>
 ```
 
-### 2. Run the Dashboard
+### 3. List Available Modules
 ```bash
-./cli/target/release/o365-cli
-# Or for development:
-cargo run --manifest-path cli/Cargo.toml
+bun src/cli.ts list
 ```
 
-### 3. Authenticate
-Navigate to the **Settings** tab (Press `3`) and select **Login**. The app will launch your browser to authenticate securely with Microsoft Entra ID.
+### 4. Execute a Module (Dry-Run by Default)
+```bash
+bun src/cli.ts run sec:shadow-it --dry-run true
+```
 
-### 4. Execute
-Navigate to **Security** or **IAM** tabs, select a module, and press **Enter**.
+---
+
+## 🎯 Production Modules
+
+The platform currently has **4 production-ready modules** across Security, IAM, and Device Management categories.
+
+### Security (SEC)
+
+#### `sec:ca-audit` - Conditional Access Audit
+Detailed technical audit of every Conditional Access policy in your tenant.
+
+**Features:**
+- Policy-by-policy analysis
+- Assignment summaries
+- Condition breakdown
+- Grant control inspection
+- Export to JSON
+
+**Usage:**
+```bash
+bun src/cli.ts run sec:ca-audit
+bun src/cli.ts run sec:ca-audit --export output/ca-policies.json
+```
+
+#### `sec:shadow-it` - Shadow IT Governance
+Detect and remediate risky OAuth applications with dangerous permissions.
+
+**Features:**
+- Identify unverified publishers
+- Flag dangerous Graph API permissions
+- Detect credential expiry issues
+- Auto-remediation with dry-run mode
+
+**Usage:**
+```bash
+bun src/cli.ts run sec:shadow-it --dry-run true
+bun src/cli.ts run sec:shadow-it --dry-run false  # Live remediation
+```
+
+### Identity & Access Management (IAM)
+
+#### `iam:offboard` - Graceful User Offboarding
+Standard user termination protocol with license reclamation and mailbox conversion.
+
+**Features:**
+- Block sign-in
+- Revoke all sessions
+- Convert mailbox to shared
+- Remove from all groups
+- Reclaim licenses
+- Device retirement (wipe/retire/none)
+
+**Usage:**
+```bash
+bun src/cli.ts run iam:offboard --user user@domain.com --dry-run true
+bun src/cli.ts run iam:offboard --user user@domain.com --device-action wipe --dry-run false
+```
+
+### Device Management (DEV)
+
+#### `dev:intune-audit` - Intune Configuration Audit
+Comprehensive audit of Intune assignments and configuration profiles.
+
+**Features:**
+- Configuration profile analysis
+- Assignment mapping
+- Compliance policy review
+- Export to JSON
+
+**Usage:**
+```bash
+bun src/cli.ts run dev:intune-audit
+bun src/cli.ts run dev:intune-audit --export output/intune-config.json
+```
+
+---
+
+## 📍 Module Status Legend
+
+- **🟢 Production** - Fully tested, production-ready (4 modules)
+- **🟡 Beta** - Functional but under active development (15+ modules)
+- **🔴 Draft** - Experimental or incomplete
+
+All modules support `--dry-run` mode for safe previewing of changes.
+
+---
+
+## 🗺️ Roadmap
+
+### Q1 2026 - Security & Compliance Expansion
+- [ ] `sec:mfa-enforcement` - MFA gap analysis and enforcement
+- [ ] `sec:risky-sign-ins` - Identity Protection risk detection
+- [ ] `sec:external-sharing` - External sharing audit across SharePoint/OneDrive
+- [ ] `gov:audit-log-export` - Unified audit log forensics
+- [ ] `gov:retention-audit` - Data retention policy compliance
+
+### Q2 2026 - IAM & Resource Management
+- [ ] `iam:guest-cleanup` - Automated guest user lifecycle management (move to prod)
+- [ ] `iam:stale-accounts` - Inactive user detection and cleanup
+- [ ] `res:license-optimization` - License usage analytics and recommendations
+- [ ] `res:device-cleanup` - Stale device identification and removal
+- [ ] `res:teams-usage` - Teams sprawl analysis
+
+### Q3 2026 - Reporting & Analytics
+- [ ] `rep:executive-dashboard` - Executive-level activity summaries
+- [ ] `rep:compliance-scorecard` - Security posture scoring
+- [ ] `rep:user-analyzer` - Per-user risk and activity profiling
+
+### Future Considerations
+- **TUI Dashboard** - Interactive terminal dashboard (Rust-based, maybe)
+- **Webhook Integration** - Real-time alerts via webhook
+- **Policy Templates** - Pre-built compliance templates (CIS, NIST, etc.)
+- **CI/CD Integration** - GitHub Actions for continuous compliance
+
+---
+
+## 🤖 Automated Production Sync
+
+This repository uses **GitHub Actions** to automatically sync production modules from `dev` to `prod` branch.
+
+### How It Works
+
+1. **Development** happens in the `dev` branch (all modules, docs, internal files)
+2. **Mark modules as production** by setting `status = "prod"` in handler files
+3. **Push to dev** - GitHub Action automatically triggers
+4. **Auto-sync to prod** - Only production modules are synced to `prod` branch
+
+### What Gets Synced
+
+**✅ Included in prod:**
+- Production modules only (`status = "prod"`)
+- Core TypeScript source code
+- Automation scripts
+- Auto-generated README with module documentation
+
+**❌ Excluded from prod:**
+- Development/beta modules (`status = "beta"` or `status = "draft"`)
+- Internal documentation (`conductor/`, research docs)
+- Sensitive files (secrets, credentials)
+- Development artifacts (`node_modules/`, logs)
+
+### Production Branch Stats
+
+- **4 production modules** across 3 categories
+- **130 tracked files** (clean & minimal)
+- **138 passing tests** (100% coverage for prod modules)
+- **Auto-generated README** with installation guide
+
+### Workflow Status
+
+View the automation status at: [GitHub Actions](https://github.com/RohiRIK/o365-cli/actions/workflows/sync-prod.yml)
+
+**Latest sync:** Automatically triggered on every push to `dev`
+
+---
+
+**Want to contribute?** See `CONTRIBUTING.md` or open an issue to discuss new modules!
 
 ---
 

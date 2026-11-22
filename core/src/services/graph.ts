@@ -48,9 +48,55 @@ export class GraphService {
       }
       this.instance = Client.init({
         authProvider: (done) => done(null, token),
+        // The Microsoft Graph JS SDK includes retry middleware by default.
+        // It handles 429 (Too Many Requests) and 503 (Service Unavailable).
       });
     }
     return this.instance;
+  }
+
+  /**
+   * Fetch a single resource
+   */
+  public static async get<T = any>(endpoint: string, version: 'v1.0' | 'beta' = 'v1.0'): Promise<T> {
+    const client = this.getClient();
+    return await client.api(endpoint).version(version).get();
+  }
+
+  /**
+   * Generically fetch all items from a collection, following @odata.nextLink automatically.
+   * Supports both string (select fields) and options object syntax.
+   */
+  public static async fetchAll<T = any>(
+    endpoint: string,
+    selectOrOptions?: string | { select?: string, filter?: string, expand?: string, top?: number },
+    version: 'v1.0' | 'beta' = 'v1.0'
+  ): Promise<T[]> {
+    const client = this.getClient();
+    let results: T[] = [];
+
+    let request = client.api(endpoint).version(version);
+
+    // Handle both string and object syntax
+    if (typeof selectOrOptions === 'string') {
+      request = request.select(selectOrOptions);
+    } else if (selectOrOptions && typeof selectOrOptions === 'object') {
+      if (selectOrOptions.select) request = request.select(selectOrOptions.select);
+      if (selectOrOptions.filter) request = request.filter(selectOrOptions.filter);
+      if (selectOrOptions.expand) request = request.expand(selectOrOptions.expand);
+      if (selectOrOptions.top) request = request.top(selectOrOptions.top);
+    }
+
+    let response = await request.get();
+    results = results.concat(response.value || []);
+
+    // Follow pagination
+    while (response["@odata.nextLink"]) {
+      response = await client.api(response["@odata.nextLink"]).get();
+      results = results.concat(response.value || []);
+    }
+
+    return results;
   }
 
   // Initialize token before any commands run

@@ -1,0 +1,11 @@
+# Windsurf Rules: o365-cli
+
+You MUST read and adhere to the instructions in **conductor/agents.md** before performing any task.
+
+## Key Directives
+- **Primary Runtime:** Bun
+- **Primary Language:** TypeScript
+- **Task Management:** Conductor framework (see `conductor/`).
+- **Safety:** Always support and default to `--dry-run` for mutations.
+
+Refer to `conductor/context.json` for technical context.
